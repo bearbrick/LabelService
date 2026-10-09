@@ -50,9 +50,24 @@
 dotnet run -c Release --project backend/tests/LabelService.Benchmarks -- --filter "*"
 ```
 
-改渲染代码（Rendering 下任何文件）的提交必须附上改动前后的基准结果。中位数比基线慢 20% 以上不能合并（CI 门禁见 T-015）。
+改渲染代码（Rendering 下任何文件）的提交必须附上改动前后的基准结果。
 
-**压测**：k6 或 NBomber 在目标机器上 50 并发压单张接口，要求 P95 ≤ 100 ms、错误率 0（T-015）。
+基准覆盖成品箱标（`RenderBenchmarks`：203、300 dpi × PNG、PDF、ZPL，加一项每次换箱号、条码缓存不命中的 PNG）和每个示例模板 × PNG、PDF、ZPL（`TemplateBenchmarks`，模板自己的 DPI）。新增示例模板后把它加进 `TemplateBenchmarks.Template` 的参数。
+
+**基准门禁**（T-015）：中位数比基线慢 20% 以上就不通过（退出码 1），CI 每次提交跑一遍。
+
+```powershell
+dotnet run -c Release --project backend/tests/LabelService.Benchmarks -- --gate               # 和 baseline.json 比较，约 5 分钟
+dotnet run -c Release --project backend/tests/LabelService.Benchmarks -- --gate --filter "*Zpl*"
+dotnet run -c Release --project backend/tests/LabelService.Benchmarks -- --update-baseline    # 写新基线
+```
+
+- 基线在 `backend/tests/LabelService.Benchmarks/baseline.json`，记了测基线的机器。**基线和机器有关**：要在跑门禁的那台（或同规格的）机器上生成，换机器先 `--update-baseline`。
+- 什么时候更新基线：有意的性能改进合并后（让门禁跟着收紧），或者有意接受的变慢（在交接记录里写明原因）之后。更新基线单独提交：`perf(bench): update baseline (T-xxx)`。
+- 门禁用 ShortRun 加到 10 次迭代：同一台机器连跑两次差 ±4% 以内；3 次迭代时能差到 25%，会误报。跑门禁时机器上不要有别的重负载（编译、视频会议）。
+- CI 平台还没定（见 README 待定问题）：选定后加一步 `--gate`，并在 CI 机器上生成基线。CI 上要先准备字体（`backend/assets/fonts`），否则文本相关的检查和基准会失败。
+
+**压测**（T-015）：k6 脚本在 `backend/tests/load/`，用法和报告模板见那里的 README。验收：在 4 核 8 GB 目标机器上单张 50 并发 P95 ≤ 100 ms、错误率 0、吞吐 ≥ 60 次/秒。
 
 ## 当前基线
 
@@ -86,5 +101,11 @@ dotnet run -c Release --project backend/tests/LabelService.Benchmarks -- --filte
 | 2026-10-10 | 启动预热（T-017），Release 进程冷启动，已有数据库（不导入示例），示例箱标 PNG 300dpi，Server-Timing total | 预热后第一个请求 18.3 ms，之后 11.3–12.4 ms（约 1.6 倍）；进程启动到 /health/ready 约 1.45 s | 关掉预热时第一个请求 64 ms（约 5.6 倍）；要求不超过 2 倍、30 秒内就绪 |
 
 | 2026-10-10 | 渲染并发限制（T-017），检查程序占满名额后发请求 | 排队 2.0 s 后返回 503 SERVICE_UNAVAILABLE，带 Retry-After: 1 | 名额 = CPU 核数；排队时间进 label_queue_wait_ms |
+
+| 2026-10-10 | 基准门禁基线（T-015，`baseline.json`），ShortRun 10 次迭代，AMD Ryzen AI 9 H 465（20 逻辑核） | 箱标 PNG 203dpi 5.49 ms、300dpi 11.66 ms；PDF 3.10 / 2.97 ms；ZPL 0.99 / 2.01 ms；A4 唛头 300dpi：PDF 6.26 ms、ZPL 19.8 ms、PNG 115 ms | A4 唛头 PNG 主要花在 PNG 编码（2480×3508 像素），在“A4 唛头 P95 ≤ 250 ms”以内；A4 建议用 PDF。连跑两次门禁差 ±4% |
+
+| 2026-10-10 | k6 压单张接口（T-015），本机模拟 4 核：服务进程绑定 4 个核（start /affinity F），渲染并发 4，Release，示例箱标 PNG 300dpi | 固定 60 次/秒（最多 50 并发）：服务端 P95 15.1 ms、P99 15.7 ms，错误 0；150 次/秒：P95 17.0 ms；不停地发时最大吞吐约 215 次/秒 | 50 个并发不停地发（饱和）时排队时间算进耗时，P95 251 ms，仍没有 503；目标机器（4 核 8 GB 服务器）上要再测一次，结果按 backend/tests/load/REPORT.md 记录 |
+
+| 2026-10-10 | k6 压批量接口（T-015），同上 4 核，100 张示例箱标合并 PDF，4 个并发 30 秒 | 服务端中位数 41.8 ms、P95 66.5 ms，错误 0，约 82 批/秒 | 要求 100 张 ≤ 3 s |
 
 实现新元素或格式后在这里追加一行，写明机器和条件。

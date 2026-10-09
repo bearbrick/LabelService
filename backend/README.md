@@ -13,10 +13,12 @@ backend/
 │  └─ LabelService.Server/        开放接口、鉴权、模板存储、指标
 ├─ tests/
 │  ├─ LabelService.Backend.Checks/  检查程序（含跨前端、调用端的契约一致性检查）
-│  └─ LabelService.Benchmarks/      渲染基准
+│  ├─ LabelService.Benchmarks/      渲染基准和基准门禁（baseline.json）
+│  └─ load/                         k6 压测脚本、压测报告模板
 ├─ assets/fonts/                 思源黑体、思源宋体（文件不提交，准备方法见那里的 README）
 ├─ assets/icons/                 GB/T 191 图标（SVG，和设计器同一套）
 ├─ assets/images/                内置图片素材（模板里写 asset:文件名）
+├─ deploy/                       Dockerfile、部署说明、监控样例（monitoring/）
 └─ samples/
    ├─ templates/                  示例模板，开发环境首次建库时导入为已发布版本
    └─ requests/                   示例请求体（UTF-8）
@@ -39,6 +41,7 @@ curl.exe -o box.png -H "X-Api-Key: lbl_test_local_dev" -H "Content-Type: applica
 
 # 渲染基准（必须 Release）
 dotnet run -c Release --project backend/tests/LabelService.Benchmarks -- --filter "*"
+dotnet run -c Release --project backend/tests/LabelService.Benchmarks -- --gate     # 基准门禁，见 docs/performance.md
 ```
 
 ## 要点
