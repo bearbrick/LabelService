@@ -16,6 +16,11 @@ internal interface ITemplateStore
     /// <param name="template">找到的模板。</param>
     /// <returns>模板不存在、版本不存在或从未发布时返回 false。</returns>
     bool TryGetPublished(string templateCode, int? version, [NotNullWhen(true)] out PublishedTemplate? template);
+
+    /// <summary>
+    /// 每个模板的最新发布版本（启动预热用）。
+    /// </summary>
+    IReadOnlyList<PublishedTemplate> LatestPublished();
 }
 
 /// <summary>

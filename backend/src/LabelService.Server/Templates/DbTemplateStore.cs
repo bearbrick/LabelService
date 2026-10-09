@@ -29,6 +29,9 @@ internal sealed class DbTemplateStore : ITemplateStore
         return template is not null;
     }
 
+    /// <inheritdoc />
+    public IReadOnlyList<PublishedTemplate> LatestPublished() => templates.Values.Select(versions => versions.Latest).ToArray();
+
     /// <summary>
     /// 用数据库里的全部已发布版本替换缓存。
     /// </summary>

@@ -15,6 +15,15 @@ internal static class ApiErrors
     public const string NotImplemented = "NOT_IMPLEMENTED";
 
     /// <summary>
+    /// 排队等渲染名额超时时的 503 响应（T-017），带 Retry-After: 1。
+    /// </summary>
+    public static IResult Busy(RenderCall call, HttpContext http, double timeoutSeconds)
+    {
+        http.Response.Headers.RetryAfter = "1";
+        return call.Fail(ErrorCodes.ServiceUnavailable, $"服务繁忙：排队超过 {timeoutSeconds:0.#} 秒，请稍后再试", statusCode: 503);
+    }
+
+    /// <summary>
     /// 创建失败响应。
     /// </summary>
     /// <param name="http">当前请求。</param>
