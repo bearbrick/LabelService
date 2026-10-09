@@ -21,7 +21,7 @@
 
 核心指标：**单张标签服务端处理 P95 ≤ 100 ms**（见 `docs/performance.md`）。
 
-当前阶段：骨架已完成（T-000）。数据库用 SQLite、单实例部署（ADR 0003）。单张 PNG 链路可用，但只实现了线和矩形；文本、条码、图片、PDF、ZPL、批量、数据库、管理后台都在任务列表里（`docs/tasks/README.md`）。
+当前阶段：骨架已完成（T-000）。数据库用 SQLite、单实例部署（ADR 0003）。单张 PNG 链路可用，实现了线、矩形和文本（T-001）；条码、图片、PDF、ZPL、批量、数据库、管理后台都在任务列表里（`docs/tasks/README.md`）。
 
 ## 2. 仓库地图
 
@@ -37,6 +37,7 @@
 | `backend/tests/LabelService.Backend.Checks/` | 后端检查程序，**也负责跨三个部分的契约一致性检查** | 不是 xUnit，见 §5 |
 | `backend/tests/LabelService.Benchmarks/` | BenchmarkDotNet | 必须 Release 运行 |
 | `backend/samples/` | 示例模板、示例请求体 | 开发期服务启动时加载示例模板 |
+| `backend/assets/fonts/` | 思源黑体、思源宋体 | 文件不提交，按其 README 自己放；检查程序和基准需要 |
 | `client/LabelService.Client.slnx` | 调用端解决方案 | |
 | `client/src/LabelService.Client/` | 给第三方的 SDK（net462、netstandard2.0、net8.0） | 遵守 R4 |
 | `client/samples/LabelService.Demo.WinForms/` | SDK 演示程序（net48、net10.0-windows） | |
@@ -222,5 +223,6 @@ cd frontend; npm run build              # 类型检查 + 打包
 - **WebApplicationFactory 不认识 .slnx**：后端检查程序里已经显式指定内容根目录，新增服务端检查时沿用 `ServerChecks` 里的 `ServerFactory`。
 - **SkiaSharp 在 Linux** 需要 `SkiaSharp.NativeAssets.Linux.NoDependencies`（Server 已引用）。
 - **条码模块宽度必须是整数个打印点**，否则看着正常、扫不出来。
+- **字体**：`backend/assets/fonts/` 里没有思源黑体时文本检查失败（准备方法见那里的 README）。Noto Sans SC 可变字体的默认字重是最细的 100，注册表会按 400、700 生成实例，不要直接用默认实例。
 - **SQLite**：数据目录不能放网络共享盘，同一数据目录只能有一个服务进程；时间列存 UTC `DateTime`，不用 `DateTimeOffset`；检查程序用临时数据目录。
 - **开发 Key** `lbl_test_local_dev` 只在 Development 环境有效；后端检查程序用 `WebApplicationFactory` 启动服务，默认就是 Development；`verify.ps1` 启动服务时也会设置 Development。
