@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <!-- SDK 调用演示程序：同一份代码编译 .NET Framework 4.8 和 .NET 10 两个版本。完整界面按 docs/prototypes 的原型实现（T-012）。 -->
+  <!-- SDK 调用演示程序：同一份代码编译 .NET Framework 4.8 和 .NET 10 两个版本，界面按 docs/prototypes 的原型实现（T-012）。 -->
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFrameworks>net48;net10.0-windows</TargetFrameworks>
@@ -9,6 +9,12 @@
     <AssemblyName>LabelServiceDemo</AssemblyName>
     <RootNamespace>LabelService.Demo</RootNamespace>
   </PropertyGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net48'">
+    <!-- 模拟服务（HttpMessageHandler）和批量 ZIP 的预览 -->
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.IO.Compression" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\LabelService.Client\LabelService.Client.csproj" />
