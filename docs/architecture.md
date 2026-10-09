@@ -60,6 +60,9 @@
 | `src/LabelService.Rendering/Binding/` | `{{key:format}}` 绑定替换 |
 | `src/LabelService.Rendering/Validation/` | 字段校验和类型转换 |
 | `src/LabelService.Rendering/Elements/` | 每种元素一个绘制器，`ElementPainters.cs` 登记；文本排版（换行、自动缩小、对齐）在 `TextLayout.cs`；条码编码在 `LinearSymbols.cs`（一维）、`MatrixSymbols.cs`（二维），编码结果缓存在 `Symbols.cs`（一维、二维共用） |
+| `src/LabelService.Rendering/Assets/` | 素材库：图标、图片素材启动时加载，按目标尺寸栅格化后缓存；SVG 清洗（`SvgSanitizer`）；Floyd–Steinberg 抖动 |
+| `src/LabelService.Server/Assets/` | 素材目录配置（`LabelService:Assets`），启动时加载并写日志；上传的素材在数据目录的 `assets/` |
+| `assets/icons/`、`assets/images/` | GB/T 191 图标（和设计器 `frontend/src/model/icons.ts` 同一套路径，检查程序核对）、内置图片素材；构建时复制到程序目录的 `icons/`、`images/` |
 | `src/LabelService.Rendering/Fonts/` | 字体注册表：启动时加载字体目录，按模板字体名匹配，缺失时降级；缓存字体和 SKFont |
 | `src/LabelService.Server/Fonts/` | 字体目录配置（`LabelService:Fonts:Directory`），启动时加载并写日志 |
 | `assets/fonts/` | 思源黑体、思源宋体，构建时复制到程序目录的 `fonts/`；文件不提交，见那里的 README |

@@ -15,6 +15,8 @@ backend/
 │  ├─ LabelService.Backend.Checks/  检查程序（含跨前端、调用端的契约一致性检查）
 │  └─ LabelService.Benchmarks/      渲染基准
 ├─ assets/fonts/                 思源黑体、思源宋体（文件不提交，准备方法见那里的 README）
+├─ assets/icons/                 GB/T 191 图标（SVG，和设计器同一套）
+├─ assets/images/                内置图片素材（模板里写 asset:文件名）
 └─ samples/
    ├─ templates/                  示例模板，开发环境首次建库时导入为已发布版本
    └─ requests/                   示例请求体（UTF-8）
