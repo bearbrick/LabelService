@@ -14,3 +14,6 @@
 *.pdf binary
 *.zip binary
 *.db binary
+*.otf binary
+*.ttc binary
+*.otc binary

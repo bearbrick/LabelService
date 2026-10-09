@@ -68,7 +68,7 @@
 
 | `type` | 专有属性 | 渲染进度 |
 | --- | --- | --- |
-| `text` | `content`；`style`（见下） | T-001 |
+| `text` | `content`；`style`（见下） | 已实现 |
 | `barcode` | `symbology`（默认 code128）、`value`、`align`（默认 left）、`showText`（默认 true）、`textPosition`（bottom / top）、`textStyle`、`minModuleDots`（默认 2）、`quietZone` | T-002 |
 | `qrcode` | `symbology`（qr / datamatrix / pdf417，默认 qr）、`value`、`ecLevel`（L / M / Q / H，默认 M，仅 QR）、`quietZone` | T-003 |
 | `image` | `src`（`asset:素材ID` 或 `{{字段}}`）、`fit`（contain / cover / stretch，默认 contain）、`mono` | T-004 |
@@ -76,7 +76,16 @@
 | `line` | `stroke`；height 为 0 是横线，width 为 0 是竖线，都不为 0 画左上到右下的斜线；线宽以线为中心 | 已实现 |
 | `rect` | `stroke`、`fill`、`radius`；边框画在框**内侧**，外沿和元素框对齐 | 已实现 |
 
-`style` / `textStyle`：`fontFamily`（默认 `SourceHanSansSC`）、`fontSize`（默认 10pt）、`bold`、`italic`、`underline`、`color`（默认 #000000）、`align`（left / center / right，默认 left）、`vAlign`（top / middle / bottom，默认 middle）、`fit`（none / wrap / shrink，默认 none）、`minFontSize`、`lineHeight`（默认 1.2）、`letterSpacing`（mm）。
+`style` / `textStyle`：`fontFamily`（默认 `SourceHanSansSC`）、`fontSize`（默认 10pt）、`bold`、`italic`、`underline`、`color`（默认 #000000）、`align`（left / center / right，默认 left）、`vAlign`（top / middle / bottom，默认 middle）、`fit`（none / wrap / shrink，默认 none）、`minFontSize`（shrink 的最小字号，默认 4pt）、`lineHeight`（默认 1.2）、`letterSpacing`（mm）。
+
+文本排版：
+
+- `fit: none` 不自动换行，超出框的部分裁掉；`wrap` 在框宽内换行，中文按字、英文按单词，行首不放结束标点、行尾不放开始标点，单词比框还宽时按字符断开，超出框高的部分裁掉；`shrink` 不自动换行，放不下时缩小字号，最小到 `minFontSize`，仍放不下就裁掉。
+- 内容里的换行符 `
+` 在三种模式下都换行。
+- 行高 = 字号 × `lineHeight`，文字在行内垂直居中；`letterSpacing` 加在相邻两个字之间。
+- 有内容被裁掉时给 `TEXT_CLIPPED` 警告；字体不存在时降级到思源黑体，给 `FONT_FALLBACK` 警告。
+- 字体名比较时忽略大小写、空格、连字符、下划线；`SourceHanSansSC` 也认 Noto Sans SC（同一款字体），`SourceHanSerifSC` 同理。
 
 `stroke`：`width`（mm，默认 0.3）、`dash`（实段、空段长度 mm，如 `[1, 0.5]`；不设为实线）、`color`。
 

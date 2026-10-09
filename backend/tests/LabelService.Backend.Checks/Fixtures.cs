@@ -1,6 +1,7 @@
 using System.Text.Json;
 using LabelService.Contracts;
 using LabelService.Contracts.Templates;
+using LabelService.Rendering.Fonts;
 
 namespace LabelService.Backend.Checks;
 
@@ -9,6 +10,8 @@ namespace LabelService.Backend.Checks;
 /// </summary>
 internal static class Fixtures
 {
+    private static FontRegistry? fonts;
+
     /// <summary>开发环境的测试 Key（appsettings.Development.json 里只存它的 SHA-256）。</summary>
     public const string DevApiKey = "lbl_test_local_dev";
 
@@ -39,6 +42,12 @@ internal static class Fixtures
     /// <summary>
     /// 把 JSON 对象文本转成接口收到的字段数据。
     /// </summary>
+    /// <summary>
+    /// backend/assets/fonts 里的字体，整个检查程序共用一份。
+    /// </summary>
+    public static FontRegistry Fonts(string backendRoot) =>
+        fonts ??= FontRegistry.Load(Path.Combine(backendRoot, "assets", "fonts"));
+
     public static Dictionary<string, JsonElement> Data(string json) =>
         JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json)!;
 }

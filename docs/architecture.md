@@ -59,7 +59,10 @@
 | `src/LabelService.Contracts/LabelJson.cs`、`LabelUnits.cs` | 统一的 JSON 设置；mm、pt、点的换算 |
 | `src/LabelService.Rendering/Binding/` | `{{key:format}}` 绑定替换 |
 | `src/LabelService.Rendering/Validation/` | 字段校验和类型转换 |
-| `src/LabelService.Rendering/Elements/` | 每种元素一个绘制器，`ElementPainters.cs` 登记 |
+| `src/LabelService.Rendering/Elements/` | 每种元素一个绘制器，`ElementPainters.cs` 登记；文本排版（换行、自动缩小、对齐）在 `TextLayout.cs` |
+| `src/LabelService.Rendering/Fonts/` | 字体注册表：启动时加载字体目录，按模板字体名匹配，缺失时降级；缓存字体和 SKFont |
+| `src/LabelService.Server/Fonts/` | 字体目录配置（`LabelService:Fonts:Directory`），启动时加载并写日志 |
+| `assets/fonts/` | 思源黑体、思源宋体，构建时复制到程序目录的 `fonts/`；文件不提交，见那里的 README |
 | `src/LabelService.Rendering/Output/` | 每种格式一个输出文档，`OutputDocuments.cs` 登记 |
 | `src/LabelService.Rendering/Diagnostics/` | 分阶段计时、Server-Timing 生成 |
 | `src/LabelService.Server/Endpoints/` | 开放接口路由、请求收尾（计时、指标、日志）、错误响应 |

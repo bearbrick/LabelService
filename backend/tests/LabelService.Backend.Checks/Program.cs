@@ -15,6 +15,7 @@ internal static class Program
         BindingChecks.Run(Check);
         ValidationChecks.Run(backendRoot, Check);
         RenderChecks.Run(backendRoot, Check);
+        TextChecks.Run(backendRoot, Check);
         await ServerChecks.RunAsync(backendRoot, Check);
         await StorageChecks.RunAsync(backendRoot, Check);
         ArchitectureChecks.Run(backendRoot, repositoryRoot, Check);

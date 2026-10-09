@@ -4,6 +4,7 @@ using LabelService.Rendering;
 using LabelService.Server.Auth;
 using LabelService.Server.Diagnostics;
 using LabelService.Server.Endpoints;
+using LabelService.Server.Fonts;
 using LabelService.Server.Templates;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -16,6 +17,7 @@ builder.Services.AddTemplateStorage(builder.Configuration);
 builder.Services.AddSingleton<ILabelRenderer, LabelRenderer>();
 builder.Services.AddSingleton<LabelMetrics>();
 builder.Services.AddHealthChecks();
+builder.Services.AddLabelFonts(builder.Configuration);
 
 var app = builder.Build();
 await app.InitializeTemplateStorageAsync();
@@ -29,6 +31,7 @@ app.UseExceptionHandler(errorApp => errorApp.Run(async http =>
 
 app.MapHealthChecks("/health");
 app.MapPublicApi();
+app.LoadFonts();
 
 app.Run();
 

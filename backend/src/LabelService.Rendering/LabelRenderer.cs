@@ -3,6 +3,7 @@ using LabelService.Contracts;
 using LabelService.Contracts.Protocol;
 using LabelService.Contracts.Templates;
 using LabelService.Rendering.Elements;
+using LabelService.Rendering.Fonts;
 using LabelService.Rendering.Output;
 using SkiaSharp;
 
@@ -17,6 +18,25 @@ namespace LabelService.Rendering;
 /// </remarks>
 public sealed class LabelRenderer : ILabelRenderer
 {
+    private readonly FontRegistry fonts;
+
+    /// <summary>
+    /// 不带字体的渲染引擎：文本用 Skia 默认字体并给 FONT_FALLBACK 警告。只给不涉及文本的检查和基准用。
+    /// </summary>
+    public LabelRenderer()
+        : this(FontRegistry.Empty)
+    {
+    }
+
+    /// <summary>
+    /// 使用指定字体的渲染引擎。字体注册表在启动时加载，渲染期间只读。
+    /// </summary>
+    public LabelRenderer(FontRegistry fonts)
+    {
+        ArgumentNullException.ThrowIfNull(fonts);
+        this.fonts = fonts;
+    }
+
     /// <inheritdoc />
     public bool Supports(LabelFormat format) => OutputDocuments.IsSupported(format);
 
@@ -36,7 +56,7 @@ public sealed class LabelRenderer : ILabelRenderer
         foreach (var label in job.Labels)
         {
             var start = Stopwatch.GetTimestamp();
-            var context = new RenderContext(job.Dpi, job.Mono, label.Values, fields, warnings);
+            var context = new RenderContext(job.Dpi, job.Mono, label.Values, fields, fonts, warnings);
             var layouts = Layout(template, context);
             start = timings.Mark(TimingStages.Layout, start);
 

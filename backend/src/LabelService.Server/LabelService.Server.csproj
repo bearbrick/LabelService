@@ -28,6 +28,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- 字体：构建时从 backend/assets/fonts 复制到输出目录的 fonts/，服务启动时加载（T-001）。 -->
+    <Content Include="..\..\assets\fonts\*.otf;..\..\assets\fonts\*.ttf;..\..\assets\fonts\*.ttc;..\..\assets\fonts\*.otc;..\..\assets\fonts\*.txt" LinkBase="fonts" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- 示例模板：开发环境首次建库时导入为已发布版本；模板来源配置为 Files 时直接从这里加载。 -->
     <Content Include="..\..\samples\templates\*.json" LinkBase="SeedTemplates" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
