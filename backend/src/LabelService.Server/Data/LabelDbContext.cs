@@ -28,6 +28,15 @@ internal sealed class LabelDbContext(DbContextOptions<LabelDbContext> options) :
     /// <summary>调用方。</summary>
     public DbSet<ApiClientRecord> ApiClients => Set<ApiClientRecord>();
 
+    /// <summary>业务分组。</summary>
+    public DbSet<BusinessRecord> Businesses => Set<BusinessRecord>();
+
+    /// <summary>后台用户。</summary>
+    public DbSet<UserRecord> Users => Set<UserRecord>();
+
+    /// <summary>角色。</summary>
+    public DbSet<RoleRecord> Roles => Set<RoleRecord>();
+
     /// <inheritdoc />
     public override int SaveChanges(bool acceptAllChangesOnSuccess)
     {
@@ -69,6 +78,7 @@ internal sealed class LabelDbContext(DbContextOptions<LabelDbContext> options) :
         {
             preset.ToTable("canvas_preset");
             preset.Property(item => item.Name).HasMaxLength(64);
+            preset.Property(item => item.Kind).HasMaxLength(16);
             preset.HasData(DefaultPresets());
         });
 
@@ -77,7 +87,7 @@ internal sealed class LabelDbContext(DbContextOptions<LabelDbContext> options) :
             template.ToTable("label_template");
             template.Property(item => item.Code).HasMaxLength(64);
             template.Property(item => item.Name).HasMaxLength(128);
-            template.Property(item => item.Category).HasMaxLength(64);
+            template.HasOne<BusinessRecord>().WithMany().HasForeignKey(item => item.BusinessId).OnDelete(DeleteBehavior.Restrict);
             template.Property(item => item.Status).HasMaxLength(16);
             template.Property(item => item.CreatedBy).HasMaxLength(64);
             template.HasIndex(item => item.Code).IsUnique();
@@ -99,6 +109,8 @@ internal sealed class LabelDbContext(DbContextOptions<LabelDbContext> options) :
         {
             asset.ToTable("asset");
             asset.Property(item => item.Kind).HasMaxLength(16);
+            asset.Property(item => item.Key).HasMaxLength(32);
+            asset.HasIndex(item => item.Key).IsUnique();
             asset.Property(item => item.Name).HasMaxLength(128);
             asset.Property(item => item.FilePath).HasMaxLength(256);
             asset.Property(item => item.Sha256).HasMaxLength(64);
@@ -111,9 +123,44 @@ internal sealed class LabelDbContext(DbContextOptions<LabelDbContext> options) :
             client.Property(item => item.Name).HasMaxLength(64);
             client.Property(item => item.ApiKeyHash).HasMaxLength(64);
             client.Property(item => item.KeyPrefix).HasMaxLength(16);
-            client.Property(item => item.AllowedTemplates).HasMaxLength(4000);
+            client.Property(item => item.AppId).HasMaxLength(64);
+            client.Property(item => item.Description).HasMaxLength(256);
+            client.Property(item => item.BusinessIds).HasMaxLength(1024);
+            client.Property(item => item.IpAllowlist).HasMaxLength(1024);
             client.HasIndex(item => item.Name).IsUnique();
             client.HasIndex(item => item.ApiKeyHash).IsUnique();
+        });
+
+        modelBuilder.Entity<BusinessRecord>(business =>
+        {
+            business.ToTable("business");
+            business.Property(item => item.Code).HasMaxLength(32);
+            business.Property(item => item.Name).HasMaxLength(64);
+            business.Property(item => item.Description).HasMaxLength(256);
+            business.Property(item => item.Color).HasMaxLength(16);
+            business.HasIndex(item => item.Code).IsUnique();
+        });
+
+        modelBuilder.Entity<UserRecord>(user =>
+        {
+            user.ToTable("app_user");
+            user.Property(item => item.Account).HasMaxLength(64);
+            user.Property(item => item.Name).HasMaxLength(64);
+            user.Property(item => item.Phone).HasMaxLength(32);
+            user.Property(item => item.PasswordHash).HasMaxLength(256);
+            user.Property(item => item.BusinessIds).HasMaxLength(1024);
+            user.Property(item => item.Status).HasMaxLength(16);
+            user.HasIndex(item => item.Account).IsUnique();
+            user.HasOne<RoleRecord>().WithMany().HasForeignKey(item => item.RoleId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<RoleRecord>(role =>
+        {
+            role.ToTable("app_role");
+            role.Property(item => item.Name).HasMaxLength(64);
+            role.Property(item => item.Description).HasMaxLength(256);
+            role.Property(item => item.Permissions).HasMaxLength(1024);
+            role.HasIndex(item => item.Name).IsUnique();
         });
 
         UseSnakeCaseColumns(modelBuilder);
@@ -137,6 +184,7 @@ internal sealed class LabelDbContext(DbContextOptions<LabelDbContext> options) :
                 WidthMm = preset.Width,
                 HeightMm = preset.Height,
                 Sort = (index + 1) * 10,
+                Kind = preset.Width >= 148 ? "办公纸张" : "标签纸",
                 Enabled = true,
             })
             .ToArray();

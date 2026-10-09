@@ -24,11 +24,9 @@ namespace LabelService.Server.Data.Migrations
                         .HasColumnType("INTEGER")
                         .HasColumnName("id");
 
-                    b.Property<string>("AllowedTemplates")
-                        .IsRequired()
-                        .HasMaxLength(4000)
-                        .HasColumnType("TEXT")
-                        .HasColumnName("allowed_templates");
+                    b.Property<bool>("AllBusinesses")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("all_businesses");
 
                     b.Property<string>("ApiKeyHash")
                         .IsRequired()
@@ -36,13 +34,37 @@ namespace LabelService.Server.Data.Migrations
                         .HasColumnType("TEXT")
                         .HasColumnName("api_key_hash");
 
+                    b.Property<string>("AppId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("app_id");
+
+                    b.Property<string>("BusinessIds")
+                        .IsRequired()
+                        .HasMaxLength(1024)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("business_ids");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT")
                         .HasColumnName("created_at");
 
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("description");
+
                     b.Property<bool>("Enabled")
                         .HasColumnType("INTEGER")
                         .HasColumnName("enabled");
+
+                    b.Property<string>("IpAllowlist")
+                        .IsRequired()
+                        .HasMaxLength(1024)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("ip_allowlist");
 
                     b.Property<string>("KeyPrefix")
                         .IsRequired()
@@ -88,6 +110,12 @@ namespace LabelService.Server.Data.Migrations
                         .HasColumnType("TEXT")
                         .HasColumnName("file_path");
 
+                    b.Property<string>("Key")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("key");
+
                     b.Property<string>("Kind")
                         .IsRequired()
                         .HasMaxLength(16)
@@ -112,9 +140,63 @@ namespace LabelService.Server.Data.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("Key")
+                        .IsUnique();
+
                     b.HasIndex("Sha256");
 
                     b.ToTable("asset", (string)null);
+                });
+
+            modelBuilder.Entity("LabelService.Server.Data.BusinessRecord", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("code");
+
+                    b.Property<string>("Color")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("color");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("description");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("name");
+
+                    b.Property<int?>("OwnerUserId")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("owner_user_id");
+
+                    b.Property<int>("Sort")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("sort");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.ToTable("business", (string)null);
                 });
 
             modelBuilder.Entity("LabelService.Server.Data.CanvasPresetRecord", b =>
@@ -131,6 +213,12 @@ namespace LabelService.Server.Data.Migrations
                     b.Property<double>("HeightMm")
                         .HasColumnType("REAL")
                         .HasColumnName("height_mm");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("kind");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -156,6 +244,7 @@ namespace LabelService.Server.Data.Migrations
                             Id = 1,
                             Enabled = true,
                             HeightMm = 297.0,
+                            Kind = "办公纸张",
                             Name = "A4",
                             Sort = 10,
                             WidthMm = 210.0
@@ -165,6 +254,7 @@ namespace LabelService.Server.Data.Migrations
                             Id = 2,
                             Enabled = true,
                             HeightMm = 210.0,
+                            Kind = "办公纸张",
                             Name = "A5",
                             Sort = 20,
                             WidthMm = 148.0
@@ -174,6 +264,7 @@ namespace LabelService.Server.Data.Migrations
                             Id = 3,
                             Enabled = true,
                             HeightMm = 150.0,
+                            Kind = "标签纸",
                             Name = "100×150",
                             Sort = 30,
                             WidthMm = 100.0
@@ -183,6 +274,7 @@ namespace LabelService.Server.Data.Migrations
                             Id = 4,
                             Enabled = true,
                             HeightMm = 100.0,
+                            Kind = "标签纸",
                             Name = "100×100",
                             Sort = 40,
                             WidthMm = 100.0
@@ -192,6 +284,7 @@ namespace LabelService.Server.Data.Migrations
                             Id = 5,
                             Enabled = true,
                             HeightMm = 60.0,
+                            Kind = "标签纸",
                             Name = "100×60",
                             Sort = 50,
                             WidthMm = 100.0
@@ -201,6 +294,7 @@ namespace LabelService.Server.Data.Migrations
                             Id = 6,
                             Enabled = true,
                             HeightMm = 50.0,
+                            Kind = "标签纸",
                             Name = "80×50",
                             Sort = 60,
                             WidthMm = 80.0
@@ -210,6 +304,7 @@ namespace LabelService.Server.Data.Migrations
                             Id = 7,
                             Enabled = true,
                             HeightMm = 40.0,
+                            Kind = "标签纸",
                             Name = "60×40",
                             Sort = 70,
                             WidthMm = 60.0
@@ -219,10 +314,56 @@ namespace LabelService.Server.Data.Migrations
                             Id = 8,
                             Enabled = true,
                             HeightMm = 30.0,
+                            Kind = "标签纸",
                             Name = "50×30",
                             Sort = 80,
                             WidthMm = 50.0
                         });
+                });
+
+            modelBuilder.Entity("LabelService.Server.Data.RoleRecord", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("id");
+
+                    b.Property<bool>("AllPermissions")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("all_permissions");
+
+                    b.Property<bool>("Builtin")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("builtin");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("description");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("name");
+
+                    b.Property<string>("Permissions")
+                        .IsRequired()
+                        .HasMaxLength(1024)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("permissions");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("app_role", (string)null);
                 });
 
             modelBuilder.Entity("LabelService.Server.Data.TemplateRecord", b =>
@@ -232,10 +373,9 @@ namespace LabelService.Server.Data.Migrations
                         .HasColumnType("INTEGER")
                         .HasColumnName("id");
 
-                    b.Property<string>("Category")
-                        .HasMaxLength(64)
-                        .HasColumnType("TEXT")
-                        .HasColumnName("category");
+                    b.Property<int?>("BusinessId")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("business_id");
 
                     b.Property<string>("Code")
                         .IsRequired()
@@ -269,7 +409,14 @@ namespace LabelService.Server.Data.Migrations
                         .HasColumnType("TEXT")
                         .HasColumnName("updated_at");
 
+                    b.Property<string>("UpdatedBy")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("updated_by");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("BusinessId");
 
                     b.HasIndex("Code")
                         .IsUnique();
@@ -288,6 +435,11 @@ namespace LabelService.Server.Data.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT")
                         .HasColumnName("content_json");
+
+                    b.Property<string>("Note")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("note");
 
                     b.Property<DateTime?>("PublishedAt")
                         .HasColumnType("TEXT")
@@ -321,6 +473,99 @@ namespace LabelService.Server.Data.Migrations
                     b.ToTable("label_template_version", (string)null);
                 });
 
+            modelBuilder.Entity("LabelService.Server.Data.UserRecord", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Account")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("account");
+
+                    b.Property<bool>("AllBusinesses")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("all_businesses");
+
+                    b.Property<string>("BusinessIds")
+                        .IsRequired()
+                        .HasMaxLength(1024)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("business_ids");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("created_at");
+
+                    b.Property<int>("FailedLogins")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("failed_logins");
+
+                    b.Property<DateTime?>("LastLoginAt")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("last_login_at");
+
+                    b.Property<DateTime?>("LockedUntil")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("locked_until");
+
+                    b.Property<bool>("MustChangePassword")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("must_change_password");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("name");
+
+                    b.Property<string>("PasswordHash")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("password_hash");
+
+                    b.Property<string>("Phone")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("phone");
+
+                    b.Property<int>("RoleId")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("role_id");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("status");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Account")
+                        .IsUnique();
+
+                    b.HasIndex("RoleId");
+
+                    b.ToTable("app_user", (string)null);
+                });
+
+            modelBuilder.Entity("LabelService.Server.Data.TemplateRecord", b =>
+                {
+                    b.HasOne("LabelService.Server.Data.BusinessRecord", null)
+                        .WithMany()
+                        .HasForeignKey("BusinessId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
             modelBuilder.Entity("LabelService.Server.Data.TemplateVersionRecord", b =>
                 {
                     b.HasOne("LabelService.Server.Data.TemplateRecord", "Template")
@@ -330,6 +575,15 @@ namespace LabelService.Server.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("Template");
+                });
+
+            modelBuilder.Entity("LabelService.Server.Data.UserRecord", b =>
+                {
+                    b.HasOne("LabelService.Server.Data.RoleRecord", null)
+                        .WithMany()
+                        .HasForeignKey("RoleId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("LabelService.Server.Data.TemplateRecord", b =>

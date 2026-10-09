@@ -65,6 +65,40 @@ internal sealed class DbTemplateStore : ITemplateStore
     }
 
     /// <summary>
+    /// 模板换了业务分组：更新全部已发布版本的分组，调用方权限立即按新分组判断。
+    /// </summary>
+    public void SetBusiness(string code, int? businessId)
+    {
+        lock (gate)
+        {
+            if (!templates.TryGetValue(code, out var versions))
+            {
+                return;
+            }
+
+            var next = new Dictionary<string, TemplateVersions>(templates, StringComparer.Ordinal)
+            {
+                [code] = TemplateVersions.From(versions.All.Values.Select(item => item with { BusinessId = businessId })),
+            };
+            templates = next.ToFrozenDictionary(StringComparer.Ordinal);
+        }
+    }
+
+    /// <summary>
+    /// 模板删除了：开放接口立即不能再用。
+    /// </summary>
+    public void Remove(string code)
+    {
+        lock (gate)
+        {
+            if (templates.ContainsKey(code))
+            {
+                templates = templates.Where(item => item.Key != code).ToFrozenDictionary(StringComparer.Ordinal);
+            }
+        }
+    }
+
+    /// <summary>
     /// 一个模板的全部已发布版本。
     /// </summary>
     private sealed record TemplateVersions(PublishedTemplate Latest, FrozenDictionary<int, PublishedTemplate> All)

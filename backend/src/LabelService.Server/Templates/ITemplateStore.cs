@@ -23,4 +23,5 @@ internal interface ITemplateStore
 /// </summary>
 /// <param name="Template">模板内容。</param>
 /// <param name="Version">版本号，从 1 开始。</param>
-internal sealed record PublishedTemplate(LabelTemplate Template, int Version);
+/// <param name="BusinessId">模板所属的业务分组；调用方按业务分组授权（ADR 0006）。文件模板为 null。</param>
+internal sealed record PublishedTemplate(LabelTemplate Template, int Version, int? BusinessId = null);
