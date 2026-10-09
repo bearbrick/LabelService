@@ -885,6 +885,7 @@ X-Api-Key: ********
             <tr><td>400</td><td><code>IMAGE_INVALID</code></td><td>图片解码失败或超过 1MB</td></tr>
             <tr><td>413</td><td><code>BATCH_TOO_LARGE</code></td><td>超过单次张数上限</td></tr>
             <tr><td>500</td><td><code>RENDER_FAILED</code></td><td>渲染内部错误，凭 traceId 查日志</td></tr>
+            <tr><td>503</td><td><code>SERVICE_UNAVAILABLE</code></td><td>服务繁忙：排队超过 2 秒，稍后重试（SDK 自动重试）</td></tr>
           </tbody>
         </table></div>
       </section>

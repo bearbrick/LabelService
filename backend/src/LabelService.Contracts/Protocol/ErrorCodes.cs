@@ -53,6 +53,9 @@ public static class ErrorCodes
     /// <summary>500：渲染内部错误，凭 traceId 查日志。</summary>
     public const string RenderFailed = "RENDER_FAILED";
 
+    /// <summary>503：服务繁忙，排队等渲染超过上限（默认 2 秒），带 Retry-After，稍后重试。SDK 收到 503 自动重试。</summary>
+    public const string ServiceUnavailable = "SERVICE_UNAVAILABLE";
+
     /// <summary>
     /// 全部错误码及其 HTTP 状态码。
     /// </summary>
@@ -76,5 +79,6 @@ public static class ErrorCodes
         [ImageInvalid] = 400,
         [BatchTooLarge] = 413,
         [RenderFailed] = 500,
+        [ServiceUnavailable] = 503,
     };
 }

@@ -129,7 +129,8 @@ PDF：矢量输出，一张标签每份一页；页面尺寸是模板的 mm 尺�
 | POST | `/api/v1/render/batch` | 批量生成，返回合并文件或 ZIP | 可用 |
 | GET | `/api/v1/templates/{code}/schema` | 最新发布版本的字段定义和样例 | 可用 |
 | POST | `/api/v1/preview` | 设计器用：未保存的模板 + 样例数据 → PNG（需要登录） | 返回 501：预览实现在管理接口 `POST /api/admin/preview`（ADR 0007，提议中，采纳后删掉这一行） |
-| GET | `/health` | 存活检查 | 可用；就绪检查见 T-017 |
+| GET | `/health` | 存活检查 | 可用 |
+| GET | `/health/ready` | 就绪检查：启动预热完成前 503，完成后 200 | 可用（T-017） |
 
 ### 单张请求
 
@@ -206,8 +207,9 @@ PDF：矢量输出，一张标签每份一页；页面尺寸是模板的 mm 尺�
 | 400 | `IMAGE_INVALID` | 图片解码失败或超过 1 MB |
 | 413 | `BATCH_TOO_LARGE` | 单次总张数超过上限 |
 | 500 | `RENDER_FAILED` | 渲染内部错误，凭 traceId 查日志 |
+| 503 | `SERVICE_UNAVAILABLE` | 服务繁忙：排队等渲染超过上限（默认 2 秒），带 `Retry-After: 1`，稍后重试（T-017） |
 
-只在 SDK 里产生的错误码：
+SDK 里产生的错误码（`SERVICE_UNAVAILABLE` 服务端也会返回）：
 
 | code | 自动重试 | 说明 |
 | --- | --- | --- |

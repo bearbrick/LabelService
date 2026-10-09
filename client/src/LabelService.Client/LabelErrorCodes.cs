@@ -56,7 +56,7 @@ public static class LabelErrorCodes
     /// <summary>客户端：超过 <see cref="LabelServiceClientOptions.Timeout"/>，已自动重试。</summary>
     public const string Timeout = "TIMEOUT";
 
-    /// <summary>客户端：服务返回 502、503、504，已自动重试。</summary>
+    /// <summary>服务返回 502、503、504，已自动重试（服务端排队超时也返回这个码和 503）。</summary>
     public const string ServiceUnavailable = "SERVICE_UNAVAILABLE";
 
     /// <summary>客户端：服务返回了无法识别的响应（如代理返回的 HTML 错误页）。</summary>
