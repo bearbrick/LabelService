@@ -1,7 +1,7 @@
 # T-012 WinForms 演示程序完整版
 
-状态：待认领
-负责人：—
+状态：进行中
+负责人：Claude 2026-10-10
 里程碑：M2
 依赖：T-011（SDK 公开 API 稳定）
 设计书：§11 调用演示程序；原型 docs/prototypes/label-sdk-demo-prototype.html
