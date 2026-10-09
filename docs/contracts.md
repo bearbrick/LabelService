@@ -69,7 +69,7 @@
 | `type` | 专有属性 | 渲染进度 |
 | --- | --- | --- |
 | `text` | `content`；`style`（见下） | 已实现 |
-| `barcode` | `symbology`（默认 code128）、`value`、`align`（默认 left）、`showText`（默认 true）、`textPosition`（bottom / top）、`textStyle`、`minModuleDots`（默认 2）、`quietZone` | T-002 |
+| `barcode` | `symbology`（默认 code128）、`value`、`align`（默认 left）、`showText`（默认 true）、`textPosition`（bottom / top）、`textStyle`、`minModuleDots`（默认 2）、`quietZone` | 已实现 |
 | `qrcode` | `symbology`（qr / datamatrix / pdf417，默认 qr）、`value`、`ecLevel`（L / M / Q / H，默认 M，仅 QR）、`quietZone` | T-003 |
 | `image` | `src`（`asset:素材ID` 或 `{{字段}}`）、`fit`（contain / cover / stretch，默认 contain）、`mono` | T-004 |
 | `icon` | `icon`（图标库路径，如 `gb191/fragile`）、`color` | T-004 |
@@ -86,6 +86,14 @@
 - 行高 = 字号 × `lineHeight`，文字在行内垂直居中；`letterSpacing` 加在相邻两个字之间。
 - 有内容被裁掉时给 `TEXT_CLIPPED` 警告；字体不存在时降级到思源黑体，给 `FONT_FALLBACK` 警告。
 - 字体名比较时忽略大小写、空格、连字符、下划线；`SourceHanSansSC` 也认 Noto Sans SC（同一款字体），`SourceHanSerifSC` 同理。
+
+一维码：
+
+- 模块宽度 = floor((框宽 − 2 × `quietZone`) 的打印点数 ÷ 模块数)，每条、每个空都是整数个点；小于 `minModuleDots` 返回 `BARCODE_TOO_DENSE`，错误消息里给出需要的最小宽度。
+- EAN-13、EAN-8、UPC-A、ITF-14 可以少写最后一位，自动补校验位；写全时核对校验位。内容不符合码制返回 `BARCODE_INVALID`。
+- GS1-128 的 `value` 写成 `(应用标识符)数据` 的形式，如 `(01)06901234567892(10)ABC`；开头自动加 FNC1，变长数据后面自动加分隔符，人眼可读文字保留括号。
+- 人眼可读文字：字号默认 8pt，占“字号 × 1.2”的高度，和条之间隔 0.12 个字号，在条码下方（`textPosition: top` 时在上方）居中；EAN、UPC 显示补上校验位后的完整号码。
+- `rotation` 只能是 0、90、180、270，发布模板时拦截其他角度；渲染时按最近的直角处理。
 
 `stroke`：`width`（mm，默认 0.3）、`dash`（实段、空段长度 mm，如 `[1, 0.5]`；不设为实线）、`color`。
 
