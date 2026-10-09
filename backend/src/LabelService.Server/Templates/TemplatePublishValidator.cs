@@ -82,9 +82,19 @@ internal sealed partial class TemplatePublishValidator(ILabelRenderer renderer)
         return new PublishCheck(errors, warnings, renderMs);
     }
 
-    private static void CheckStatic(LabelTemplate template, List<string> errors, List<string> warnings)
+    /// <summary>
+    /// 服务端预览前的检查：和发布一样的静态规则，但不要求模板编码合法（未保存的模板也能预览）。
+    /// </summary>
+    public static IReadOnlyList<string> PreviewErrors(LabelTemplate template)
     {
-        if (!IsValidCode(template.Code))
+        var errors = new List<string>();
+        CheckStatic(template, errors, [], checkCode: false);
+        return errors;
+    }
+
+    private static void CheckStatic(LabelTemplate template, List<string> errors, List<string> warnings, bool checkCode = true)
+    {
+        if (checkCode && !IsValidCode(template.Code))
         {
             errors.Add($"模板编码“{template.Code}”不合法：要以字母开头，只含字母、数字、下划线、连字符，最长 64 个字符");
         }

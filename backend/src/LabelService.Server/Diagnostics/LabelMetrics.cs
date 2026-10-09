@@ -83,4 +83,20 @@ internal sealed class LabelMetrics
             labelsGenerated.Add(labelCount, new("template", templateCode), new("format", format));
         }
     }
+
+    /// <summary>
+    /// 设计器的服务端预览（管理接口）结束：只记请求数和总耗时，endpoint 维度是 preview；
+    /// 不记阶段耗时和生成张数，开放接口的指标不受影响（T-016）。
+    /// </summary>
+    public void PreviewFinished(string templateCode, int dpi, string result, double totalMs)
+    {
+        requests.Add(1, new("endpoint", "preview"), new("client", "designer"), new("result", result));
+        renderDuration.Record(
+            totalMs,
+            new("endpoint", "preview"),
+            new("template", templateCode),
+            new("format", "png"),
+            new("dpi", dpi),
+            new("result", result));
+    }
 }

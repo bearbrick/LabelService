@@ -398,6 +398,7 @@ internal static class AdminChecks
             using var http = factory.CreateClient();
             var admin = await AdminAccountChecks.RunAsync(http, check);
             await AdminResourceChecks.RunAsync(http, admin, check);
+            await PreviewChecks.RunAsync(backendRoot, http, admin, check);
         }
         finally
         {

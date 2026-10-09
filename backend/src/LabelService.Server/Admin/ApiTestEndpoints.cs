@@ -97,6 +97,7 @@ internal static class AdminEndpoints
         ClientEndpoints.Map(api);
         LogEndpoints.Map(api);
         ApiTestEndpoints.Map(api);
+        PreviewEndpoints.Map(api);
         return app;
     }
 
