@@ -1,6 +1,8 @@
 using System.Diagnostics.CodeAnalysis;
 using LabelService.Contracts.Templates;
 
+using LabelService.Rendering.Diagnostics;
+
 namespace LabelService.Server.Templates;
 
 /// <summary>
@@ -21,6 +23,14 @@ internal interface ITemplateStore
     /// 每个模板的最新发布版本（启动预热用）。
     /// </summary>
     IReadOnlyList<PublishedTemplate> LatestPublished();
+
+    /// <summary>
+    /// 查找次数：找到算命中，模板或版本不存在算未命中（label_cache_hit_ratio 的“模板”一项）。
+    /// </summary>
+    CacheCounter Lookups
+    {
+        get;
+    }
 }
 
 /// <summary>

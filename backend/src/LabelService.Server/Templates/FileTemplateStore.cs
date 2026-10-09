@@ -2,6 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using LabelService.Contracts;
 using LabelService.Contracts.Templates;
+using LabelService.Rendering.Diagnostics;
 using Microsoft.Extensions.Options;
 
 namespace LabelService.Server.Templates;
@@ -51,12 +52,17 @@ internal sealed class FileTemplateStore : ITemplateStore
     {
         if (templates.TryGetValue(templateCode, out template) && (version is null || version == template.Version))
         {
+            Lookups.Hit();
             return true;
         }
 
+        Lookups.Miss();
         template = null;
         return false;
     }
+
+    /// <inheritdoc />
+    public CacheCounter Lookups { get; } = new();
 
     /// <inheritdoc />
     public IReadOnlyList<PublishedTemplate> LatestPublished() => templates.Values.ToArray();

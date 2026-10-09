@@ -88,7 +88,7 @@
 | POST | `/clients/{id}/reset-key` | api.manage | → `{ client, apiKey }`，旧 Key 立即失效 |
 | GET | `/call-logs` | log.view | 参数 `from、to、templateCode、clientId、status、q（链路 ID / X-Request-Id / 模板编码 / 错误码）、beforeTime、beforeId、pageSize`；按时间倒序，翻页用上一页最后一条的 `createdAt`、`id` |
 | GET | `/op-logs` | log.view | 参数 `from、to、userId、type、q、beforeId、pageSize` |
-| GET | `/dashboard` | tpl.view | `templates{total,published,changed,neverPublished}`；有 log.view 时再给 `today、days[14]、topTemplates、recentOps` |
+| GET | `/dashboard` | tpl.view | `templates{total,published,changed,neverPublished}`；有 log.view 时再给 `today{total,errors,slow,labels,averageMs,p95Ms}`（p95Ms 是今日单张成功调用的 P95）、`days[14]`、`topTemplates`、`slowTemplates`（近 7 天单张平均耗时最高的 5 个）、`recentOps` |
 | POST | `/api-test/render` | api.test | 请求体和开放接口单张生成一样，用已发布的模板试生成，返回文件；不写调用日志 |
 | POST | `/preview` | tpl.view | 服务端预览（ADR 0007）：`{ template, data?, dpi?, mono? }`，模板不用先保存，不传 data 时用字段样例值 → PNG（带 `X-Label-Dpi`、`Server-Timing`、`X-Label-Warnings`）；模板 JSON 不合法时 400，`message` 写 JSON 路径和行；结构问题（元素 ID 重复等）逐条列在 `details` |
 
