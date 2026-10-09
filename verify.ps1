@@ -90,6 +90,7 @@ try {
                 Invoke-Step '前端：安装依赖' { npm ci }
             }
 
+            Invoke-Step '前端：检查程序' { npm run check }
             Invoke-Step '前端：类型检查和打包' { npm run build }
         }
         finally {

@@ -1,76 +1,114 @@
 <script setup lang="ts">
 /**
- * 设计器骨架：左侧元素库和字段，中间画布，右侧属性。
- * 目前加载示例模板，可以选中、拖动元素、改坐标；保存、新增元素等见 docs/tasks/T-013、T-014。
+ * 应用外壳：顶栏（新建、打开、导出模板 JSON）和设计器。
+ * 模板库、登录、保存到服务端见 T-014；在那之前模板以 JSON 文件导入导出，草稿自动保存在本机浏览器。
  */
-import { computed, reactive, ref } from 'vue'
-import DesignerCanvas from './components/DesignerCanvas.vue'
-import sample from './samples/box-label.json'
-import { ELEMENT_LABELS, ELEMENT_TYPES } from './model/template'
-import type { LabelTemplate } from './model/template'
-import { roundMm } from './model/units'
+import { onBeforeUnmount, onMounted, ref } from 'vue'
+import AppIcon from './components/AppIcon.vue'
+import DesignerView from './components/DesignerView.vue'
+import { CANVAS_PRESETS } from './model/presets.ts'
+import { designer, exportTemplate, importTemplate, newTemplate, openSample, saveDraft, toast } from './stores/designer.ts'
 
-const template = reactive(structuredClone(sample) as unknown as LabelTemplate)
-const selectedId = ref<string | null>(null)
-const scale = ref(6)
+const menuOpen = ref(false)
+const fileInput = ref<HTMLInputElement>()
 
-const selected = computed(() => template.elements.find((element) => element.id === selectedId.value) ?? null)
+function choose(action: () => void): void {
+  menuOpen.value = false
+  action()
+}
 
-function move(id: string, x: number, y: number) {
-  const element = template.elements.find((item) => item.id === id)
-  if (element) {
-    element.x = x
-    element.y = y
+function confirmReplace(): boolean {
+  return !designer.template.elements.length || confirm('当前草稿会被替换。需要保留的话先“导出 JSON”。继续吗？')
+}
+
+function create(width: number, height: number, name: string): void {
+  if (confirmReplace()) newTemplate(width, height, name)
+}
+
+function openFile(): void {
+  if (confirmReplace()) fileInput.value?.click()
+}
+
+async function onFile(event: Event): Promise<void> {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = ''
+  if (!file) return
+  try {
+    importTemplate(await file.text())
+    toast(`已打开 ${file.name}`)
+  } catch (error) {
+    toast(`打开失败：${(error as Error).message}`, true)
   }
 }
 
-function setNumber(key: 'x' | 'y' | 'width' | 'height' | 'rotation', value: string) {
-  const number = Number(value)
-  if (selected.value && Number.isFinite(number)) selected.value[key] = key === 'rotation' ? number : roundMm(number)
+function download(): void {
+  try {
+    const json = exportTemplate()
+    const link = document.createElement('a')
+    link.href = URL.createObjectURL(new Blob([json], { type: 'application/json' }))
+    link.download = `${designer.template.code || 'label-template'}.json`
+    link.click()
+    URL.revokeObjectURL(link.href)
+    toast('已导出模板 JSON')
+  } catch (error) {
+    toast(`不能导出：${(error as Error).message}`, true)
+  }
 }
+
+function onDocumentClick(): void {
+  menuOpen.value = false
+}
+
+function onBeforeUnload(event: BeforeUnloadEvent): void {
+  if (!designer.dirty) return
+  saveDraft()
+  event.preventDefault()
+}
+
+onMounted(() => {
+  document.addEventListener('click', onDocumentClick)
+  window.addEventListener('beforeunload', onBeforeUnload)
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('click', onDocumentClick)
+  window.removeEventListener('beforeunload', onBeforeUnload)
+})
 </script>
 
 <template>
-  <div class="shell">
-    <header class="topbar">
-      <strong>标签设计器</strong>
-      <span class="muted">{{ template.name }} · {{ template.code }} · {{ template.page.width }}×{{ template.page.height }} mm</span>
-      <span class="spacer" />
-      <label class="muted">缩放
-        <input v-model.number="scale" type="range" min="2" max="16" step="1" />
-        {{ Math.round((scale / 6) * 100) }}%
-      </label>
-    </header>
-
-    <aside class="panel left">
-      <h3>元素库</h3>
-      <ul class="palette">
-        <li v-for="type in ELEMENT_TYPES" :key="type" title="拖入画布（T-013）">{{ ELEMENT_LABELS[type] }}</li>
-      </ul>
-      <h3>数据字段</h3>
-      <ul class="fields">
-        <li v-for="field in template.fields" :key="field.key">
-          <code>{{ field.key }}</code><span class="muted">{{ field.name }} · {{ field.type }}</span>
-        </li>
-      </ul>
-    </aside>
-
-    <main class="canvas">
-      <DesignerCanvas :template="template" :scale="scale" :selected-id="selectedId" @select="selectedId = $event" @move="move" />
-    </main>
-
-    <aside class="panel right">
-      <h3>属性</h3>
-      <template v-if="selected">
-        <p class="muted">{{ ELEMENT_LABELS[selected.type] }} · {{ selected.id }}</p>
-        <div class="grid">
-          <label v-for="key in (['x', 'y', 'width', 'height', 'rotation'] as const)" :key="key">
-            {{ { x: 'X', y: 'Y', width: '宽', height: '高', rotation: '旋转' }[key] }}
-            <input :value="selected[key] ?? 0" type="number" step="0.1" @change="setNumber(key, ($event.target as HTMLInputElement).value)" />
-          </label>
-        </div>
-      </template>
-      <p v-else class="muted">未选中元素。模板 {{ template.page.width }}×{{ template.page.height }} mm，{{ template.page.dpi ?? 300 }} dpi。</p>
-    </aside>
+  <header class="topbar">
+    <div class="brand"><AppIcon name="tag" />标签设计器</div>
+    <span class="header-divider"></span>
+    <div class="doc-title">
+      <b>{{ designer.template.name || '未命名模板' }}</b>
+      <small>{{ designer.template.code }}</small>
+      <small>{{ designer.template.page.width }}×{{ designer.template.page.height }} mm</small>
+    </div>
+    <span class="spacer"></span>
+    <span class="saved">{{ designer.dirty ? '正在保存草稿…' : designer.savedAt ? `草稿已保存 ${designer.savedAt}` : '' }}</span>
+    <div style="position: relative">
+      <button class="top-btn" type="button" :class="{ on: menuOpen }" aria-haspopup="menu" :aria-expanded="menuOpen" @click.stop="menuOpen = !menuOpen">
+        <AppIcon name="folderOpen" small />模板<AppIcon name="chevD" small />
+      </button>
+      <div v-if="menuOpen" class="menu" role="menu" @click.stop>
+        <div class="hint" style="padding: 4px 10px">新建（选择画布）</div>
+        <button v-for="preset in CANVAS_PRESETS" :key="preset.name" class="menu-item" type="button" role="menuitem" @click="choose(() => create(preset.width, preset.height, `新模板 ${preset.name}`))">
+          <AppIcon name="plus" small />{{ preset.name }}<small>{{ preset.width }}×{{ preset.height }} mm</small>
+        </button>
+        <div class="menu-sep"></div>
+        <button class="menu-item" type="button" role="menuitem" @click="choose(openFile)"><AppIcon name="upload" small />打开模板 JSON…</button>
+        <button class="menu-item" type="button" role="menuitem" @click="choose(() => confirmReplace() && openSample())"><AppIcon name="tag" small />打开示例：成品箱标</button>
+      </div>
+    </div>
+    <button class="top-btn" type="button" @click="download"><AppIcon name="download" small />导出 JSON</button>
+    <input ref="fileInput" type="file" accept="application/json,.json" hidden @change="onFile" />
+  </header>
+  <DesignerView />
+  <div class="toasts" aria-live="polite">
+    <div v-for="item in designer.toasts" :key="item.id" class="toast" :class="{ err: item.error }">
+      <AppIcon :name="item.error ? 'alert' : 'check'" small />{{ item.text }}
+    </div>
   </div>
 </template>
