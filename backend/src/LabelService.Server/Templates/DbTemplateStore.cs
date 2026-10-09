@@ -1,5 +1,6 @@
 using System.Collections.Frozen;
 using System.Diagnostics.CodeAnalysis;
+using LabelService.Rendering.Diagnostics;
 
 namespace LabelService.Server.Templates;
 
@@ -26,8 +27,18 @@ internal sealed class DbTemplateStore : ITemplateStore
         template = templates.TryGetValue(templateCode, out var versions)
             ? version is null ? versions.Latest : versions.All.GetValueOrDefault(version.Value)
             : null;
-        return template is not null;
+        if (template is null)
+        {
+            Lookups.Miss();
+            return false;
+        }
+
+        Lookups.Hit();
+        return true;
     }
+
+    /// <inheritdoc />
+    public CacheCounter Lookups { get; } = new();
 
     /// <inheritdoc />
     public IReadOnlyList<PublishedTemplate> LatestPublished() => templates.Values.Select(versions => versions.Latest).ToArray();
