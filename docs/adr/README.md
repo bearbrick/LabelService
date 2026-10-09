@@ -41,3 +41,4 @@
 | [0002](0002-client-sdk-standalone.md) | 客户端 SDK 不引用契约程序集 | 已采纳 |
 | [0003](0003-sqlite-single-instance.md) | 初版数据库用 SQLite，服务单实例部署 | 已采纳 |
 | [0004](0004-three-parts.md) | 仓库分成前端、后端、调用端三个独立部分 | 已采纳 |
+| [0005](0005-sheet-layout.md) | A4 拼版用独立的“版式”，模板嵌套放到二期 | 已采纳 |

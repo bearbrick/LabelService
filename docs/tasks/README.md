@@ -34,7 +34,10 @@ Select-String -Path docs/tasks/T-*.md -Pattern '^(状态|负责人)：'
 | [T-015](T-015-benchmarks-load-tests.md) | 基准门禁与压测 | 后端 | M4 | T-001～T-006 | tests/LabelService.Benchmarks、tests/load |
 | [T-016](T-016-preview-and-fonts.md) | 服务端预览与字体下载 | 后端 + 前端 | M3 | T-001 | backend：Server/Endpoints；frontend：src/ |
 | [T-017](T-017-warmup-concurrency-deploy.md) | 预热、并发控制与部署 | 后端 | M4 | T-008 | Server/Hosting、deploy |
+| [T-018](T-018-sheet-layout.md) | A4 拼版：版式与拼版渲染 | 后端 + 调用端 | M3 | T-005（存库依赖 T-008） | Contracts、Rendering、Server；client：src/LabelService.Client |
+| [T-019](T-019-sheet-designer.md) | 拼版设计器：拖拽单张标签到 A4 上排版 | 前端 | M3 | T-013、T-018 | src/ |
+| [T-020](T-020-embedded-template.md) | 模板嵌套 | 后端 + 前端 | 二期 | T-008、T-013 | Contracts、Server；frontend：src/ |
 
-“主要目录”是相对于对应部分（`frontend/`、`backend/`、`client/`）的路径；后端的 Rendering、Server 指 `backend/src/LabelService.Rendering`、`backend/src/LabelService.Server`。跨两个部分的任务（T-014、T-016）建议拆成前端、后端两个子任务分别认领。
+“主要目录”是相对于对应部分（`frontend/`、`backend/`、`client/`）的路径；后端的 Rendering、Server 指 `backend/src/LabelService.Rendering`、`backend/src/LabelService.Server`。跨两个部分的任务（T-014、T-016、T-018、T-020）建议按部分拆成子任务分别认领；T-018 是契约变更，后端和调用端的契约副本要在同一个提交里改齐。
 
 新增任务：复制 [_template.md](_template.md)，编号取当前最大值加 1，并在上表追加一行（只追加，不改别的行）。

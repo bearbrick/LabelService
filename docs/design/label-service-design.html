@@ -141,7 +141,7 @@ footer { margin-top: 48px; font-size: 13px; color: var(--ink-3); }
 
 <div class="wrap">
   <header>
-    <div class="eyebrow">设计说明书 · V0.6</div>
+    <div class="eyebrow">设计说明书 · V0.7</div>
     <h1>标签生成服务</h1>
     <p class="lede">一个独立部署的 Web 服务。业务人员在网页上拖拽设计标签模板，业务系统用“模板编码 + 数据 JSON”调用接口，拿回 PDF、PNG 或 ZPL 文件。</p>
     <dl class="meta">
@@ -205,6 +205,7 @@ footer { margin-top: 48px; font-size: 13px; color: var(--ink-3); }
             <ul>
               <li>网页设计器：7 种元素（文本、一维码、二维码、图片、图标、线、矩形），拖拽、缩放、旋转、吸附对齐、撤销重做</li>
               <li>画布预设维护（A4、100×60mm 等）</li>
+              <li>A4 拼版：把做好的单张标签拖到 A4 纸上排版，保存成“版式”；同一个模板既能单张打，也能按版式拼在 A4 上打</li>
               <li>字段定义（key + 类型），自动生成 JSON 样例</li>
               <li>模板版本：草稿和发布分开，接口只用已发布的版本</li>
               <li>开放接口：单张、批量（合并成一个文件或打包 ZIP），输出 PDF、PNG、ZPL（位图模式）</li>
@@ -217,7 +218,7 @@ footer { margin-top: 48px; font-size: 13px; color: var(--ink-3); }
             <ul>
               <li>送打印机：服务只返回文件，打印由调用方负责</li>
               <li>发号：序列号、流水号由调用方生成后传入，服务不保存计数，避免重号</li>
-              <li>A4 拼版（一页排多张不干胶标签）</li>
+              <li>模板里嵌套模板（把一个模板作为元素放进另一个模板）</li>
               <li>表格元素、按条件显示元素</li>
               <li>ZPL 原生指令、TSPL 输出</li>
               <li>异步批量任务、多租户</li>
@@ -313,6 +314,7 @@ footer { margin-top: 48px; font-size: 13px; color: var(--ink-3); }
           <thead><tr><th>概念</th><th>说明</th></tr></thead>
           <tbody>
             <tr><td>画布预设</td><td>常用纸张尺寸，如 A4（210×297）、100×100、100×60、80×50、60×40、50×30mm，管理员可以增删。选中预设后把宽高写进模板，之后改预设不影响已有模板</td></tr>
+            <tr><td>拼版版式</td><td>A4 等纸张上怎么排多张标签：纸张尺寸、格子尺寸、每个格子的位置和填充顺序、打印偏移。按格子尺寸和模板匹配，同一个模板可以单张打，也可以按版式拼在一张纸上打</td></tr>
             <tr><td>模板</td><td>一种标签，如“成品箱标”。模板编码 <code>templateCode</code> 全局唯一，就是接口里的 key</td></tr>
             <tr><td>模板版本</td><td>编辑产生草稿，发布生成新版本号。接口默认用最新发布版本，也可以指定版本。同一模板同一时间最多一个草稿</td></tr>
             <tr><td>元素</td><td>画布上的一个对象：文本、一维码、二维码、图片、图标、线、矩形</td></tr>
@@ -326,11 +328,12 @@ footer { margin-top: 48px; font-size: 13px; color: var(--ink-3); }
           <thead><tr><th>表</th><th>主要字段</th><th>说明</th></tr></thead>
           <tbody>
             <tr><td><code>canvas_preset</code></td><td>id, name, width_mm, height_mm, sort, enabled</td><td>画布预设</td></tr>
+            <tr><td><code>sheet_layout</code></td><td>id, code, name, paper_width_mm, paper_height_mm, slot_width_mm, slot_height_mm, slots_json, offset_x_mm, offset_y_mm, enabled, updated_at</td><td>slots_json 存每个格子的位置和旋转，数组顺序就是填充顺序；版式不分版本，修改立即生效</td></tr>
             <tr><td><code>label_template</code></td><td>id, code, name, category, status, latest_version, created_by, updated_at</td><td>code 唯一索引</td></tr>
             <tr><td><code>label_template_version</code></td><td>id, template_id, version_no, content_json, status, published_by, published_at</td><td>status：draft / published；content_json 存整份模板 JSON</td></tr>
             <tr><td><code>asset</code></td><td>id, kind, name, file_path, sha256, size, created_at</td><td>kind：image / icon / font。文件放文件存储，表里只存元数据</td></tr>
             <tr><td><code>api_client</code></td><td>id, name, api_key_hash, allowed_templates, enabled, created_at</td><td>每个调用系统一个 Key</td></tr>
-            <tr><td><code>render_log</code></td><td>id, request_id, client_id, template_code, version_no, format, item_count, duration_ms, stage_ms_json, is_slow, status, error_code, created_at</td><td>不存业务数据全文</td></tr>
+            <tr><td><code>render_log</code></td><td>id, request_id, client_id, template_code, version_no, format, layout_code, item_count, duration_ms, stage_ms_json, is_slow, status, error_code, created_at</td><td>不存业务数据全文</td></tr>
           </tbody>
         </table></div>
         <p>初版用 SQLite：<code>render_log</code> 放在单独的 <code>label-log.db</code>，其余表放在 <code>label.db</code>，日志批量写入不会和后台保存模板抢写锁。调用日志默认保留 180 天，每天用 <code>VACUUM INTO</code> 备份一次。数据目录不能放网络共享盘。</p>
@@ -450,6 +453,75 @@ footer { margin-top: 48px; font-size: 13px; color: var(--ink-3); }
           <li>条码：设计器用 bwip-js 预览，服务端用 ZXing.Net 生成，以服务端预览为准</li>
           <li>验收：同一模板，设计器和服务端 PNG 的元素位置偏差不超过 0.2mm</li>
         </ul>
+
+        <h3>A4 拼版</h3>
+        <p>同一个标签模板，既可以单张打（标签机），也可以拼在 A4 不干胶纸上打（激光打印机）。模板本身不变，拼版方式单独保存成“版式”，打印时选择用哪个版式。版式在拼版设计器里画：把已经做好的单张标签拖到纸上，像排模板里的元素一样对齐。</p>
+        <figure>
+          <div class="fig">
+            <svg viewBox="0 0 760 384" role="img" aria-labelledby="sheet-t">
+              <title id="sheet-t">拼版设计器：把单张标签拖到 A4 纸上排成格子，右边设置版式属性</title>
+              <defs><marker id="arr-s" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="d-head"/></marker></defs>
+              <text x="24" y="32" class="d-title">把单张标签拖到 A4 上排成格子，保存成版式</text>
+              <text x="24" y="50" class="d-note">A4 210×297 mm，成品箱标 100×50 mm，2 列 × 5 行共 10 张</text>
+              <rect x="24" y="64" width="176" height="300" rx="8" class="d-box"/>
+              <text x="40" y="88" class="d-name">已发布的模板</text>
+              <rect x="40" y="100" width="144" height="72" rx="2" class="d-paper"/>
+              <rect x="48" y="110" width="70" height="7" rx="1" class="d-lab-faint"/>
+              <rect x="48" y="124" width="56" height="5" rx="1" class="d-lab-faint"/>
+              <rect x="112" y="124" width="56" height="5" rx="1" class="d-lab-faint"/>
+              <rect x="48" y="140" width="80" height="20" rx="1" class="d-lab-faint"/>
+              <text x="40" y="190" class="d-sub">成品箱标 100×50</text>
+              <text x="40" y="208" class="d-note">只列出尺寸相同的模板</text>
+              <line x1="40" y1="224" x2="184" y2="224" class="d-rule"/>
+              <text x="40" y="248" class="d-name">自动排列</text>
+              <text x="40" y="270" class="d-sub">2 列 × 5 行，一键排满</text>
+              <text x="40" y="288" class="d-sub">再拖动微调</text>
+              <rect x="252" y="64" width="256" height="300" rx="8" class="d-group"/>
+              <rect x="283" y="74" width="198" height="280" rx="1" class="d-paper"/>
+              <rect x="288" y="96" width="94" height="47" class="d-paper"/><text x="293" y="108" class="d-note">1</text>
+              <rect x="382" y="96" width="94" height="47" class="d-paper"/><text x="387" y="108" class="d-note">2</text>
+              <rect x="288" y="143" width="94" height="47" class="d-paper"/><text x="293" y="155" class="d-note">3</text>
+              <rect x="382" y="143" width="94" height="47" class="d-paper"/><text x="387" y="155" class="d-note">4</text>
+              <rect x="288" y="190" width="94" height="47" class="d-paper"/><text x="293" y="202" class="d-note">5</text>
+              <rect x="382" y="190" width="94" height="47" class="d-paper"/><text x="387" y="202" class="d-note">6</text>
+              <rect x="288" y="237" width="94" height="47" class="d-paper"/><text x="293" y="249" class="d-note">7</text>
+              <rect x="382" y="237" width="94" height="47" class="d-paper"/><text x="387" y="249" class="d-note">8</text>
+              <rect x="288" y="284" width="94" height="47" class="d-paper"/><text x="293" y="296" class="d-note">9</text>
+              <rect x="382" y="284" width="94" height="47" class="d-dash"/><text x="387" y="296" class="d-note">10</text>
+              <rect x="390" y="292" width="94" height="47" class="d-sel"/>
+              <path d="M184 150C260 150 300 330 384 318" fill="none" stroke-dasharray="4 4" class="d-rule" marker-end="url(#arr-s)"/>
+              <line x1="382" y1="88" x2="382" y2="346" stroke-dasharray="2 3" class="d-rule"/>
+              <text x="380" y="378" text-anchor="middle" class="d-note">吸附网格 · 对齐参考线 · 等间距分布</text>
+              <rect x="536" y="64" width="200" height="300" rx="8" class="d-box"/>
+              <text x="552" y="88" class="d-name">版式属性</text>
+              <text x="552" y="112" class="d-sub">纸张  A4 210×297 mm</text>
+              <text x="552" y="132" class="d-sub">格子  100×50 mm × 10</text>
+              <text x="552" y="152" class="d-sub">页边距  上 23.5  左 5 mm</text>
+              <text x="552" y="172" class="d-sub">间距  0 mm</text>
+              <text x="552" y="192" class="d-sub">填充顺序  先行后列</text>
+              <line x1="552" y1="208" x2="720" y2="208" class="d-rule"/>
+              <text x="552" y="232" class="d-name">打印校准</text>
+              <text x="552" y="254" class="d-sub">偏移  X 0.0  Y 0.0 mm</text>
+              <text x="552" y="274" class="d-sub">打印测试页</text>
+              <line x1="552" y1="290" x2="720" y2="290" class="d-rule"/>
+              <text x="552" y="314" class="d-note">格子越界或重叠时标红，</text>
+              <text x="552" y="332" class="d-note">不能保存</text>
+            </svg>
+          </div>
+          <figcaption>格子里显示模板的真实预览（样例值）。第 10 个格子正在拖入，竖虚线是对齐参考线。</figcaption>
+        </figure>
+        <dl class="kv">
+          <div><dt>新建版式</dt><dd>选纸张（A4、A5 或自定义），再选一个已发布的模板，格子尺寸取模板的尺寸</dd></div>
+          <div><dt>拖入</dt><dd>从左侧把模板拖到纸上，生成一个格子；可以拖多次</dd></div>
+          <div><dt>对齐</dt><dd>和模板设计器一样的网格吸附、对齐参考线、等间距分布；格子之间、格子和纸边都能对齐；方向键微调 0.1mm</dd></div>
+          <div><dt>自动排列</dt><dd>输入行数、列数、页边距、间距，一键排满，再手动微调</dd></div>
+          <div><dt>旋转</dt><dd>格子可以旋转 90°，竖着放能多排几张</dd></div>
+          <div><dt>填充顺序</dt><dd>格子上显示序号，可以按“先行后列”“先列后行”重新编号，也可以手动调整</dd></div>
+          <div><dt>检查</dt><dd>格子超出纸张或互相重叠时标红，不能保存</dd></div>
+          <div><dt>打印校准</dt><dd>打一张测试页（格子边框和中心十字），量出打印机的偏差，填写 X、Y 偏移</dd></div>
+          <div><dt>预览</dt><dd>用样例值预览，或上传一批数据预览多页效果</dd></div>
+        </dl>
+        <p>版式按格子尺寸和模板匹配：一个版式可以给所有同尺寸的模板用，模板详情页列出可用的版式。“把一个模板作为元素放进另一个模板”（模板嵌套）放到二期。</p>
       </section>
 
       <!-- 5 -->
@@ -654,6 +726,14 @@ footer { margin-top: 48px; font-size: 13px; color: var(--ink-3); }
         </table></div>
         <p>ZPL 用位图模式，是因为中文字体和图片不需要打印机支持，效果和 PNG 一致；代价是文件比原生指令大，传输稍慢。原生 ZPL 指令（<code>^FD</code>、<code>^BC</code>）放到二期。</p>
 
+        <h3>拼版渲染</h3>
+        <ul>
+          <li>按版式的格子顺序依次放标签：每个格子先把画布平移、旋转到格子位置，再按单张的方式排版和绘制；一页排满换下一页</li>
+          <li>只支持 PDF 和 PNG：PDF 一页对应一张纸，PNG 每页一张图（多页时打包 ZIP）。ZPL 面向热敏标签机，不支持拼版</li>
+          <li>模板里不随数据变化的内容（Logo、固定文字、边框）每页只计算一次，在各格子重复使用</li>
+          <li>整页加上版式的打印偏移；可以选择画出格子边框，在白纸上打印时当裁切线</li>
+        </ul>
+
         <h3>字体</h3>
         <ul>
           <li>服务启动时加载 <code>fonts/</code> 目录下的字体文件，按 fontFamily 名称匹配</li>
@@ -765,6 +845,23 @@ X-Api-Key: ********
           <li>输出顺序和 <code>items</code> 顺序一致</li>
         </ul>
 
+        <h3>拼版打印</h3>
+        <p>单张和批量接口都加两个可选参数。不传 <code>layout</code> 时和原来一样，一页一张标签。</p>
+<pre><code>{
+  "templateCode": "BOX_LABEL",
+  "format": "pdf",
+  "layout": "A4_100x50_2x5",
+  "startSlot": 3,
+  "common": { "partName": "电源适配器", "batchNo": "20261008-A" },
+  "items": [ { "data": { "boxNo": "C2610080001" } }, { "data": { "boxNo": "C2610080002" } } ]
+}</code></pre>
+        <ul>
+          <li><code>layout</code>：版式编码。版式不存在返回 <code>LAYOUT_NOT_FOUND</code>；模板尺寸和格子尺寸不一致返回 <code>LAYOUT_SIZE_MISMATCH</code>；格式只能是 pdf 或 png</li>
+          <li><code>startSlot</code>：第一页从第几个格子开始，默认 1，贴过一部分的不干胶纸可以接着用</li>
+          <li>单张接口的 <code>copies</code> 用来铺格子：<code>copies: 10</code> 就是一页 10 张相同的标签；用了版式时 PNG 也可以多份</li>
+          <li>响应头多一个 <code>X-Page-Count</code>（页数）；<code>X-Label-Count</code> 仍是标签张数，批量上限也按标签张数算</li>
+        </ul>
+
         <h3>错误返回</h3>
 <pre><code>{
   "code": "FIELD_REQUIRED",
@@ -778,6 +875,8 @@ X-Api-Key: ********
             <tr><td>401</td><td><code>UNAUTHORIZED</code></td><td>Key 缺失或无效</td></tr>
             <tr><td>403</td><td><code>TEMPLATE_FORBIDDEN</code></td><td>这个 Key 无权使用该模板</td></tr>
             <tr><td>404</td><td><code>TEMPLATE_NOT_FOUND</code></td><td>模板或版本不存在，或者还没有发布过</td></tr>
+            <tr><td>404</td><td><code>LAYOUT_NOT_FOUND</code></td><td>拼版版式不存在或已停用</td></tr>
+            <tr><td>400</td><td><code>LAYOUT_SIZE_MISMATCH</code></td><td>模板尺寸和版式的格子尺寸不一致</td></tr>
             <tr><td>400</td><td><code>INVALID_JSON</code>、<code>FORMAT_INVALID</code>、<code>DPI_INVALID</code>、<code>OUTPUT_INVALID</code>、<code>COPIES_INVALID</code></td><td>请求体不是合法 JSON，或格式、DPI、输出方式、份数的取值不对（PNG 单张只能 1 份）</td></tr>
             <tr><td>400</td><td><code>FIELD_REQUIRED</code></td><td>缺少必填字段</td></tr>
             <tr><td>400</td><td><code>FIELD_TYPE_INVALID</code></td><td>字段值的类型或格式不对</td></tr>
@@ -802,6 +901,7 @@ X-Api-Key: ********
             <tr><td><b>单张标签</b>（≤ 100×150 mm，≤ 300 dpi，PNG / ZPL / PDF）</td><td><b>P95 ≤ 100 ms</b>，P99 ≤ 200 ms</td><td>服务端处理时间：收到完整请求到写完最后一个字节。核心指标，必须达标</td></tr>
             <tr><td>单张标签，局域网内调用方实测</td><td>P95 ≤ 150 ms</td><td>包含网络往返。SDK 同时给出总耗时和服务端耗时，方便区分</td></tr>
             <tr><td>单张 A4 / A5 唛头（300 dpi）</td><td>P95 ≤ 250 ms</td><td>幅面大约是箱标的 5–10 倍，单独定预算</td></tr>
+            <tr><td>A4 拼版，一页不超过 24 张标签（PDF）</td><td>每页 P95 ≤ 250 ms</td><td>和 A4 唛头同一个预算；多页按页数线性增加</td></tr>
             <tr><td>批量 100 张，合并成 PDF 或 ZPL</td><td>≤ 3 s</td><td></td></tr>
             <tr><td>批量 500 张，合并成 PDF</td><td>≤ 10 s</td><td>上限 500 张，再多请拆批</td></tr>
             <tr><td>吞吐</td><td>4 核 8 GB 单实例 ≥ 60 次/秒</td><td>单张箱标 PNG；初版单实例，以后换 SQL Server 后可以加实例</td></tr>
@@ -930,9 +1030,9 @@ X-Api-Key: ********
           <tbody>
             <tr><td><code>LabelServiceClient</code></td><td>RenderAsync / Render、RenderBatchAsync / RenderBatch、GetSchemaAsync / GetSchema、CallCompleted 事件</td><td>入口类，实现 ILabelServiceClient，调用方写单元测试时可以替换</td></tr>
             <tr><td><code>LabelServiceClientOptions</code></td><td>BaseAddress、ApiKey、Timeout（默认 30 秒）、MaxRetries（默认 2）、RetryDelay（默认 0.5 秒）、MaxLabelsPerRequest（默认 500）、UserAgent</td><td>构造客户端时传入</td></tr>
-            <tr><td><code>RenderRequest</code></td><td>TemplateCode、Version、Format、Dpi、Mono、Copies、Data、Set(key, value)</td><td>单张请求，Set 可以链式调用</td></tr>
-            <tr><td><code>BatchRenderRequest</code></td><td>TemplateCode、Version、Format、Dpi、Output（Merge / Zip）、Common、Items、SetCommon()、AddItem()</td><td>批量请求，公共字段只传一次</td></tr>
-            <tr><td><code>LabelFile</code></td><td>Content、ContentType、FileName、Format、TemplateVersion、LabelCount、Dpi、TraceId、ServerDuration、ServerTiming、Warnings、Save()、SaveAsync()、OpenRead()、GetZplText()</td><td>生成结果，属性来自响应头</td></tr>
+            <tr><td><code>RenderRequest</code></td><td>TemplateCode、Version、Format、Dpi、Mono、Copies、Layout、StartSlot、Data、Set(key, value)</td><td>单张请求，Set 可以链式调用</td></tr>
+            <tr><td><code>BatchRenderRequest</code></td><td>TemplateCode、Version、Format、Dpi、Output（Merge / Zip）、Layout、StartSlot、Common、Items、SetCommon()、AddItem()</td><td>批量请求，公共字段只传一次</td></tr>
+            <tr><td><code>LabelFile</code></td><td>Content、ContentType、FileName、Format、TemplateVersion、LabelCount、PageCount、Dpi、TraceId、ServerDuration、ServerTiming、Warnings、Save()、SaveAsync()、OpenRead()、GetZplText()</td><td>生成结果，属性来自响应头</td></tr>
             <tr><td><code>TemplateSchema</code></td><td>TemplateCode、Name、Version、Page、Fields、Sample</td><td>字段定义，演示程序用它生成录入表格</td></tr>
             <tr><td><code>LabelServiceException</code></td><td>StatusCode、ErrorCode、Message、TraceId、Errors、IsTransient</td><td>服务端错误和网络错误都转成它</td></tr>
             <tr><td><code>LabelErrorCodes</code></td><td>FieldRequired、TemplateNotFound 等常量</td><td>和第 8 节的错误码一一对应</td></tr>
@@ -1126,7 +1226,7 @@ catch (LabelServiceException ex) when (ex.IsTransient)
       <!-- 12 -->
       <section id="plan">
         <h2><span class="n">12</span>计划与待确认</h2>
-        <p class="lead">按每周 10–15 小时的业余投入估算，初版大约 11 周。第 3 周先拿出设计器原型，给老板看绘制效果。客户端 SDK 和演示程序跟着接口一起做，试点时交给第一家对接方。</p>
+        <p class="lead">按每周 10–15 小时的业余投入估算，初版大约 11 周。第 3 周先拿出设计器原型，给老板看绘制效果。客户端 SDK 和演示程序跟着接口一起做，试点时交给第一家对接方。A4 拼版（2026-10-09 加入初版）放在 M3，和管理后台一起做，整体排期相应顺延。</p>
         <figure>
           <div class="fig">
             <svg viewBox="0 0 760 268" role="img" aria-labelledby="plan-t">
@@ -1177,7 +1277,7 @@ catch (LabelServiceException ex) when (ex.IsTransient)
           <li><span class="tag">待定</span><span>部署环境：Linux Docker 还是 Windows 服务器？</span></li>
           <li><span class="tag">待定</span><span>现场主要用什么品牌的标签打印机、多少 DPI？这决定 ZPL 是否够用，要不要加 TSPL。</span></li>
           <li><span class="tag">待定</span><span>打印边界：服务只返回文件、由调用方送打印机，这个分工是否认可？</span></li>
-          <li><span class="tag">待定</span><span>A4 拼版（一页排多张不干胶标签）要不要进初版？</span></li>
+          <li><span class="tag done">已定</span><span>A4 拼版进初版：把单张标签拖到 A4 上排成版式，同一模板可以单张打也可以拼版打（2026-10-09）。模板嵌套放到二期。</span></li>
           <li><span class="tag">待定</span><span>试点选哪个项目、哪种标签？</span></li>
           <li><span class="tag">待定</span><span>监控接入公司现有平台，还是随服务部署一套 Prometheus + Grafana？告警发到哪个群？</span></li>
           <li><span class="tag">待定</span><span>生产服务器配置：本设计的吞吐目标按 4 核 8 GB 单实例估算，需要确认实际机器。</span></li>
@@ -1187,7 +1287,7 @@ catch (LabelServiceException ex) when (ex.IsTransient)
         </ul>
       </section>
 
-      <footer>标签生成服务设计书 · V0.6 · 2026-10-09 · 代码仓库分成前端、后端、调用端三个部分（V0.5 数据库定为 SQLite、初版单实例部署；V0.4 补充请求参数类错误码）</footer>
+      <footer>标签生成服务设计书 · V0.7 · 2026-10-09 · A4 拼版加入初版（V0.6 代码仓库分成三个部分；V0.5 数据库定为 SQLite、单实例部署）</footer>
     </main>
   </div>
 </div>

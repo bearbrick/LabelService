@@ -108,6 +108,8 @@
 | `copies` | 否 | 1–100，默认 1。**PNG 只能 1 份**，多份请用批量接口并选 zip |
 | `data` | 是 | 字段数据 |
 
+> 规划中（T-018，ADR 0005）：单张和批量请求增加可选参数 `layout`（拼版版式编码）、`startSlot`（起始格子），响应头增加 `X-Page-Count`，错误码增加 `LAYOUT_NOT_FOUND`、`LAYOUT_SIZE_MISMATCH`。实现时把正式规范写进本文，并删除这段说明。
+
 批量请求多出 `output`（`merge` / `zip`，默认 merge；PNG 只能 zip）、`common`（公共字段，条目里同名字段覆盖它）、`items[]`（`data`、`copies`）。单次总张数（含份数）上限 500。
 
 ### HTTP 头
