@@ -35,6 +35,26 @@ internal static class LiveServerChecks
         var schema = await client.GetSchemaAsync("BOX_LABEL");
         check("端到端：SDK 读取字段定义", schema.Fields.Count == 6 && schema.Sample.ContainsKey("boxNo"));
 
+        BatchRenderRequest Batch(LabelFormat format)
+        {
+            var batch = new BatchRenderRequest("BOX_LABEL", format)
+                .SetCommon("partName", "电源适配器")
+                .SetCommon("partNo", "3100-0123")
+                .SetCommon("qty", 50)
+                .SetCommon("batchNo", "20261008-A")
+                .SetCommon("prodDate", new DateTime(2026, 10, 8));
+            batch.AddItem().Set("boxNo", "C2610080001");
+            batch.AddItem(copies: 2).Set("boxNo", "C2610080002");
+            return batch;
+        }
+
+        var merged = await client.RenderBatchAsync(Batch(LabelFormat.Pdf));
+        check("端到端：SDK 批量合并成一个 PDF，张数含份数",
+            merged is { LabelCount: 3, IsZip: false } && merged.Content.Length > 4 && merged.Content[0] == (byte)'%' && merged.Content[1] == (byte)'P');
+        var zipped = await client.RenderBatchAsync(Batch(LabelFormat.Png));
+        check("端到端：SDK 批量 PNG 默认打包成 zip",
+            zipped is { LabelCount: 3, IsZip: true } && zipped.Content.Length > 4 && zipped.Content[0] == (byte)'P' && zipped.Content[1] == (byte)'K');
+
         var invalid = await Fails(() => client.RenderAsync(new RenderRequest("BOX_LABEL", LabelFormat.Png).Set("qty", "abc")));
         check("端到端：服务端的错误码和明细原样传给调用方",
             invalid is { ErrorCode: LabelErrorCodes.FieldRequired, StatusCode: 400 }

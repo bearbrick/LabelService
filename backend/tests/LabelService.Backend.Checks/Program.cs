@@ -23,6 +23,7 @@ internal static class Program
         ZplChecks.Run(backendRoot, Check);
         await ServerChecks.RunAsync(backendRoot, Check);
         await StorageChecks.RunAsync(backendRoot, Check);
+        await BatchChecks.RunAsync(backendRoot, Check);
         ArchitectureChecks.Run(backendRoot, repositoryRoot, Check);
         Console.WriteLine($"后端检查全部通过：{passed} 项");
         return 0;
