@@ -21,7 +21,7 @@
 
 核心指标：**单张标签服务端处理 P95 ≤ 100 ms**（见 `docs/performance.md`）。
 
-当前阶段：骨架已完成（T-000）。数据库用 SQLite、单实例部署（ADR 0003）。单张 PNG 链路可用，7 种元素全部实现（T-001～T-004），PNG、PDF、ZPL 三种格式和批量接口都可用（T-005～T-007）；模板数据库和版本发布、调用方和调用日志已完成（T-008、T-009）；管理接口（见 `docs/admin-api.md`）和管理后台页面已完成（T-014），设计器的模板从服务端打开、草稿自动保存到服务端；服务端预览和设计器加载服务端字体已完成（T-016）；启动预热、并发排队、每日备份和部署说明已完成（T-017，`backend/deploy/`）；`/metrics` 和监控样例已完成（T-010）。其余任务见 `docs/tasks/README.md`。
+当前阶段：骨架已完成（T-000）。数据库用 SQLite、单实例部署（ADR 0003）。单张 PNG 链路可用，7 种元素全部实现（T-001～T-004），PNG、PDF、ZPL 三种格式和批量接口都可用（T-005～T-007）；模板数据库和版本发布、调用方和调用日志已完成（T-008、T-009）；管理接口（见 `docs/admin-api.md`）和管理后台页面已完成（T-014），设计器的模板从服务端打开、草稿自动保存到服务端；服务端预览和设计器加载服务端字体已完成（T-016）；启动预热、并发排队、每日备份和部署说明已完成（T-017，`backend/deploy/`）；`/metrics` 和监控样例已完成（T-010）；基准门禁和 k6 压测脚本已完成（T-015）。其余任务见 `docs/tasks/README.md`。
 
 ## 2. 仓库地图
 
@@ -35,8 +35,9 @@
 | `backend/src/LabelService.Rendering/` | 绑定、校验、排版、绘制、输出编码 | 热路径，遵守 R3 |
 | `backend/src/LabelService.Server/` | ASP.NET Core：开放接口、鉴权、模板存储、指标 | |
 | `backend/tests/LabelService.Backend.Checks/` | 后端检查程序，**也负责跨三个部分的契约一致性检查** | 不是 xUnit，见 §5 |
-| `backend/tests/LabelService.Benchmarks/` | BenchmarkDotNet | 必须 Release 运行 |
-| `backend/samples/` | 示例模板、示例请求体 | 开发期服务启动时加载示例模板 |
+| `backend/tests/LabelService.Benchmarks/` | BenchmarkDotNet，基准门禁（`--gate`，基线 `baseline.json`） | 必须 Release 运行 |
+| `backend/tests/load/` | k6 压测脚本、压测报告模板 | |
+| `backend/samples/` | 示例模板（成品箱标、A4 出口唛头）、示例请求体 | 开发期服务启动时加载示例模板 |
 | `backend/assets/fonts/` | 思源黑体、思源宋体 | 文件不提交，按其 README 自己放；检查程序和基准需要 |
 | `client/LabelService.Client.slnx` | 调用端解决方案 | |
 | `client/src/LabelService.Client/` | 给第三方的 SDK（net462、netstandard2.0、net8.0） | 遵守 R4 |
@@ -68,6 +69,7 @@ dotnet run --project backend/tests/LabelService.Backend.Checks
 dotnet run --project backend/src/LabelService.Server          # http://localhost:5080，开发 Key：lbl_test_local_dev
 curl.exe -o box.png -H "X-Api-Key: lbl_test_local_dev" -H "Content-Type: application/json" --data-binary "@backend/samples/requests/box-label.render.json" http://localhost:5080/api/v1/render
 dotnet run -c Release --project backend/tests/LabelService.Benchmarks -- --filter "*"   # 改了 Rendering 必跑
+dotnet run -c Release --project backend/tests/LabelService.Benchmarks -- --gate        # 基准门禁：比基线慢 20% 以上失败
 ```
 
 **调用端**：
