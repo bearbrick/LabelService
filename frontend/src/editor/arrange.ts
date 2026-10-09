@@ -1,5 +1,6 @@
 /**
  * 对齐、等间距分布、调整叠放顺序。直接修改传入的元素，坐标保留 1 位小数。锁定的元素参与计算但不移动。
+ * 对齐和分布只用到位置和尺寸，拼版设计器的格子（按所占矩形）也用它们。
  */
 import type { LabelElement } from '../model/template.ts'
 import { roundMm } from '../model/units.ts'
@@ -9,10 +10,19 @@ import type { Box } from './geometry.ts'
 export type AlignKind = 'left' | 'hcenter' | 'right' | 'top' | 'vcenter' | 'bottom'
 export type OrderKind = 'front' | 'back' | 'up' | 'down'
 
-const boxOf = (element: LabelElement): Box => ({ x: element.x, y: element.y, width: element.width, height: element.height })
+/** 能对齐、分布的对象：模板元素，或拼版设计器里格子所占的矩形。 */
+export interface Movable {
+  x: number
+  y: number
+  width: number
+  height: number
+  locked?: boolean
+}
+
+const boxOf = (element: Movable): Box => ({ x: element.x, y: element.y, width: element.width, height: element.height })
 
 /** 对齐。只选一个元素时对齐到画布，多个时对齐到选区外框。 */
-export function alignElements(selected: readonly LabelElement[], kind: AlignKind, page: { width: number; height: number }): void {
+export function alignElements(selected: readonly Movable[], kind: AlignKind, page: { width: number; height: number }): void {
   if (!selected.length) return
   const reference = selected.length === 1 ? { x: 0, y: 0, width: page.width, height: page.height } : unionBox(selected.map(boxOf))!
   for (const element of selected) {
@@ -44,7 +54,7 @@ export function alignElements(selected: readonly LabelElement[], kind: AlignKind
 }
 
 /** 等间距分布，至少 3 个元素。首尾两个不动，中间的按相等间隙排开。 */
-export function distributeElements(selected: readonly LabelElement[], axis: 'h' | 'v'): void {
+export function distributeElements(selected: readonly Movable[], axis: 'h' | 'v'): void {
   if (selected.length < 3) return
   const position = axis === 'h' ? 'x' : 'y'
   const size = axis === 'h' ? 'width' : 'height'
