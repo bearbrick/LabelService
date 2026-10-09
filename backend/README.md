@@ -56,10 +56,13 @@ dotnet run -c Release --project backend/tests/LabelService.Benchmarks -- --filte
 - **模板来源**：配置 `LabelService:Templates:Source`，默认 `Database`；设成 `Files` 时直接读示例目录、不建库，只适合只读演示。
 - **草稿和发布**：`Templates/TemplateRepository.cs`（保存草稿、发布、放弃草稿、回滚到旧版本），管理接口（T-014）调它。同一模板最多一个草稿，草稿的版本号是“最新发布版本 + 1”；发布前做静态检查并用样例值试渲染计时，通过后立即生效；已发布版本不能修改、不能删除。
 - **开放接口**只读 `Templates/DbTemplateStore.cs` 的内存缓存（启动时整体加载，发布时追加），不访问数据库。
+- **调用方**：数据库 `api_client` 表（Key 只存 SHA-256）加上配置文件 `LabelService:Auth:Clients`，启动时加载进内存；`Auth/ApiClientRepository.cs` 新建、改权限、启停、重置 Key 后立即生效。新 Key 正式环境前缀 `lbl_live_`，其他环境 `lbl_test_`。
+- **调用日志**：独立的 `label-log.db`（配置 `LabelService:RenderLog`：队列上限、每批条数、保留天数，默认 180 天）。请求结束时投递到队列，后台服务按批写入，队列满丢弃并计入指标 `label_log_dropped_total`，写入失败只记警告。
 - **改表结构**：改 `Server/Data/Records.cs`、`LabelDbContext.cs` 后生成迁移，不要手改迁移文件和快照。检查程序会发现漏生成的迁移。
 
 ```powershell
 dotnet tool install --global dotnet-ef        # 第一次用
-dotnet ef migrations add 迁移名 --project backend/src/LabelService.Server --output-dir Data/Migrations
+dotnet ef migrations add 迁移名 --project backend/src/LabelService.Server --context LabelDbContext --output-dir Data/Migrations
+dotnet ef migrations add 迁移名 --project backend/src/LabelService.Server --context LogDbContext --output-dir Data/LogMigrations    # 日志库
 dotnet format backend/LabelService.Backend.slnx
 ```
