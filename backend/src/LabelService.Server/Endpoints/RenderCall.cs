@@ -71,6 +71,12 @@ internal sealed class RenderCall : IDisposable
         get; set;
     }
 
+    /// <summary>拼版版式编码，不拼版时为 null。</summary>
+    public string? LayoutCode
+    {
+        get; set;
+    }
+
     /// <summary>实际 DPI。</summary>
     public int Dpi
     {
@@ -98,10 +104,10 @@ internal sealed class RenderCall : IDisposable
     }
 
     /// <summary>
-    /// 成功：返回渲染出的文件，写响应头（版本、张数、DPI、警告、链路 ID）。
+    /// 成功：返回渲染出的文件，写响应头（版本、张数、拼版页数、DPI、警告、链路 ID）。
     /// </summary>
     public IResult Succeed(RenderResult result, int templateVersion) =>
-        SucceedFile(result.Content, result.ContentType, LabelFormats.Extension(result.Format), result.LabelCount, result.Dpi, result.Warnings, templateVersion);
+        SucceedFile(result.Content, result.ContentType, result.Extension, result.LabelCount, result.Dpi, result.Warnings, templateVersion, result.PageCount);
 
     /// <summary>
     /// 成功：返回任意文件（批量 zip 用），响应头和单张相同。
@@ -113,13 +119,19 @@ internal sealed class RenderCall : IDisposable
     /// <param name="dpi">分辨率。</param>
     /// <param name="warnings">渲染警告。</param>
     /// <param name="templateVersion">模板版本。</param>
-    public IResult SucceedFile(ReadOnlyMemory<byte> content, string contentType, string extension, int labelCount, int dpi, IReadOnlyCollection<string> warnings, int templateVersion)
+    /// <param name="pageCount">拼版时的页数，写进 X-Page-Count；不拼版时为 null，不写这个头。</param>
+    public IResult SucceedFile(ReadOnlyMemory<byte> content, string contentType, string extension, int labelCount, int dpi, IReadOnlyCollection<string> warnings, int templateVersion, int? pageCount = null)
     {
         Finish("ok", labelCount);
         var headers = http.Response.Headers;
         headers[HeaderNames.TemplateVersion] = templateVersion.ToString(CultureInfo.InvariantCulture);
         headers[HeaderNames.LabelCount] = labelCount.ToString(CultureInfo.InvariantCulture);
         headers[HeaderNames.LabelDpi] = dpi.ToString(CultureInfo.InvariantCulture);
+        if (pageCount is { } pages)
+        {
+            headers[HeaderNames.PageCount] = pages.ToString(CultureInfo.InvariantCulture);
+        }
+
         headers[HeaderNames.TraceId] = ApiErrors.TraceId(http);
         if (warnings.Count > 0)
         {
@@ -176,6 +188,7 @@ internal sealed class RenderCall : IDisposable
             TemplateCode = TemplateCode,
             VersionNo = TemplateVersion,
             Format = format,
+            LayoutCode = LayoutCode,
             ItemCount = labelCount,
             DurationMs = Math.Round(total, 1),
             StageMsJson = RenderLogWriter.StagesJson(Timings),

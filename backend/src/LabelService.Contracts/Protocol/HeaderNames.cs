@@ -17,6 +17,9 @@ public static class HeaderNames
     /// <summary>响应头：文件里的标签张数（含份数）。</summary>
     public const string LabelCount = "X-Label-Count";
 
+    /// <summary>响应头：用了拼版版式时的页数（纸张张数）；不用版式时没有这个头。</summary>
+    public const string PageCount = "X-Page-Count";
+
     /// <summary>响应头：实际使用的 DPI。</summary>
     public const string LabelDpi = "X-Label-Dpi";
 

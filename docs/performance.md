@@ -108,4 +108,6 @@ dotnet run -c Release --project backend/tests/LabelService.Benchmarks -- --updat
 
 | 2026-10-10 | k6 压批量接口（T-015），同上 4 核，100 张示例箱标合并 PDF，4 个并发 30 秒 | 服务端中位数 41.8 ms、P95 66.5 ms，错误 0，约 82 批/秒 | 要求 100 张 ≤ 3 s |
 
+| 2026-10-10 | A4 拼版（T-018，`SheetBenchmarks`），一页 24 张 70×37 mm 小箱标（每张 12 个元素、箱号各不相同），300 dpi，ShortRun 10 次迭代，同上机器 | PDF 中位数 7.3 ms（预算 250 ms）；PNG 122 ms（A4 整页 PNG 编码为主，和 A4 唛头 PNG 相当） | 固定元素只排版一次（`LabelPlan`）：PDF 7.31 ms 对 7.31 ms，时间看不出差别（文本测量、条码编码本来就有缓存），分配从 1078 KB 降到 875 KB（−19%）。门禁只放 PDF 两项，PNG 太重会让笔记本降频、拖慢后面的基准（整套门禁跑完时 TemplateBenchmarks 曾误报慢 30%，单独重跑 ±3%） |
+
 实现新元素或格式后在这里追加一行，写明机器和条件。

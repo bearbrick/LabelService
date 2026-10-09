@@ -9,6 +9,7 @@ using LabelService.Rendering.Validation;
 using LabelService.Server.Auth;
 using LabelService.Server.Diagnostics;
 using LabelService.Server.Hosting;
+using LabelService.Server.Layouts;
 using LabelService.Server.Logging;
 using LabelService.Server.Templates;
 
@@ -24,6 +25,7 @@ namespace LabelService.Server.Endpoints;
 /// <item>zip：每个条目一个文件，并行渲染后按顺序打包，文件名 <c>模板编码_序号.扩展名</c>；PDF、ZPL 的份数在文件里，
 /// PNG 一个文件只能放一张，所以每份一个文件。</item>
 /// <item>Server-Timing 各阶段是全部张数的累计值，X-Label-Count 是总张数（含份数）。</item>
+/// <item>带 layout 时按版式拼版（T-018）：output 不起作用，PDF 一个文件、PNG 一页一张图（多页打包 ZIP），另加 X-Page-Count。</item>
 /// </list>
 /// </remarks>
 internal static class BatchRenderEndpoint
@@ -35,6 +37,7 @@ internal static class BatchRenderEndpoint
         HttpContext http,
         ApiKeyAuthenticator authenticator,
         ITemplateStore store,
+        LayoutStore layouts,
         ILabelRenderer renderer,
         RenderGate gate,
         LabelMetrics metrics,
@@ -78,7 +81,13 @@ internal static class BatchRenderEndpoint
             return call.Fail(ErrorCodes.OutputInvalid, "output 只能是 merge 或 zip");
         }
 
-        if (format == LabelFormat.Png && output == BatchOutput.Merge)
+        if (SheetParameters.Check(call, body.Layout, body.StartSlot, format) is { } sheetError)
+        {
+            return sheetError;
+        }
+
+        var sheet = !string.IsNullOrEmpty(body.Layout);
+        if (format == LabelFormat.Png && output == BatchOutput.Merge && !sheet)
         {
             return call.Fail(ErrorCodes.OutputInvalid, "PNG 不能合并成一个文件，批量 PNG 请用 output=zip");
         }
@@ -127,6 +136,12 @@ internal static class BatchRenderEndpoint
             return call.Fail(ErrorCodes.TemplateForbidden, $"调用方 {client.Name} 无权使用模板 {body.TemplateCode}");
         }
 
+        var (layout, layoutError) = SheetParameters.Resolve(call, layouts, body.Layout, body.StartSlot, published.Template);
+        if (layoutError is not null)
+        {
+            return layoutError;
+        }
+
         stage = call.Timings.Mark(TimingStages.Template, stage);
         var template = published.Template;
         var labels = new List<LabelInstance>(items.Count);
@@ -154,9 +169,19 @@ internal static class BatchRenderEndpoint
 
         try
         {
-            if (output == BatchOutput.Merge)
+            if (output == BatchOutput.Merge || layout is not null)
             {
-                var job = new RenderJob { Template = template, Labels = labels, Format = format, Dpi = call.Dpi, Mono = body.Mono ?? false, Timings = call.Timings };
+                var job = new RenderJob
+                {
+                    Template = template,
+                    Labels = labels,
+                    Format = format,
+                    Dpi = call.Dpi,
+                    Mono = body.Mono ?? false,
+                    Layout = layout,
+                    StartSlot = body.StartSlot ?? 1,
+                    Timings = call.Timings,
+                };
                 return call.Succeed(renderer.Render(job), published.Version);
             }
 

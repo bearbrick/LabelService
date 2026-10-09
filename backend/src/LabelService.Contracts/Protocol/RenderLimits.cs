@@ -20,6 +20,15 @@ public static class RenderLimits
     /// <summary>批量单次总张数（含份数）默认上限。</summary>
     public const int MaxBatchLabels = 500;
 
+    /// <summary>拼版版式最多的格子数。</summary>
+    public const int MaxLayoutSlots = 500;
+
+    /// <summary>拼版版式纸张的最大边长（mm）。</summary>
+    public const double MaxPaperMm = 1000;
+
+    /// <summary>模板尺寸和格子尺寸比较时允许的误差（mm），两边都按 0.1 mm 记录。</summary>
+    public const double LayoutSizeToleranceMm = 0.05;
+
     /// <summary>image 字段解码后的最大字节数（1 MB）。</summary>
     public const int MaxImageBytes = 1024 * 1024;
 

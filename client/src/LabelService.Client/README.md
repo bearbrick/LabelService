@@ -42,6 +42,26 @@ await NetworkPrinter.SendAsync("192.168.1.50", 9100, zpl.Content);
 
 要先知道模板要哪些字段：`TemplateSchema schema = await client.GetSchemaAsync("BOX_LABEL");`，里面有字段 key、类型、是否必填和调用样例。
 
+### 拼版：多张标签排在 A4 上打
+
+激光打印机打 A4 不干胶纸时，设 `Layout`（版式编码，找管理员要；版式的格子尺寸要和模板尺寸一致）。只支持 PDF 和 PNG：
+
+```csharp
+// 单张：Copies 就是铺几个格子，8 格的版式 8 份是一页 8 张相同的标签
+var sheet = new RenderRequest("BOX_LABEL", LabelFormat.Pdf) { Layout = "A4_100x60_2x4", Copies = 8 }
+    .Set("partName", "电源适配器");
+
+// 批量：每条按顺序占格子，一页排满换下一页；StartSlot = 3 表示第一页从第 3 格开始（前两格已经用掉了）
+var boxes = new BatchRenderRequest("BOX_LABEL", LabelFormat.Pdf) { Layout = "A4_100x60_2x4", StartSlot = 3 }
+    .SetCommon("partName", "电源适配器");
+foreach (var boxNo in boxNumbers)
+    boxes.AddItem().Set("boxNo", boxNo);
+LabelFile pages = await client.RenderBatchAsync(boxes);
+Console.WriteLine($"{pages.LabelCount} 张标签，{pages.PageCount} 页");
+```
+
+PDF 是一个文件、一页一张纸；PNG 一页一张图，多页时是 ZIP（`IsZip` 为 true）。用了版式时批量的 `Output` 不起作用，PNG 单张也可以多份。
+
 ## 错误处理
 
 服务端错误和网络错误都转成 `LabelServiceException`：`ErrorCode`、`Message`（中文）、`StatusCode`、`TraceId`、`Errors`（逐条：第几条、哪个字段）、`IsTransient`（暂时性错误，SDK 已经重试过）。
@@ -74,6 +94,8 @@ catch (LabelServiceException ex) when (ex.IsTransient)
 | 400 | `FIELD_REQUIRED`、`FIELD_TYPE_INVALID` | 否 | 按 `ex.Errors` 修正数据 |
 | 400 | `BARCODE_INVALID`、`BARCODE_TOO_DENSE`、`IMAGE_INVALID` | 否 | 条码内容不符合码制、太长放不下，或图片坏了 |
 | 400 | `INVALID_JSON`、`FORMAT_INVALID`、`DPI_INVALID`、`OUTPUT_INVALID`、`COPIES_INVALID` | 否 | 请求参数不对（SDK 会先在本地拦一部分） |
+| 404 | `LAYOUT_NOT_FOUND` | 否 | 版式编码不对或版式已停用，找管理员 |
+| 400 | `LAYOUT_SIZE_MISMATCH`、`START_SLOT_INVALID` | 否 | 换一个格子尺寸和模板相同的版式；StartSlot 不能超过版式的格子数 |
 | 413 | `BATCH_TOO_LARGE` | 否 | 拆成多批 |
 | 500 | `RENDER_FAILED` | 否 | 带 traceId 联系标签服务管理员 |
 

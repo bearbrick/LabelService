@@ -21,9 +21,11 @@ internal static class Program
         AssetChecks.Run(backendRoot, Check);
         PdfChecks.Run(backendRoot, Check);
         ZplChecks.Run(backendRoot, Check);
+        LayoutRenderChecks.Run(backendRoot, Check);
         await ServerChecks.RunAsync(backendRoot, Check);
         await StorageChecks.RunAsync(backendRoot, Check);
         await BatchChecks.RunAsync(backendRoot, Check);
+        await LayoutServerChecks.RunAsync(backendRoot, Check);
         await ClientLogChecks.RunAsync(backendRoot, Check);
         await AdminChecks.RunAsync(backendRoot, Check);
         await HostingChecks.RunAsync(backendRoot, Check);

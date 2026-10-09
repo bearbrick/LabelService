@@ -208,6 +208,7 @@ public sealed class LabelServiceClient : ILabelServiceClient, IDisposable
         {
             TemplateVersion = ParseInt(Header(response, HeaderNames.TemplateVersion)),
             LabelCount = ParseInt(Header(response, HeaderNames.LabelCount)) ?? 0,
+            PageCount = ParseInt(Header(response, HeaderNames.PageCount)) ?? ParseInt(Header(response, HeaderNames.LabelCount)) ?? 0,
             Dpi = ParseInt(Header(response, HeaderNames.LabelDpi)) ?? 0,
             TraceId = Header(response, HeaderNames.TraceId),
             RequestId = requestId,

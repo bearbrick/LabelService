@@ -47,6 +47,15 @@ public static class LabelErrorCodes
     /// <summary>413：单次总张数超过上限，请拆批。</summary>
     public const string BatchTooLarge = "BATCH_TOO_LARGE";
 
+    /// <summary>404：拼版版式不存在或已停用，核对请求里的版式编码。</summary>
+    public const string LayoutNotFound = "LAYOUT_NOT_FOUND";
+
+    /// <summary>400：模板尺寸和版式的格子尺寸不一致，换一个格子尺寸相同的版式。</summary>
+    public const string LayoutSizeMismatch = "LAYOUT_SIZE_MISMATCH";
+
+    /// <summary>400：StartSlot 超过了版式的格子数。</summary>
+    public const string StartSlotInvalid = "START_SLOT_INVALID";
+
     /// <summary>500：服务端渲染内部错误，带 traceId 联系标签服务管理员。</summary>
     public const string RenderFailed = "RENDER_FAILED";
 

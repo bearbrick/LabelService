@@ -142,14 +142,52 @@ PDF：矢量输出，一张标签每份一页；页面尺寸是模板的 mm 尺�
 | `format` | 是 | `pdf` / `png` / `zpl`，忽略大小写 |
 | `dpi` | 否 | 203 / 300 / 600；不传则用模板设置，模板也没有则 300 |
 | `mono` | 否 | 仅 png 有效 |
-| `copies` | 否 | 1–100，默认 1。**PNG 只能 1 份**，多份请用批量接口并选 zip |
+| `copies` | 否 | 1–100，默认 1。**PNG 只能 1 份**，多份请用批量接口并选 zip；用了版式时 PNG 也可以多份 |
+| `layout` | 否 | 拼版版式编码，见下面“拼版”；不传则一页一张标签 |
+| `startSlot` | 否 | 用了版式时第一页从第几个格子开始，默认 1 |
 | `data` | 是 | 字段数据 |
 
-> 规划中（T-018，ADR 0005）：单张和批量请求增加可选参数 `layout`（拼版版式编码）、`startSlot`（起始格子），响应头增加 `X-Page-Count`，错误码增加 `LAYOUT_NOT_FOUND`、`LAYOUT_SIZE_MISMATCH`。实现时把正式规范写进本文，并删除这段说明。
-
-批量请求多出 `output`（`merge` / `zip`，默认 merge；PNG 只能 zip）、`common`（公共字段，条目里同名字段覆盖它）、`items[]`（`data`、`copies`）。单次总张数（含份数）上限 500。
+批量请求也有 `layout`、`startSlot`，另外多出 `output`（`merge` / `zip`，默认 merge；PNG 只能 zip；用了版式时不起作用）、`common`（公共字段，条目里同名字段覆盖它）、`items[]`（`data`、`copies`）。单次总张数（含份数）上限 500。
 
 批量的输出：merge 是一个文件（PDF 每张每份一页，ZPL 每张一个 `^XA…^XZ`），顺序和 `items` 一致；zip 里每个条目一个文件，文件名 `模板编码_序号.扩展名`（序号从 001 开始），PDF、ZPL 的份数在文件里，PNG 一个文件只能放一张，所以每份一个文件。先校验全部条目，任何一条不通过整批返回；渲染时出错（如条码内容不符合码制）也带条目序号。`Server-Timing` 各阶段是全部张数的累计值，`X-Label-Count` 是总张数（含份数）。
+
+### 拼版
+
+单张和批量请求带 `layout` 时，按版式把标签一张张排到纸上（ADR 0005，T-018）：
+
+- 标签按顺序填格子：批量按 `items` 顺序，每条的份数连续占格子；单张的 `copies` 就是铺几个格子（`copies: 8` 在 8 格的版式上是一页 8 张相同的标签）。一页排满换下一页。
+- `startSlot`：第一页从第几个格子开始，默认 1，贴过一部分的不干胶纸可以接着用；之后的页从第 1 格开始。页数 = ⌈(startSlot − 1 + 张数) ÷ 格子数⌉。
+- 只支持 PDF 和 PNG，ZPL 返回 `FORMAT_INVALID`。PDF 是一个文件、一页一张纸；PNG 一页一张图，多页时打包成 ZIP（文件名 `模板编码_页号.png`，页号从 001 开始）。批量的 `output` 不起作用。
+- 模板宽高要和版式的格子尺寸一致（误差 0.05 mm 以内），否则 `LAYOUT_SIZE_MISMATCH`；版式不存在或已停用返回 `LAYOUT_NOT_FOUND`；`startSlot` 不在 1 到格子数之间返回 `START_SLOT_INVALID`。
+- 张数上限按标签张数算（单张最多 100 份，批量最多 500 张）；响应头 `X-Label-Count` 是标签张数，另加 `X-Page-Count` 是页数。
+- 每个格子把画布平移、旋转到格子位置后按单张的方式绘制，超出格子的部分裁掉；格子位置对齐到整数个打印点（300 dpi 下误差不超过 0.043 mm），条码不会因为平移变模糊。整页加上版式的打印偏移；`cutLines` 为 true 时给放了标签的格子画 0.1 mm 的灰色边框当裁切线。
+- 模板里不引用字段的元素（固定文字、Logo、边框、线）一次请求只排版一次，各格子重复使用。
+
+版式 JSON（管理后台“拼版版式”里维护，存数据库 `sheet_layout` 表；开发环境首次建库时导入 `backend/samples/layouts/`）：
+
+```json
+{
+  "code": "A4_100x60_2x4",
+  "name": "A4 · 100×60 · 2 列 × 4 行",
+  "paper": { "width": 210, "height": 297 },
+  "slot": { "width": 100, "height": 60 },
+  "slots": [ { "x": 5, "y": 28.5, "rotation": 0 }, { "x": 105, "y": 28.5, "rotation": 0 } ],
+  "offset": { "x": 0, "y": 0 },
+  "cutLines": false
+}
+```
+
+| 属性 | 说明 |
+| --- | --- |
+| `code` | 版式编码，全局唯一，规则和模板编码相同（字母开头，字母、数字、`_`、`-`，最长 64） |
+| `name` | 显示名 |
+| `paper` | 纸张宽高（mm），不超过 1000 |
+| `slot` | 格子宽高（mm），等于能用这个版式的模板尺寸；格子旋转时也不变 |
+| `slots[]` | 格子，**数组顺序就是填充顺序**，1–500 个。`x`、`y` 是格子在纸上所占矩形的左上角（mm，原点在纸张左上角）；`rotation` 是标签顺时针旋转的角度，只能是 0、90、180、270，90 和 270 时所占矩形的宽高互换 |
+| `offset` | 打印偏移（mm），作用于整页，向右、向下为正；打印出来偏右 1 mm 就填 `"x": -1` |
+| `cutLines` | 是否画格子边框（裁切线），默认 false |
+
+长度保留 1 位小数（0.1 mm）。保存时检查：格子不能超出纸张，格子之间不能重叠（误差 0.05 mm 以内算贴边）。版式不分版本，修改立即生效。
 
 ### HTTP 头
 
@@ -159,6 +197,7 @@ PDF：矢量输出，一张标签每份一页；页面尺寸是模板的 mm 尺�
 | `X-Request-Id` | 请求 | 可选，调用方生成的请求号，原样写进调用日志（最长 64 字符）；SDK 每次调用自动生成 |
 | `X-Template-Version` | 响应 | 实际使用的模板版本 |
 | `X-Label-Count` | 响应 | 文件里的张数，含份数 |
+| `X-Page-Count` | 响应 | 用了拼版版式时的页数（纸张张数）；不用版式时没有这个头 |
 | `X-Label-Dpi` | 响应 | 实际 DPI |
 | `X-Trace-Id` | 响应 | 链路 ID（W3C traceparent），成功和失败都带 |
 | `Server-Timing` | 响应 | 各阶段耗时，成功和失败都带，见下 |
@@ -197,7 +236,7 @@ PDF：矢量输出，一张标签每份一页；页面尺寸是模板的 mm 尺�
 | 403 | `TEMPLATE_FORBIDDEN` | 这个 Key 无权使用该模板 |
 | 404 | `TEMPLATE_NOT_FOUND` | 模板或版本不存在，或者还没有发布过 |
 | 400 | `INVALID_JSON` | 请求体不是合法 JSON，或缺少 templateCode、data（请求体超过 20 MB 时为 413） |
-| 400 | `FORMAT_INVALID` | format 不是 pdf、png、zpl |
+| 400 | `FORMAT_INVALID` | format 不是 pdf、png、zpl，或用了拼版版式时是 zpl |
 | 400 | `DPI_INVALID` | dpi 不是 203、300、600 |
 | 400 | `OUTPUT_INVALID` | output 不是 merge、zip，或 PNG 批量没用 zip |
 | 400 | `COPIES_INVALID` | copies 不在 1–100，或 PNG 单张超过 1 份 |
@@ -207,6 +246,9 @@ PDF：矢量输出，一张标签每份一页；页面尺寸是模板的 mm 尺�
 | 400 | `BARCODE_TOO_DENSE` | 内容太长，框内放不下能扫的条码 |
 | 400 | `IMAGE_INVALID` | 图片解码失败或超过 1 MB |
 | 413 | `BATCH_TOO_LARGE` | 单次总张数超过上限 |
+| 404 | `LAYOUT_NOT_FOUND` | 拼版版式不存在或已停用 |
+| 400 | `LAYOUT_SIZE_MISMATCH` | 模板尺寸和版式的格子尺寸不一致 |
+| 400 | `START_SLOT_INVALID` | startSlot 不在 1 到版式的格子数之间 |
 | 500 | `RENDER_FAILED` | 渲染内部错误，凭 traceId 查日志 |
 | 503 | `SERVICE_UNAVAILABLE` | 服务繁忙：排队等渲染超过上限（默认 2 秒），带 `Retry-After: 1`，稍后重试（T-017） |
 

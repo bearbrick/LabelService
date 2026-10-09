@@ -50,6 +50,15 @@ public static class ErrorCodes
     /// <summary>413：单次总张数（含份数）超过上限。</summary>
     public const string BatchTooLarge = "BATCH_TOO_LARGE";
 
+    /// <summary>404：拼版版式不存在或已停用。</summary>
+    public const string LayoutNotFound = "LAYOUT_NOT_FOUND";
+
+    /// <summary>400：模板尺寸和版式的格子尺寸不一致。</summary>
+    public const string LayoutSizeMismatch = "LAYOUT_SIZE_MISMATCH";
+
+    /// <summary>400：startSlot 不在 1 到版式的格子数之间。</summary>
+    public const string StartSlotInvalid = "START_SLOT_INVALID";
+
     /// <summary>500：渲染内部错误，凭 traceId 查日志。</summary>
     public const string RenderFailed = "RENDER_FAILED";
 
@@ -78,6 +87,9 @@ public static class ErrorCodes
         [BarcodeTooDense] = 400,
         [ImageInvalid] = 400,
         [BatchTooLarge] = 413,
+        [LayoutNotFound] = 404,
+        [LayoutSizeMismatch] = 400,
+        [StartSlotInvalid] = 400,
         [RenderFailed] = 500,
         [ServiceUnavailable] = 503,
     };

@@ -55,6 +55,7 @@
 | 路径 | 职责 |
 | --- | --- |
 | `src/LabelService.Contracts/Templates/` | 模板 JSON 模型：模板、纸张、字段、7 种元素、样式和枚举 |
+| `src/LabelService.Contracts/Layouts/` | 拼版版式 JSON 模型（ADR 0005）：纸张、格子尺寸、格子位置和旋转、打印偏移、裁切线 |
 | `src/LabelService.Contracts/Protocol/` | 错误码、HTTP 头、计时阶段、取值上限、请求和响应体 |
 | `src/LabelService.Contracts/LabelJson.cs`、`LabelUnits.cs` | 统一的 JSON 设置；mm、pt、点的换算 |
 | `src/LabelService.Rendering/Binding/` | `{{key:format}}` 绑定替换 |
@@ -67,11 +68,13 @@
 | `src/LabelService.Server/Fonts/` | 字体目录配置（`LabelService:Fonts:Directory`），启动时加载并写日志；`/fonts` 把同一份字体提供给设计器（T-016） |
 | `assets/fonts/` | 思源黑体、思源宋体，构建时复制到程序目录的 `fonts/`；文件不提交，见那里的 README |
 | `src/LabelService.Rendering/Output/` | 每种格式一个输出文档，`OutputDocuments.cs` 登记 |
+| `src/LabelService.Rendering/Sheets/` | 拼版（T-018）：`SheetRenderer` 按版式的格子顺序把标签排到纸上（平移、旋转、裁剪，一页排满换页，打印偏移、裁切线），PDF 一页一张纸、PNG 多页打包 ZIP；`LabelPlan` 把不引用字段的元素排版一次、录成画面，各格子回放 |
 | `src/LabelService.Rendering/Diagnostics/` | 分阶段计时、Server-Timing 生成 |
 | `src/LabelService.Server/Endpoints/` | 开放接口路由、请求收尾（计时、指标、日志）、错误响应 |
 | `src/LabelService.Server/Auth/` | API Key 识别（内存快照，配置文件 + 数据库 api_client 表）；调用方管理：新建、改权限、启停、重置 Key（`ApiClientRepository`） |
 | `src/LabelService.Server/Admin/` | 管理接口 `/api/admin`（`docs/admin-api.md`）：JWT 登录、权限点和业务范围（`AdminFilter` 每次请求核对用户）、用户、角色、业务分组、模板、画布预设、素材、调用方、日志、概览、接口调试；操作日志 |
 | `src/LabelService.Server/Logging/` | 调用日志：请求结束时投递到有界队列，后台服务按批写入 label-log.db，每天清理过期日志；后台查询（`RenderLogQuery`） |
+| `src/LabelService.Server/Layouts/` | 拼版版式（T-018）：内存快照 `LayoutStore`（开放接口只读它）、表 sheet_layout 的读写、保存前检查（`LayoutValidator`）、开发环境导入 `backend/samples/layouts/`、打印校准测试页 |
 | `src/LabelService.Server/Data/` | SQLite 主库 `label.db`：表对应的实体、DbContext、迁移、连接 PRAGMA（ADR 0003） |
 | `src/LabelService.Server/Templates/` | 模板存储：已发布版本的内存缓存（开放接口只读它）、草稿和发布、发布前检查；`Source=Files` 时改从 `samples/templates` 加载 |
 | `src/LabelService.Server/Diagnostics/` | 指标（System.Diagnostics.Metrics）和 `/metrics` 的 Prometheus 导出（`PrometheusExporter`，ADR 0009）、缓存命中率 |

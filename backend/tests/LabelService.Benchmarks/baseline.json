@@ -10,6 +10,8 @@
     "RenderBenchmarks.BoxLabelPngUniqueBox(Dpi=300)": 11.598,
     "RenderBenchmarks.BoxLabelZpl(Dpi=203)": 0.988,
     "RenderBenchmarks.BoxLabelZpl(Dpi=300)": 2.013,
+    "SheetBenchmarks.A4Sheet24(Format=Pdf, ShareStatic=False)": 7.306,
+    "SheetBenchmarks.A4Sheet24(Format=Pdf, ShareStatic=True)": 7.314,
     "TemplateBenchmarks.Render(Template=a4-shipping-mark, Format=Pdf)": 6.258,
     "TemplateBenchmarks.Render(Template=a4-shipping-mark, Format=Png)": 115.309,
     "TemplateBenchmarks.Render(Template=a4-shipping-mark, Format=Zpl)": 19.833,
