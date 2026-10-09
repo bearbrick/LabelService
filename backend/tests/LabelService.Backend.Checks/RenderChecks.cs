@@ -20,7 +20,7 @@ internal static class RenderChecks
     {
         var template = Fixtures.LoadTemplate(root);
         var values = FieldValidator.Validate(template.Fields, null, Fixtures.Data(Fixtures.BoxLabelData)).Values;
-        var renderer = new LabelRenderer(Fixtures.Fonts(root));
+        var renderer = Fixtures.Renderer(root);
         RenderResult Render(LabelTemplate source, int dpi = 300) => renderer.Render(new RenderJob
         {
             Template = source,

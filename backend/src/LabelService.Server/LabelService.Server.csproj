@@ -33,6 +33,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- 图标和内置图片素材：构建时复制到输出目录的 icons/、images/，服务启动时加载（T-004）。 -->
+    <Content Include="..\..\assets\icons\**\*.svg" LinkBase="icons" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="..\..\assets\images\*.svg;..\..\assets\images\*.png;..\..\assets\images\*.jpg" LinkBase="images" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- 示例模板：开发环境首次建库时导入为已发布版本；模板来源配置为 Files 时直接从这里加载。 -->
     <Content Include="..\..\samples\templates\*.json" LinkBase="SeedTemplates" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>

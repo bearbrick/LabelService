@@ -69,4 +69,6 @@ dotnet run -c Release --project backend/tests/LabelService.Benchmarks -- --filte
 
 | 2026-10-09 | BenchmarkDotNet（`--job short`），`BoxLabelPng`，加上二维码（T-003） | 203dpi 6.14 ms、300dpi 12.49 ms；每次分配 59–78 KB | 改动前 5.55 ms、11.91 ms（+5%～+10%），多出的主要是 PNG 编码 |
 
+| 2026-10-09 | BenchmarkDotNet（`--job short`），`BoxLabelPng`，加上图标（T-004，示例箱标的全部元素都已实现） | 203dpi 5.96 ms、300dpi 12.93 ms；每次分配 60–79 KB | 改动前 6.14 ms、12.49 ms，在误差范围内 |
+
 实现新元素或格式后在这里追加一行，写明机器和条件。

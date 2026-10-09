@@ -18,7 +18,7 @@ internal static class BarcodeChecks
 {
     public static void Run(string backendRoot, Action<string, bool> check)
     {
-        var renderer = new LabelRenderer(Fixtures.Fonts(backendRoot));
+        var renderer = Fixtures.Renderer(backendRoot);
         CheckSample(backendRoot, renderer, check);
         CheckSymbologies(renderer, check);
         CheckDots(renderer, check);
@@ -203,7 +203,7 @@ internal static class BarcodeChecks
         };
 
     private static RenderContext Context(int dpi) =>
-        new(dpi, false, new Dictionary<string, object?>(), new Dictionary<string, FieldDefinition>(), Rendering.Fonts.FontRegistry.Empty, new WarningList());
+        new(dpi, false, new Dictionary<string, object?>(), new Dictionary<string, FieldDefinition>(), Rendering.Fonts.FontRegistry.Empty, Rendering.Assets.AssetLibrary.Empty, new WarningList());
 
     private static SKBitmap Bitmap(RenderResult result) => SKBitmap.Decode(result.Content.ToArray());
 

@@ -68,7 +68,36 @@ internal static partial class ContractChecks
         var frontendSample = JsonNode.Parse(File.ReadAllText(Path.Combine(repositoryRoot, "frontend", "src", "samples", "box-label.json")));
         var backendSample = JsonNode.Parse(File.ReadAllText(Path.Combine(backendRoot, "samples", "templates", "box-label.json")));
         check("前端的示例模板和后端一致", JsonNode.DeepEquals(frontendSample, backendSample));
+
+        // 图标和内置素材：设计器和服务端各一份（三个部分互不引用），按文本核对。
+        var frontendIcons = FrontendIcon().Matches(File.ReadAllText(Path.Combine(repositoryRoot, "frontend", "src", "model", "icons.ts")))
+            .ToDictionary(match => match.Groups["key"].Value, match => match.Groups["d"].Value);
+        var iconRoot = Path.Combine(backendRoot, "assets", "icons");
+        var backendIcons = Directory.GetFiles(iconRoot, "*.svg", SearchOption.AllDirectories)
+            .ToDictionary(
+                path => Path.ChangeExtension(Path.GetRelativePath(iconRoot, path), null).Replace('\\', '/'),
+                path => SvgPath().Match(File.ReadAllText(path)).Groups["d"].Value);
+        var iconMismatch = frontendIcons.Keys.Union(backendIcons.Keys)
+            .Where(key => frontendIcons.GetValueOrDefault(key) != backendIcons.GetValueOrDefault(key))
+            .Order()
+            .ToArray();
+        check("设计器和服务端的图标一致（frontend/src/model/icons.ts 对 backend/assets/icons）" + (iconMismatch.Length > 0 ? "：" + string.Join(", ", iconMismatch) : ""),
+            frontendIcons.Count > 0 && iconMismatch.Length == 0);
+        var builtinAssets = FrontendAsset().Matches(File.ReadAllText(Path.Combine(repositoryRoot, "frontend", "src", "stores", "assets.ts")))
+            .Select(match => match.Groups["id"].Value)
+            .ToArray();
+        check("设计器的内置素材在服务端都有（backend/assets/images）",
+            builtinAssets.Length > 0 && builtinAssets.All(id => Directory.GetFiles(Path.Combine(backendRoot, "assets", "images"), id + ".*").Length > 0));
     }
+
+    [GeneratedRegex(@"'(?<key>gb191/[^']+)': \{ name: '[^']+', d: '(?<d>[^']+)' \}")]
+    private static partial Regex FrontendIcon();
+
+    [GeneratedRegex(@"<path d=""(?<d>[^""]+)""")]
+    private static partial Regex SvgPath();
+
+    [GeneratedRegex(@"id: '(?<id>[^']+)',\s*name:[^\n]*\n\s*builtin: true")]
+    private static partial Regex FrontendAsset();
 
     private static IEnumerable<string> BoundTexts(LabelElement element) => element switch
     {
