@@ -52,6 +52,10 @@ internal static class PublicApiEndpoints
 
         call.Client = client.Name;
         call.ClientId = client.Id;
+        if (!client.AllowsIp(http.Connection.RemoteIpAddress))
+        {
+            return call.Fail(ErrorCodes.Unauthorized, $"来源 IP {http.Connection.RemoteIpAddress} 不在调用方 {client.Name} 的白名单里");
+        }
         var (body, readError) = await ReadJsonAsync<RenderApiRequest>(http);
         if (readError is not null)
         {
@@ -99,7 +103,7 @@ internal static class PublicApiEndpoints
 
         call.TemplateVersion = published.Version;
 
-        if (!client.CanUse(body.TemplateCode))
+        if (!client.CanUse(published))
         {
             return call.Fail(ErrorCodes.TemplateForbidden, $"调用方 {client.Name} 无权使用模板 {body.TemplateCode}");
         }
@@ -150,12 +154,17 @@ internal static class PublicApiEndpoints
             return ApiErrors.Create(http, ErrorCodes.Unauthorized, "API Key 缺失或无效");
         }
 
+        if (!client.AllowsIp(http.Connection.RemoteIpAddress))
+        {
+            return ApiErrors.Create(http, ErrorCodes.Unauthorized, $"来源 IP {http.Connection.RemoteIpAddress} 不在调用方 {client.Name} 的白名单里");
+        }
+
         if (!store.TryGetPublished(code, null, out var published))
         {
             return ApiErrors.Create(http, ErrorCodes.TemplateNotFound, $"模板 {code} 不存在或还没有发布");
         }
 
-        if (!client.CanUse(code))
+        if (!client.CanUse(published))
         {
             return ApiErrors.Create(http, ErrorCodes.TemplateForbidden, $"调用方 {client.Name} 无权使用模板 {code}");
         }
