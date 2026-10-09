@@ -1,7 +1,7 @@
 # T-013 设计器绘制交互
 
-状态：待认领
-负责人：—
+状态：进行中
+负责人：Claude 2026-10-09
 里程碑：M1（第 3 周评审绘制体验）
 依赖：—
 设计书：§4 标签设计器；原型 docs/prototypes/label-designer-prototype.html
@@ -39,3 +39,4 @@
 ## 交接记录
 
 <!-- 按时间倒序追加：日期 · 谁 · 做了什么 / 卡在哪里 / 留给下一位的话 -->
+- 2026-10-09 · Claude · 认领。计划：把已评审的高保真原型（docs/prototypes/label-designer-prototype.html）里的设计器逻辑移植成 TypeScript 模块和 Vue 组件；画布改用直接操作 Konva（不再用 vue-konva），只重画内容变化的元素；纯函数（吸附、对齐、撤销、绑定）配 node 检查脚本。
