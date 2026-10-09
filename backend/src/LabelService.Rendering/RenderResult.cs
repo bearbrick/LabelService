@@ -57,7 +57,28 @@ public sealed class RenderResult
     }
 
     /// <summary>
+    /// 用了拼版版式时的页数；不用版式时为 null。
+    /// </summary>
+    public int? PageCount
+    {
+        get; init;
+    }
+
+    /// <summary>
+    /// 内容是不是 ZIP：拼版 PNG 多于一页时每页一张图打包。
+    /// </summary>
+    public bool IsZip
+    {
+        get; init;
+    }
+
+    /// <summary>
     /// Content-Type。
     /// </summary>
-    public string ContentType => LabelFormats.ContentType(Format);
+    public string ContentType => IsZip ? LabelFormats.ZipContentType : LabelFormats.ContentType(Format);
+
+    /// <summary>
+    /// 下载文件名的扩展名。
+    /// </summary>
+    public string Extension => IsZip ? "zip" : LabelFormats.Extension(Format);
 }

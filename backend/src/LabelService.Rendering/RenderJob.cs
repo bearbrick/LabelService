@@ -1,3 +1,4 @@
+using LabelService.Contracts.Layouts;
 using LabelService.Contracts.Protocol;
 using LabelService.Contracts.Templates;
 using LabelService.Rendering.Diagnostics;
@@ -48,6 +49,25 @@ public sealed class RenderJob
     {
         get; init;
     }
+
+    /// <summary>
+    /// 拼版版式。为 null 时一页一张标签（原来的行为）；不为 null 时按格子顺序排到纸上，只支持 PDF 和 PNG。
+    /// 调用方已校验模板尺寸和格子尺寸一致。
+    /// </summary>
+    public SheetLayout? Layout
+    {
+        get; init;
+    }
+
+    /// <summary>
+    /// 用了版式时第一页从第几个格子开始，1 到格子数，默认 1。
+    /// </summary>
+    public int StartSlot { get; init; } = 1;
+
+    /// <summary>
+    /// 拼版时不随数据变化的元素是否只排版、绘制一次，各格子回放。默认开启，基准测试关掉它做对比。
+    /// </summary>
+    internal bool ShareStaticElements { get; init; } = true;
 
     /// <summary>
     /// 计时对象。服务端传入已记录 auth、tpl、validate 的实例，渲染引擎接着记录 layout、draw、encode。

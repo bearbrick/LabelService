@@ -6,6 +6,7 @@ using LabelService.Rendering.Assets;
 using LabelService.Rendering.Elements;
 using LabelService.Rendering.Fonts;
 using LabelService.Rendering.Output;
+using LabelService.Rendering.Sheets;
 using SkiaSharp;
 
 namespace LabelService.Rendering;
@@ -56,6 +57,11 @@ public sealed class LabelRenderer : ILabelRenderer
     public RenderResult Render(RenderJob job)
     {
         ArgumentNullException.ThrowIfNull(job);
+        if (job.Layout is not null)
+        {
+            return SheetRenderer.Render(job, fonts, assets);
+        }
+
         var template = job.Template;
         var timings = job.Timings;
         var warnings = new WarningList();
@@ -118,25 +124,24 @@ public sealed class LabelRenderer : ILabelRenderer
         var layouts = new List<(IElementPainter, ElementLayout)>(template.Elements.Count);
         foreach (var element in template.Elements)
         {
-            if (element.Hidden)
+            if (PainterFor(element) is { } painter)
             {
-                continue;
+                layouts.Add((painter, painter.Layout(element, context)));
             }
-
-            // 尚未实现的元素类型先跳过，实现进度见 docs/tasks/README.md。
-            var painter = ElementPainters.Find(element.Type);
-            if (painter is null)
-            {
-                continue;
-            }
-
-            layouts.Add((painter, painter.Layout(element, context)));
         }
 
         return layouts;
     }
 
-    private static void Draw(SKCanvas canvas, IElementPainter painter, ElementLayout layout, RenderContext context)
+    /// <summary>
+    /// 元素的绘制器；隐藏的元素和尚未实现的元素类型返回 null（跳过），实现进度见 docs/tasks/README.md。
+    /// </summary>
+    internal static IElementPainter? PainterFor(LabelElement element) => element.Hidden ? null : ElementPainters.Find(element.Type);
+
+    /// <summary>
+    /// 画一个已排版的元素，统一处理旋转。单张和拼版共用。
+    /// </summary>
+    internal static void Draw(SKCanvas canvas, IElementPainter painter, ElementLayout layout, RenderContext context)
     {
         var rotation = (float)layout.Rotation;
         if (rotation == 0)
