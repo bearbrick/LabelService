@@ -104,7 +104,7 @@ internal static class TextChecks
 
     private static void CheckPixels(string backendRoot, FontRegistry fonts, Action<string, bool> check)
     {
-        var renderer = new LabelRenderer(fonts);
+        var renderer = new LabelRenderer(fonts, Fixtures.Assets(backendRoot));
         var template = Fixtures.LoadTemplate(backendRoot);
         var values = FieldValidator.Validate(template.Fields, null, Fixtures.Data(Fixtures.BoxLabelData)).Values;
         var sample = Render(renderer, template, values);

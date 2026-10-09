@@ -17,7 +17,7 @@ internal static class QrCodeChecks
 {
     public static void Run(string backendRoot, Action<string, bool> check)
     {
-        var renderer = new LabelRenderer(Fixtures.Fonts(backendRoot));
+        var renderer = Fixtures.Renderer(backendRoot);
         var template = Fixtures.LoadTemplate(backendRoot);
         var values = FieldValidator.Validate(template.Fields, null, Fixtures.Data(Fixtures.BoxLabelData)).Values;
         foreach (var dpi in new[] { 203, 300 })

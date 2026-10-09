@@ -4,6 +4,7 @@ using LabelService.Contracts;
 using LabelService.Contracts.Protocol;
 using LabelService.Contracts.Templates;
 using LabelService.Rendering;
+using LabelService.Rendering.Assets;
 using LabelService.Rendering.Fonts;
 using LabelService.Rendering.Validation;
 
@@ -19,6 +20,7 @@ public class RenderBenchmarks
         """{"partName":"电源适配器","partNo":"3100-0123","qty":50,"batchNo":"20261008-A","prodDate":"2026-10-08","boxNo":"C2610080001"}""";
 
     private FontRegistry fonts = null!;
+    private AssetLibrary assets = null!;
     private LabelRenderer renderer = null!;
     private LabelTemplate template = null!;
     private Dictionary<string, JsonElement> data = null!;
@@ -33,7 +35,7 @@ public class RenderBenchmarks
     }
 
     /// <summary>
-    /// 加载内嵌的示例模板和 backend/assets/fonts 里的字体。
+    /// 加载内嵌的示例模板，以及 backend/assets 里的字体、图标和图片素材。
     /// </summary>
     [GlobalSetup]
     public void Setup()
@@ -48,14 +50,20 @@ public class RenderBenchmarks
             throw new InvalidOperationException("backend/assets/fonts 里没有思源黑体，见那里的 README");
         }
 
-        renderer = new LabelRenderer(fonts);
+        var root = Path.GetDirectoryName(FontDirectory())!;
+        assets = AssetLibrary.Load(Path.Combine(root, "icons"), [Path.Combine(root, "images")]);
+        renderer = new LabelRenderer(fonts, assets);
     }
 
     /// <summary>
-    /// 释放字体。
+    /// 释放字体和素材。
     /// </summary>
     [GlobalCleanup]
-    public void Cleanup() => fonts.Dispose();
+    public void Cleanup()
+    {
+        fonts.Dispose();
+        assets.Dispose();
+    }
 
     /// <summary>
     /// 成品箱标 100×60mm 输出 PNG。
