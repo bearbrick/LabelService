@@ -64,7 +64,7 @@
 | `src/LabelService.Server/Assets/` | 素材目录配置（`LabelService:Assets`），启动时加载并写日志；上传的素材在数据目录的 `assets/` |
 | `assets/icons/`、`assets/images/` | GB/T 191 图标（和设计器 `frontend/src/model/icons.ts` 同一套路径，检查程序核对）、内置图片素材；构建时复制到程序目录的 `icons/`、`images/` |
 | `src/LabelService.Rendering/Fonts/` | 字体注册表：启动时加载字体目录，按模板字体名匹配，缺失时降级；缓存字体和 SKFont |
-| `src/LabelService.Server/Fonts/` | 字体目录配置（`LabelService:Fonts:Directory`），启动时加载并写日志 |
+| `src/LabelService.Server/Fonts/` | 字体目录配置（`LabelService:Fonts:Directory`），启动时加载并写日志；`/fonts` 把同一份字体提供给设计器（T-016） |
 | `assets/fonts/` | 思源黑体、思源宋体，构建时复制到程序目录的 `fonts/`；文件不提交，见那里的 README |
 | `src/LabelService.Rendering/Output/` | 每种格式一个输出文档，`OutputDocuments.cs` 登记 |
 | `src/LabelService.Rendering/Diagnostics/` | 分阶段计时、Server-Timing 生成 |

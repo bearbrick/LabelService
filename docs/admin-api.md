@@ -90,5 +90,11 @@
 | GET | `/op-logs` | log.view | 参数 `from、to、userId、type、q、beforeId、pageSize` |
 | GET | `/dashboard` | tpl.view | `templates{total,published,changed,neverPublished}`；有 log.view 时再给 `today、days[14]、topTemplates、recentOps` |
 | POST | `/api-test/render` | api.test | 请求体和开放接口单张生成一样，用已发布的模板试生成，返回文件；不写调用日志 |
+| POST | `/preview` | tpl.view | 服务端预览（ADR 0007）：`{ template, data?, dpi?, mono? }`，模板不用先保存，不传 data 时用字段样例值 → PNG（带 `X-Label-Dpi`、`Server-Timing`、`X-Label-Warnings`）；模板 JSON 不合法时 400，`message` 写 JSON 路径和行；结构问题（元素 ID 重复等）逐条列在 `details` |
 
 \* 必须先改密码的用户也能访问。
+
+## 字体（不在 /api/admin 下，不需要登录）
+
+- `GET /fonts/fonts.css`：每个模板字体名（`SourceHanSansSC`、`SourceHanSerifSC`）一条 `@font-face`，家族名 `LabelService SourceHanSansSC` 等，指向服务端渲染实际用的字体文件；用 `ascent-override`、`descent-override` 把浏览器的字体度量设成服务端的值。设计器在 `index.html` 里引入。
+- `GET /fonts/{文件名}`：字体文件，只提供已加载的文件，地址带版本号，缓存一年。
