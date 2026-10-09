@@ -4,6 +4,7 @@ using LabelService.Contracts;
 using LabelService.Contracts.Protocol;
 using LabelService.Contracts.Templates;
 using LabelService.Rendering;
+using LabelService.Rendering.Fonts;
 using LabelService.Rendering.Validation;
 
 namespace LabelService.Benchmarks;
@@ -17,7 +18,8 @@ public class RenderBenchmarks
     private const string Data =
         """{"partName":"电源适配器","partNo":"3100-0123","qty":50,"batchNo":"20261008-A","prodDate":"2026-10-08","boxNo":"C2610080001"}""";
 
-    private readonly LabelRenderer renderer = new();
+    private FontRegistry fonts = null!;
+    private LabelRenderer renderer = null!;
     private LabelTemplate template = null!;
     private Dictionary<string, JsonElement> data = null!;
 
@@ -31,7 +33,7 @@ public class RenderBenchmarks
     }
 
     /// <summary>
-    /// 加载内嵌的示例模板。
+    /// 加载内嵌的示例模板和 backend/assets/fonts 里的字体。
     /// </summary>
     [GlobalSetup]
     public void Setup()
@@ -40,7 +42,20 @@ public class RenderBenchmarks
             ?? throw new InvalidOperationException("缺少内嵌模板 templates/box-label.json");
         template = JsonSerializer.Deserialize<LabelTemplate>(stream, LabelJson.Options)!;
         data = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(Data)!;
+        fonts = FontRegistry.Load(FontDirectory());
+        if (!fonts.HasDefaultFamily)
+        {
+            throw new InvalidOperationException("backend/assets/fonts 里没有思源黑体，见那里的 README");
+        }
+
+        renderer = new LabelRenderer(fonts);
     }
+
+    /// <summary>
+    /// 释放字体。
+    /// </summary>
+    [GlobalCleanup]
+    public void Cleanup() => fonts.Dispose();
 
     /// <summary>
     /// 成品箱标 100×60mm 输出 PNG。
@@ -57,5 +72,17 @@ public class RenderBenchmarks
             Dpi = Dpi,
         });
         return result.Content.Length;
+    }
+
+    private static string FontDirectory()
+    {
+        // BenchmarkDotNet 在 bin 下的子目录里运行，往上找到 backend 目录。
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory != null && !File.Exists(Path.Combine(directory.FullName, "LabelService.Backend.slnx")))
+        {
+            directory = directory.Parent;
+        }
+
+        return Path.Combine(directory?.FullName ?? throw new DirectoryNotFoundException("未找到 LabelService.Backend.slnx"), "assets", "fonts");
     }
 }

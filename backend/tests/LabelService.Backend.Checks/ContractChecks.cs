@@ -6,6 +6,7 @@ using LabelService.Contracts;
 using LabelService.Contracts.Protocol;
 using LabelService.Contracts.Templates;
 using LabelService.Rendering.Binding;
+using LabelService.Rendering.Elements;
 
 namespace LabelService.Backend.Checks;
 
@@ -57,6 +58,9 @@ internal static partial class ContractChecks
         var contractsDoc = File.ReadAllText(Path.Combine(repositoryRoot, "docs", "contracts.md"));
         check("docs/contracts.md 写到了全部错误码", clientCodes.All(contractsDoc.Contains));
         check("docs/contracts.md 写到了全部元素类型", ElementTypes.All.All(type => contractsDoc.Contains($"`{type}`")));
+        var progress = ElementTypes.All.Where(type => Regex.IsMatch(contractsDoc, $@"^\| `{type}` \|.*\| 已实现 \|\r?$", RegexOptions.Multiline)).Order().ToArray();
+        check("docs/contracts.md 元素表的“已实现”和服务端已登记的绘制器一致：" + string.Join("、", progress),
+            progress.SequenceEqual(ElementPainters.Implemented.Order()));
         check("docs/contracts.md 写到了全部 HTTP 头", contractHeaders.All(contractsDoc.Contains));
 
         var frontendModel = File.ReadAllText(Path.Combine(repositoryRoot, "frontend", "src", "model", "template.ts"));

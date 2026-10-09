@@ -31,6 +31,7 @@ internal static class ServerChecks
             && Header(ok, HeaderNames.LabelDpi) == "300" && Header(ok, HeaderNames.TraceId) is { Length: > 0 });
         var stages = Header(ok, HeaderNames.ServerTiming)!.Split(", ").Select(item => item.Split(';')[0]).ToArray();
         check("Server-Timing 包含全部阶段且按规范顺序", stages.SequenceEqual(TimingStages.All));
+        check("示例模板用打包的字体渲染，没有字体降级警告", Header(ok, HeaderNames.LabelWarnings)?.Contains(WarningCodes.FontFallback) != true);
         check("文件名是 模板编码_日期.png", ok.Content.Headers.ContentDisposition?.FileName?.Trim('"') is { } name && name.StartsWith("BOX_LABEL_") && name.EndsWith(".png"));
 
         var unauthorized = await Post(http, "{}", apiKey: null);

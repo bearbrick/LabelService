@@ -15,6 +15,7 @@ internal static class Program
         BindingChecks.Run(Check);
         ValidationChecks.Run(backendRoot, Check);
         RenderChecks.Run(backendRoot, Check);
+        TextChecks.Run(backendRoot, Check);
         await ServerChecks.RunAsync(backendRoot, Check);
         ArchitectureChecks.Run(backendRoot, repositoryRoot, Check);
         Console.WriteLine($"后端检查全部通过：{passed} 项");
