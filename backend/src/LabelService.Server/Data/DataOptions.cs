@@ -18,6 +18,11 @@ internal sealed class DataOptions
     public const string DatabaseFileName = "label.db";
 
     /// <summary>
+    /// 调用日志库文件名，和主库分开（ADR 0003）。
+    /// </summary>
+    public const string LogDatabaseFileName = "label-log.db";
+
+    /// <summary>
     /// 数据目录。相对路径相对于程序目录，默认程序目录下的 data/。不能放网络共享盘，也不能让两个服务进程共用。
     /// </summary>
     public string Directory { get; set; } = "data";
@@ -32,4 +37,10 @@ internal sealed class DataOptions
     /// </summary>
     public string ConnectionString() =>
         new SqliteConnectionStringBuilder { DataSource = Path.Combine(ResolveDirectory(), DatabaseFileName) }.ToString();
+
+    /// <summary>
+    /// 调用日志库的连接字符串。
+    /// </summary>
+    public string LogConnectionString() =>
+        new SqliteConnectionStringBuilder { DataSource = Path.Combine(ResolveDirectory(), LogDatabaseFileName) }.ToString();
 }
