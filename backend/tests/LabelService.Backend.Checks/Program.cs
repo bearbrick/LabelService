@@ -25,6 +25,7 @@ internal static class Program
         await StorageChecks.RunAsync(backendRoot, Check);
         await BatchChecks.RunAsync(backendRoot, Check);
         await ClientLogChecks.RunAsync(backendRoot, Check);
+        await AdminChecks.RunAsync(backendRoot, Check);
         ArchitectureChecks.Run(backendRoot, repositoryRoot, Check);
         Console.WriteLine($"后端检查全部通过：{passed} 项");
         return 0;

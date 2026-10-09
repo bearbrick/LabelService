@@ -83,8 +83,8 @@ internal static class StorageChecks
         var repository = services.GetRequiredService<TemplateRepository>();
         var store = services.GetRequiredService<DbTemplateStore>();
         var box = (await repository.ListAsync()).SingleOrDefault(item => item.Code == BoxLabel);
-        check("开发环境首次建库把示例模板导入为已发布版本 1",
-            box is { Status: TemplateStatuses.Published, LatestVersion: 1, HasDraft: false, Category: "示例" });
+        check("开发环境首次建库把示例模板导入为已发布版本 1，放在示例业务分组里",
+            box is { Status: TemplateStatuses.Published, LatestVersion: 1, HasDraft: false, BusinessId: not null });
         check("时间列读回来是 UTC", box is { UpdatedAt.Kind: DateTimeKind.Utc } && (DateTime.UtcNow - box.UpdatedAt).Duration() < TimeSpan.FromMinutes(10));
 
         var template = Fixtures.LoadTemplate(backendRoot);
@@ -136,7 +136,7 @@ internal static class StorageChecks
             Fields = [new FieldDefinition { Key = "lot", Type = FieldType.String }],
             Elements = [new TextElement { Id = "t1", Content = "批次 {{lot}}", X = 2, Y = 2, Width = 40, Height = 8 }],
         };
-        await repository.SaveDraftAsync(fresh, "checks", "测试");
+        await repository.SaveDraftAsync(fresh, "checks");
         var notFound = await ServerChecks.Post(http, """{"templateCode":"NEW_LABEL","format":"png","data":{"lot":"A1"}}""");
         check("新模板只有草稿时开放接口返回 404", (int)notFound.StatusCode == 404);
         var result = await repository.PublishAsync("NEW_LABEL", "checks");

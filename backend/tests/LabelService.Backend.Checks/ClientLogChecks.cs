@@ -44,7 +44,7 @@ internal static class ClientLogChecks
     private static async Task<(int ClientId, string Key)> CheckClientsAsync(IServiceProvider services, HttpClient http, Action<string, bool> check)
     {
         var repository = services.GetRequiredService<ApiClientRepository>();
-        var (mes, key) = await repository.CreateAsync("MES", ["*"]);
+        var (mes, key) = await repository.CreateAsync(new ApiClientInput("MES", "", "", AllBusinesses: true, [], ""));
         check("新建调用方返回 Key 原文（开发环境 lbl_test_ 前缀），可以直接调用", key.StartsWith("lbl_test_", StringComparison.Ordinal) && key.Length == 41 && await Status(http, key) == 200);
         await using (var db = await services.GetRequiredService<IDbContextFactory<LabelDbContext>>().CreateDbContextAsync())
         {
@@ -53,14 +53,14 @@ internal static class ClientLogChecks
                 row.ApiKeyHash == ApiKeyAuthenticator.Hash(key) && row.KeyPrefix == key[..13] && !row.ApiKeyHash.Contains(key[9..], StringComparison.Ordinal));
         }
 
-        var (_, limitedKey) = await repository.CreateAsync("WMS", ["OTHER_LABEL"]);
-        check("只允许部分模板的调用方用别的模板返回 403 TEMPLATE_FORBIDDEN", await Status(http, limitedKey) == 403);
-        check("调用方名称不能重复", await Throws(() => repository.CreateAsync("MES", ["*"])));
+        var (_, limitedKey) = await repository.CreateAsync(new ApiClientInput("WMS", "", "", AllBusinesses: false, [], ""));
+        check("没有授权这个业务分组的调用方返回 403 TEMPLATE_FORBIDDEN", await Status(http, limitedKey) == 403);
+        check("调用方名称不能重复", await Throws(() => repository.CreateAsync(new ApiClientInput("MES", "", "", AllBusinesses: true, [], ""))));
 
         await repository.UpdateAsync(mes.Id, null, enabled: false);
         check("停用后立即不能调用（401）", await Status(http, key) == 401);
         await repository.UpdateAsync(mes.Id, null, enabled: true);
-        var newKey = await repository.ResetKeyAsync(mes.Id);
+        var (_, newKey) = await repository.ResetKeyAsync(mes.Id);
         check("重置 Key 后旧 Key 立即失效、新 Key 可用", await Status(http, key) == 401 && await Status(http, newKey) == 200);
         check("配置文件里的开发 Key 仍然可用", await Status(http, Fixtures.DevApiKey) == 200);
 
