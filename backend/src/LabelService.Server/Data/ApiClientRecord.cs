@@ -20,8 +20,20 @@ internal sealed class ApiClientRecord
     /// <summary>Key 的前几位（如 lbl_live_3Fk9），只用来在后台辨认是哪把 Key，不能用来鉴权。</summary>
     public string KeyPrefix { get; set; } = "";
 
-    /// <summary>允许使用的模板编码，逗号分隔；<c>*</c> 表示全部。</summary>
-    public string AllowedTemplates { get; set; } = "*";
+    /// <summary>调用方系统的标识，如 mes-prod，全局唯一，可空。</summary>
+    public string AppId { get; set; } = "";
+
+    /// <summary>说明，如对接人。</summary>
+    public string Description { get; set; } = "";
+
+    /// <summary>是否能调用全部业务分组的模板。</summary>
+    public bool AllBusinesses { get; set; } = true;
+
+    /// <summary>能调用的业务分组 ID，逗号分隔；<see cref="AllBusinesses"/> 为 true 时忽略。</summary>
+    public string BusinessIds { get; set; } = "";
+
+    /// <summary>IP 白名单，CIDR 或单个地址，逗号分隔；空表示不限。</summary>
+    public string IpAllowlist { get; set; } = "";
 
     /// <summary>是否启用。停用后立即不能调用。</summary>
     public bool Enabled { get; set; } = true;

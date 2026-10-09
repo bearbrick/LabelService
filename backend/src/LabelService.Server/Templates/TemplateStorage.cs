@@ -10,6 +10,11 @@ namespace LabelService.Server.Templates;
 internal static class TemplateStorage
 {
     /// <summary>
+    /// 示例模板所在的业务分组编码。
+    /// </summary>
+    public const string SampleBusinessCode = "SAMPLE";
+
+    /// <summary>
     /// 注册模板存储。配置在第一次用到时才读取，检查程序覆盖的配置（如临时数据目录）能生效。
     /// </summary>
     public static IServiceCollection AddTemplateStorage(this IServiceCollection services, IConfiguration configuration)
@@ -59,7 +64,7 @@ internal static class TemplateStorage
         var repository = services.GetRequiredService<TemplateRepository>();
         if (empty && app.Environment.IsDevelopment())
         {
-            await ImportSamplesAsync(repository, options.ResolveSeedDirectory(), logger);
+            await ImportSamplesAsync(repository, contexts, options.ResolveSeedDirectory(), logger);
         }
 
         var count = await repository.LoadPublishedAsync();
@@ -67,9 +72,9 @@ internal static class TemplateStorage
     }
 
     /// <summary>
-    /// 开发环境首次建库：把示例模板导入为已发布版本，走正常的保存草稿和发布流程。
+    /// 开发环境首次建库：把示例模板导入为已发布版本，放在业务分组“示例”（SAMPLE）里，走正常的保存草稿和发布流程。
     /// </summary>
-    private static async Task ImportSamplesAsync(TemplateRepository repository, string directory, ILogger logger)
+    private static async Task ImportSamplesAsync(TemplateRepository repository, IDbContextFactory<LabelDbContext> contexts, string directory, ILogger logger)
     {
         if (!Directory.Exists(directory))
         {
@@ -77,11 +82,25 @@ internal static class TemplateStorage
             return;
         }
 
+        int businessId;
+        await using (var db = await contexts.CreateDbContextAsync())
+        {
+            var business = await db.Businesses.SingleOrDefaultAsync(item => item.Code == SampleBusinessCode);
+            if (business is null)
+            {
+                business = new BusinessRecord { Code = SampleBusinessCode, Name = "示例", Description = "开发环境自动导入的示例模板", CreatedAt = DateTime.UtcNow };
+                db.Businesses.Add(business);
+                await db.SaveChangesAsync();
+            }
+
+            businessId = business.Id;
+        }
+
         foreach (var template in FileTemplateStore.ReadDirectory(directory))
         {
             try
             {
-                await repository.SaveDraftAsync(template, "system", "示例");
+                await repository.SaveDraftAsync(template, "system", businessId);
                 await repository.PublishAsync(template.Code, "system");
                 logger.LogInformation("已导入示例模板 {Code}", template.Code);
             }

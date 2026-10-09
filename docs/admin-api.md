@@ -1,0 +1,94 @@
+# 管理接口 /api/admin
+
+只给设计器和管理后台用，不对外公开，可以随前端一起调整（改了要同步本文和后端检查程序）。登录和权限的设计见 [ADR 0006](adr/0006-admin-auth.md)。
+
+## 约定
+
+- 鉴权：`Authorization: Bearer <令牌>`。令牌由 `POST /api/admin/login` 签发，8 小时；勾选“7 天内自动登录”时 7 天。开放接口的 `X-Api-Key` 在这里无效，令牌在开放接口也无效。
+- 每次请求都会从库里核对用户：停用、改角色、改业务范围立即生效。
+- 错误统一是 `{ "code": "...", "message": "...", "details": [] }`：
+
+| HTTP | code | 含义 |
+| --- | --- | --- |
+| 400 | `INVALID` | 输入有问题，`message` 和 `details` 写明原因（发布检查不通过时 `details` 逐条列出） |
+| 401 | `UNAUTHORIZED` | 没登录、令牌无效或过期、账号已停用：跳回登录页 |
+| 401 | `INVALID_LOGIN` | 账号或密码不对 |
+| 403 | `LOCKED` | 连续输错 5 次，锁定 15 分钟 |
+| 403 | `DISABLED` | 账号已停用 |
+| 403 | `PASSWORD_CHANGE_REQUIRED` | 首次登录或被重置密码后必须先改密码，只能访问个人设置相关接口 |
+| 403 | `FORBIDDEN` | 没有这个权限点，或目标业务分组不在自己的范围里 |
+| 404 | `NOT_FOUND` | 不存在，或不在自己的业务范围里（不暴露是否存在） |
+
+- 时间都是 UTC（ISO 8601），前端按本地时区显示。查询参数里的时间可以带时区。
+- JSON 属性名是 camelCase。
+
+## 权限点
+
+| 权限点 | 说明 |
+| --- | --- |
+| `tpl.view` | 查看模板、概览 |
+| `tpl.edit` | 新建、编辑模板（保存草稿、放弃草稿、回滚成草稿、换分组） |
+| `tpl.publish` | 发布模板 |
+| `tpl.delete` | 删除模板 |
+| `biz.manage` | 管理业务分组 |
+| `res.manage` | 管理画布预设、素材 |
+| `api.test` | 接口调试 |
+| `api.manage` | 管理调用方和密钥 |
+| `log.view` | 查看调用日志、操作日志 |
+| `sys.user` | 管理用户 |
+| `sys.role` | 管理角色权限 |
+
+模板相关的接口同时检查权限点和业务范围。下表“权限”一列写“登录”的，只要登录（且不需要先改密码）就能用。
+
+## 接口
+
+| 方法 | 路径 | 权限 | 说明 |
+| --- | --- | --- | --- |
+| POST | `/login` | — | `{ account, password, remember }` → `{ token, expiresAt, me }` |
+| POST | `/logout` | 登录* | 记一条操作日志 |
+| GET | `/me` | 登录* | 当前用户：`id、account、name、phone、role{id,name}、permissions[]、allBusinesses、businessIds[]、mustChangePassword、lastLoginAt` |
+| PUT | `/me` | 登录* | `{ name, phone }` |
+| POST | `/me/password` | 登录* | `{ oldPassword, newPassword }`；新密码至少 8 位，同时有字母和数字 |
+| GET | `/permissions` | 登录* | 权限点目录 `[{ key, label, group }]` |
+| GET | `/users` | sys.user | 用户列表 |
+| POST | `/users` | sys.user | `{ account, name, roleId, allBusinesses, businessIds[] }` → `{ user, temporaryPassword }` |
+| PUT | `/users/{id}` | sys.user | `{ name, roleId, allBusinesses, businessIds[] }`；不能改自己的角色 |
+| POST | `/users/{id}/status` | sys.user | `{ enabled }`；不能停用自己 |
+| POST | `/users/{id}/reset-password` | sys.user | → `{ temporaryPassword }`，同时解锁 |
+| GET | `/roles` | 登录 | 角色列表（含 `permissions[]`、`builtin`、`users` 人数） |
+| POST | `/roles` | sys.role | `{ name, description, permissions[] }` 或 `{ name, description, copyFromRoleId }` |
+| PUT | `/roles/{id}` | sys.role | `{ name, description, permissions[] }`；系统管理员角色不能改 |
+| DELETE | `/roles/{id}` | sys.role | 内置角色、有人在用的角色不能删 |
+| GET | `/businesses` | 登录 | 自己范围里的业务分组（含 `templates` 数量） |
+| POST / PUT | `/businesses`、`/businesses/{id}` | biz.manage | `{ code, name, description, ownerUserId, color }` |
+| DELETE | `/businesses/{id}` | biz.manage | 分组里还有模板时不能删 |
+| GET | `/templates` | tpl.view | 模板列表（自己范围里的）：`code、name、businessId、status、latestVersion、hasDraft、createdBy、updatedBy、updatedAt` |
+| POST | `/templates` | tpl.edit | `{ code, name, businessId, width, height, dpi }` 建空白模板，或带 `content`（完整模板 JSON） |
+| POST | `/templates/check` | tpl.view | 请求体是模板 JSON：发布前检查 + 试渲染，不保存 → `{ errors[], warnings[], renderMs, canPublish }` |
+| GET | `/templates/{code}` | tpl.view | 打开：有草稿给草稿，没有给最新发布版本；`{ ..., hasDraft, content }` |
+| DELETE | `/templates/{code}` | tpl.delete | 软删除：开放接口立即不能用，编码不能再用 |
+| PUT | `/templates/{code}/draft` | tpl.edit | 请求体是模板 JSON（编码不能改）→ `{ draftVersion, savedAt }` |
+| DELETE | `/templates/{code}/draft` | tpl.edit | 放弃未发布的改动 |
+| POST | `/templates/{code}/publish` | tpl.publish | `{ note }` → `{ version, warnings[], renderMs }`；检查不通过时 400，`details` 逐条列出 |
+| GET | `/templates/{code}/versions` | tpl.view | `[{ versionNo, status, publishedBy, publishedAt, note }]` |
+| GET | `/templates/{code}/versions/{n}` | tpl.view | 某个已发布版本的模板 JSON |
+| POST | `/templates/{code}/versions/{n}/restore` | tpl.edit | 回滚第一步：把 vN 复制成草稿 → `{ draftVersion }` |
+| PUT | `/templates/{code}/business` | tpl.edit | `{ businessId }`，新旧分组都要在自己范围里 |
+| GET | `/presets` | 登录 | 画布预设 `[{ id, name, kind, widthMm, heightMm, sort, enabled }]` |
+| POST / PUT / DELETE | `/presets`、`/presets/{id}` | res.manage | `{ name, kind, width, height, enabled }` |
+| GET | `/assets` | 登录 | `[{ key, name, builtin, size, createdAt }]`；模板里写 `asset:key` |
+| GET | `/assets/{key}/file` | 登录 | 素材文件（设计器显示用） |
+| POST | `/assets` | res.manage | multipart，字段 `file`；PNG、JPG、SVG，≤ 1 MB；按内容判断类型，SVG 先清洗 |
+| PUT / DELETE | `/assets/{key}` | res.manage | `{ name }` 改名 / 删除（内置素材不能改、不能删） |
+| GET | `/fonts` | 登录 | `{ families[], files[] }` |
+| GET | `/clients` | api.manage | 调用方列表（只有 `keyPrefix`，没有 Key） |
+| POST | `/clients` | api.manage | `{ name, appId, description, allBusinesses, businessIds[], ipAllowlist }` → `{ client, apiKey }`（Key 只返回这一次） |
+| PUT | `/clients/{id}` | api.manage | 同上（不改 Key） |
+| POST | `/clients/{id}/status` | api.manage | `{ enabled }`，停用立即生效 |
+| POST | `/clients/{id}/reset-key` | api.manage | → `{ client, apiKey }`，旧 Key 立即失效 |
+| GET | `/call-logs` | log.view | 参数 `from、to、templateCode、clientId、status、q（链路 ID / X-Request-Id / 模板编码 / 错误码）、beforeTime、beforeId、pageSize`；按时间倒序，翻页用上一页最后一条的 `createdAt`、`id` |
+| GET | `/op-logs` | log.view | 参数 `from、to、userId、type、q、beforeId、pageSize` |
+| GET | `/dashboard` | tpl.view | `templates{total,published,changed,neverPublished}`；有 log.view 时再给 `today、days[14]、topTemplates、recentOps` |
+| POST | `/api-test/render` | api.test | 请求体和开放接口单张生成一样，用已发布的模板试生成，返回文件；不写调用日志 |
+
+\* 必须先改密码的用户也能访问。

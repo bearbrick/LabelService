@@ -16,7 +16,7 @@ namespace LabelService.Rendering.Assets;
 /// <item>属性值里的 url(...) 只保留 url(#id)。</item>
 /// </list>
 /// </remarks>
-internal static partial class SvgSanitizer
+public static partial class SvgSanitizer
 {
     private static readonly HashSet<string> RemovedElements = new(StringComparer.OrdinalIgnoreCase)
     {

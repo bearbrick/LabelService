@@ -14,6 +14,9 @@ internal sealed class CanvasPresetRecord
     /// <summary>显示名称，如“A4”“100×60”。</summary>
     public string Name { get; set; } = "";
 
+    /// <summary>类型：标签纸、办公纸张。</summary>
+    public string Kind { get; set; } = "标签纸";
+
     /// <summary>宽度，mm。</summary>
     public double WidthMm
     {
@@ -53,8 +56,8 @@ internal sealed class TemplateRecord
     /// <summary>模板名称，保存草稿时从模板内容同步。</summary>
     public string Name { get; set; } = "";
 
-    /// <summary>业务分组，管理后台的模板库按它分组。</summary>
-    public string? Category
+    /// <summary>业务分组（business.id），管理后台的模板库按它分组，用户和调用方按它授权。</summary>
+    public int? BusinessId
     {
         get; set;
     }
@@ -70,6 +73,9 @@ internal sealed class TemplateRecord
 
     /// <summary>创建人。</summary>
     public string CreatedBy { get; set; } = "";
+
+    /// <summary>最后修改人。</summary>
+    public string UpdatedBy { get; set; } = "";
 
     /// <summary>最后修改时间（UTC），保存草稿和发布时更新。</summary>
     public DateTime UpdatedAt
@@ -131,6 +137,9 @@ internal sealed class TemplateVersionRecord
     {
         get; set;
     }
+
+    /// <summary>发布说明，如“箱号改为第几箱 / 共几箱”。</summary>
+    public string Note { get; set; } = "";
 }
 
 /// <summary>
@@ -149,6 +158,9 @@ internal sealed class AssetRecord
 
     /// <summary>显示名称。</summary>
     public string Name { get; set; } = "";
+
+    /// <summary>素材 Key，模板里写 asset:Key；也是数据目录 assets/ 下的文件名（不含扩展名）。</summary>
+    public string Key { get; set; } = "";
 
     /// <summary>文件路径，相对于数据目录下的 assets/。</summary>
     public string FilePath { get; set; } = "";
@@ -179,4 +191,7 @@ internal static class TemplateStatuses
 
     /// <summary>已发布：模板至少发布过一个版本，或版本已发布。</summary>
     public const string Published = "published";
+
+    /// <summary>已删除（只用于模板）：不再出现在列表里，开放接口不能再用；版本记录保留备查，编码不能再用。</summary>
+    public const string Deleted = "deleted";
 }

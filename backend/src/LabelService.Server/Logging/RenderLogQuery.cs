@@ -39,6 +39,17 @@ internal sealed class RenderLogQuery(IDbContextFactory<LogDbContext> contexts)
             query = query.Where(log => log.TemplateCode == filter.TemplateCode);
         }
 
+        if (filter.TemplateCodes is { } codes)
+        {
+            query = query.Where(log => codes.Contains(log.TemplateCode));
+        }
+
+        if (!string.IsNullOrWhiteSpace(filter.Search))
+        {
+            var search = filter.Search.Trim();
+            query = query.Where(log => log.TraceId == search || log.RequestId == search || log.TemplateCode == search || log.ErrorCode == search);
+        }
+
         if (filter.ClientId is { } clientId)
         {
             query = query.Where(log => log.ClientId == clientId);
@@ -72,6 +83,8 @@ internal sealed class RenderLogQuery(IDbContextFactory<LogDbContext> contexts)
 /// <param name="Status">结果：ok、error、aborted。</param>
 /// <param name="Before">翻页：上一页最后一条的时间和 ID。</param>
 /// <param name="PageSize">每页条数，最多 200。</param>
+/// <param name="TemplateCodes">只看这些模板（按用户的业务范围限制）；null 表示不限。</param>
+/// <param name="Search">按链路 ID、X-Request-Id、模板编码或错误码精确查找。</param>
 internal sealed record RenderLogFilter(
     DateTime? From = null,
     DateTime? To = null,
@@ -79,4 +92,6 @@ internal sealed record RenderLogFilter(
     int? ClientId = null,
     string? Status = null,
     (DateTime CreatedAt, long Id)? Before = null,
-    int PageSize = 50);
+    int PageSize = 50,
+    IReadOnlyCollection<string>? TemplateCodes = null,
+    string? Search = null);

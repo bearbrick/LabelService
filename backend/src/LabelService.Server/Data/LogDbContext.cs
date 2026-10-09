@@ -11,6 +11,9 @@ internal sealed class LogDbContext(DbContextOptions<LogDbContext> options) : DbC
     /// <summary>调用日志。</summary>
     public DbSet<RenderLogRecord> RenderLogs => Set<RenderLogRecord>();
 
+    /// <summary>后台操作日志。</summary>
+    public DbSet<OpLogRecord> OpLogs => Set<OpLogRecord>();
+
     /// <inheritdoc />
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder) =>
         LabelDbContext.UseUtcDateTimes(configurationBuilder);
@@ -36,6 +39,23 @@ internal sealed class LogDbContext(DbContextOptions<LogDbContext> options) : DbC
             log.HasIndex(item => new { item.ClientId, item.CreatedAt });
             log.HasIndex(item => new { item.Status, item.CreatedAt });
             log.HasIndex(item => item.RequestId);
+            log.Property(item => item.TraceId).HasMaxLength(64);
+            log.Property(item => item.Ip).HasMaxLength(64);
+            log.Property(item => item.ErrorMessage).HasMaxLength(512);
+            log.HasIndex(item => item.TraceId);
+        });
+
+        modelBuilder.Entity<OpLogRecord>(log =>
+        {
+            log.ToTable("op_log");
+            log.Property(item => item.UserName).HasMaxLength(64);
+            log.Property(item => item.Type).HasMaxLength(32);
+            log.Property(item => item.Target).HasMaxLength(256);
+            log.Property(item => item.Detail).HasMaxLength(1024);
+            log.Property(item => item.Ip).HasMaxLength(64);
+            log.HasIndex(item => item.CreatedAt);
+            log.HasIndex(item => new { item.UserId, item.CreatedAt });
+            log.HasIndex(item => new { item.Type, item.CreatedAt });
         });
 
         LabelDbContext.UseSnakeCaseColumns(modelBuilder);
@@ -53,8 +73,14 @@ internal sealed class RenderLogRecord
         get; set;
     }
 
-    /// <summary>调用方传的 X-Request-Id；没传时是服务端的链路 ID。</summary>
+    /// <summary>调用方传的 X-Request-Id；没传时为空。</summary>
     public string RequestId { get; set; } = "";
+
+    /// <summary>服务端链路 ID（X-Trace-Id），调用方报问题时凭它查。</summary>
+    public string TraceId { get; set; } = "";
+
+    /// <summary>调用方的来源 IP。</summary>
+    public string Ip { get; set; } = "";
 
     /// <summary>接口：render、batch、preview。</summary>
     public string Endpoint { get; set; } = "";
@@ -112,6 +138,12 @@ internal sealed class RenderLogRecord
 
     /// <summary>失败时的错误码。</summary>
     public string? ErrorCode
+    {
+        get; set;
+    }
+
+    /// <summary>失败时给调用方的说明（截断到 512 字）。</summary>
+    public string? ErrorMessage
     {
         get; set;
     }

@@ -21,7 +21,7 @@
 
 核心指标：**单张标签服务端处理 P95 ≤ 100 ms**（见 `docs/performance.md`）。
 
-当前阶段：骨架已完成（T-000）。数据库用 SQLite、单实例部署（ADR 0003）。单张 PNG 链路可用，7 种元素全部实现（T-001～T-004），PNG、PDF、ZPL 三种格式和批量接口都可用（T-005～T-007）；模板数据库和版本发布、调用方和调用日志已完成（T-008、T-009）；PDF、ZPL、批量、管理后台都在任务列表里（`docs/tasks/README.md`）。
+当前阶段：骨架已完成（T-000）。数据库用 SQLite、单实例部署（ADR 0003）。单张 PNG 链路可用，7 种元素全部实现（T-001～T-004），PNG、PDF、ZPL 三种格式和批量接口都可用（T-005～T-007）；模板数据库和版本发布、调用方和调用日志已完成（T-008、T-009）；管理接口（登录、权限、模板、调用方、日志等，见 `docs/admin-api.md`）已完成，管理后台页面在做（T-014）。其余任务见 `docs/tasks/README.md`。
 
 ## 2. 仓库地图
 
@@ -110,7 +110,7 @@ cd frontend; npm run build              # 类型检查 + 打包
 
 **R10 设计文档。** `docs/design/` 和 `docs/prototypes/` 是和老板评审过的设计，只做“让文档和实现一致”的同步修改，并在交接记录说明改了哪里；要改设计本身，先写 ADR 请人确认。
 
-**R11 文件规模。** 产品源码单个文件少于 500 行（检查程序会拦）。快到上限就按职责拆分。
+**R11 文件规模。** 产品源码单个文件少于 500 行（检查程序会拦，工具生成的文件如 EF Core 迁移的 Designer 和快照除外）。快到上限就按职责拆分。
 
 **R12 不提交生成物。** `bin/`、`obj/`、`node_modules/`、`dist/`、`BenchmarkDotNet.Artifacts/` 已在 .gitignore。`frontend/package-lock.json` 要提交。
 
@@ -230,4 +230,5 @@ cd frontend; npm run build              # 类型检查 + 打包
 - **字体**：`backend/assets/fonts/` 里没有思源黑体时文本检查失败（准备方法见那里的 README）。Noto Sans SC 可变字体的默认字重是最细的 100，注册表会按 400、700 生成实例，不要直接用默认实例。
 - **SQLite**：数据目录不能放网络共享盘，同一数据目录只能有一个服务进程；时间列存 UTC `DateTime`，不用 `DateTimeOffset`；检查程序用临时数据目录（`ServerFactory`、`TempDataDirectory`），删除前要 `SqliteConnection.ClearAllPools()`，否则 Windows 上库文件被占用删不掉。
 - **EF Core 迁移**：改了 `Server/Data` 的实体要用 `dotnet ef migrations add` 生成迁移（命令见 `backend/README.md`），不要手改迁移和快照。
+- **管理后台账号**：首次启动建 `admin`，开发环境初始密码 `admin123`（首次登录必须改），其他环境随机生成写在启动日志里。JWT 签名密钥没配置时生成在数据目录的 `admin-signing.key`，不要提交。检查程序里登录、改密码用 `AdminSession`（`AdminAccountChecks.CreateUserAsync` 能一步建好用户并改好密码）。
 - **开发 Key** `lbl_test_local_dev` 只在 Development 环境有效；后端检查程序用 `WebApplicationFactory` 启动服务，默认就是 Development；`verify.ps1` 启动服务时也会设置 Development。

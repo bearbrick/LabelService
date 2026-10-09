@@ -17,6 +17,62 @@ namespace LabelService.Server.Data.LogMigrations
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.12");
 
+            modelBuilder.Entity("LabelService.Server.Data.OpLogRecord", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Detail")
+                        .IsRequired()
+                        .HasMaxLength(1024)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("detail");
+
+                    b.Property<string>("Ip")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("ip");
+
+                    b.Property<string>("Target")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("target");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("type");
+
+                    b.Property<int?>("UserId")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("user_id");
+
+                    b.Property<string>("UserName")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("user_name");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("Type", "CreatedAt");
+
+                    b.HasIndex("UserId", "CreatedAt");
+
+                    b.ToTable("op_log", (string)null);
+                });
+
             modelBuilder.Entity("LabelService.Server.Data.RenderLogRecord", b =>
                 {
                     b.Property<long>("Id")
@@ -53,11 +109,22 @@ namespace LabelService.Server.Data.LogMigrations
                         .HasColumnType("TEXT")
                         .HasColumnName("error_code");
 
+                    b.Property<string>("ErrorMessage")
+                        .HasMaxLength(512)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("error_message");
+
                     b.Property<string>("Format")
                         .IsRequired()
                         .HasMaxLength(8)
                         .HasColumnType("TEXT")
                         .HasColumnName("format");
+
+                    b.Property<string>("Ip")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("ip");
 
                     b.Property<bool>("IsSlow")
                         .HasColumnType("INTEGER")
@@ -95,6 +162,12 @@ namespace LabelService.Server.Data.LogMigrations
                         .HasColumnType("TEXT")
                         .HasColumnName("template_code");
 
+                    b.Property<string>("TraceId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("trace_id");
+
                     b.Property<int?>("VersionNo")
                         .HasColumnType("INTEGER")
                         .HasColumnName("version_no");
@@ -104,6 +177,8 @@ namespace LabelService.Server.Data.LogMigrations
                     b.HasIndex("CreatedAt");
 
                     b.HasIndex("RequestId");
+
+                    b.HasIndex("TraceId");
 
                     b.HasIndex("ClientId", "CreatedAt");
 

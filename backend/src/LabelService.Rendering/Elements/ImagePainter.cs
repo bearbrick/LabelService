@@ -30,13 +30,13 @@ internal sealed partial class ImagePainter : IElementPainter
         if (src.StartsWith("asset:", StringComparison.Ordinal))
         {
             var id = src["asset:".Length..];
-            if (!context.Assets.HasImage(id))
+            if (!context.Assets.TryGetImage(id, out var asset))
             {
                 throw new LabelRenderException(ErrorCodes.ImageInvalid, $"元素 {element.Id} 引用的图片素材 {id} 不存在", element.Id);
             }
 
-            var target = Pixels(ImageRaster.Destination(context.Assets.ImageSize(id), box.Width, box.Height, image.Fit), box);
-            return new ImageLayout(element, box, context.Assets.Scaled(id, target.Width, target.Height, image.Fit, mono), target, owned: false);
+            var target = Pixels(ImageRaster.Destination(asset.Size, box.Width, box.Height, image.Fit), box);
+            return new ImageLayout(element, box, context.Assets.Scaled(id, asset, target.Width, target.Height, image.Fit, mono), target, owned: false);
         }
 
         var match = FieldReference().Match(src);

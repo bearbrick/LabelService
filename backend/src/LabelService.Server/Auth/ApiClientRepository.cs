@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 namespace LabelService.Server.Auth;
 
 /// <summary>
-/// 调用方管理：新建、改权限、启停、重置 Key。给管理接口（T-014）和启动加载用。
+/// 调用方管理：新建、修改（业务范围、IP 白名单等）、启停、重置 Key。给管理接口（T-014）和启动加载用。
 /// </summary>
 /// <remarks>
 /// Key 只在新建和重置时返回一次原文，库里只存 SHA-256。每次变更后重新加载 <see cref="ApiKeyAuthenticator"/> 的快照，
@@ -31,36 +31,14 @@ internal sealed class ApiClientRepository(
     /// <summary>
     /// 新建调用方。返回记录和 Key 原文（只返回这一次）。
     /// </summary>
-    /// <param name="name">名称，全局唯一。</param>
-    /// <param name="allowedTemplates">允许的模板编码；<c>*</c> 表示全部。</param>
-    /// <param name="cancellationToken">取消令牌。</param>
-    public async Task<(ApiClientRecord Client, string ApiKey)> CreateAsync(string name, IEnumerable<string> allowedTemplates, CancellationToken cancellationToken = default)
+    public async Task<(ApiClientRecord Client, string ApiKey)> CreateAsync(ApiClientInput input, CancellationToken cancellationToken = default)
     {
-        name = name.Trim();
-        if (name.Length is 0 or > 64)
-        {
-            throw new ManagementException("调用方名称不能为空，最长 64 个字符");
-        }
-
         var key = NewKey();
         var now = clock.GetUtcNow().UtcDateTime;
-        var client = new ApiClientRecord
-        {
-            Name = name,
-            ApiKeyHash = ApiKeyAuthenticator.Hash(key),
-            KeyPrefix = key[..Math.Min(13, key.Length)],
-            AllowedTemplates = Join(allowedTemplates),
-            Enabled = true,
-            CreatedAt = now,
-            UpdatedAt = now,
-        };
+        var client = new ApiClientRecord { ApiKeyHash = ApiKeyAuthenticator.Hash(key), KeyPrefix = key[..13], Enabled = true, CreatedAt = now, UpdatedAt = now };
         await using (var db = await contexts.CreateDbContextAsync(cancellationToken))
         {
-            if (await db.ApiClients.AnyAsync(item => item.Name == name, cancellationToken))
-            {
-                throw new ManagementException($"调用方 {name} 已存在");
-            }
-
+            await ApplyAsync(db, client, input, cancellationToken);
             db.ApiClients.Add(client);
             await db.SaveChangesAsync(cancellationToken);
         }
@@ -70,18 +48,18 @@ internal sealed class ApiClientRepository(
     }
 
     /// <summary>
-    /// 修改调用方：允许的模板、启用状态。参数为 null 表示不改。
+    /// 修改调用方：名称、AppId、说明、业务范围、IP 白名单；<paramref name="enabled"/> 为 null 时不改启停。
     /// </summary>
-    public async Task<ApiClientRecord> UpdateAsync(int id, IEnumerable<string>? allowedTemplates, bool? enabled, CancellationToken cancellationToken = default)
+    public async Task<ApiClientRecord> UpdateAsync(int id, ApiClientInput? input, bool? enabled, CancellationToken cancellationToken = default)
     {
         ApiClientRecord client;
         await using (var db = await contexts.CreateDbContextAsync(cancellationToken))
         {
             client = await db.ApiClients.SingleOrDefaultAsync(item => item.Id == id, cancellationToken)
                 ?? throw new ManagementException($"调用方 {id} 不存在");
-            if (allowedTemplates is not null)
+            if (input is not null)
             {
-                client.AllowedTemplates = Join(allowedTemplates);
+                await ApplyAsync(db, client, input, cancellationToken);
             }
 
             client.Enabled = enabled ?? client.Enabled;
@@ -96,21 +74,22 @@ internal sealed class ApiClientRepository(
     /// <summary>
     /// 重置 Key：生成新 Key，旧 Key 立即失效。返回新 Key 原文（只返回这一次）。
     /// </summary>
-    public async Task<string> ResetKeyAsync(int id, CancellationToken cancellationToken = default)
+    public async Task<(ApiClientRecord Client, string ApiKey)> ResetKeyAsync(int id, CancellationToken cancellationToken = default)
     {
         var key = NewKey();
+        ApiClientRecord client;
         await using (var db = await contexts.CreateDbContextAsync(cancellationToken))
         {
-            var client = await db.ApiClients.SingleOrDefaultAsync(item => item.Id == id, cancellationToken)
+            client = await db.ApiClients.SingleOrDefaultAsync(item => item.Id == id, cancellationToken)
                 ?? throw new ManagementException($"调用方 {id} 不存在");
             client.ApiKeyHash = ApiKeyAuthenticator.Hash(key);
-            client.KeyPrefix = key[..Math.Min(13, key.Length)];
+            client.KeyPrefix = key[..13];
             client.UpdatedAt = clock.GetUtcNow().UtcDateTime;
             await db.SaveChangesAsync(cancellationToken);
         }
 
         await ReloadAsync(cancellationToken);
-        return key;
+        return (client, key);
     }
 
     /// <summary>
@@ -122,6 +101,49 @@ internal sealed class ApiClientRepository(
         authenticator.Load(await db.ApiClients.AsNoTracking().ToListAsync(cancellationToken));
     }
 
+    private static async Task ApplyAsync(LabelDbContext db, ApiClientRecord client, ApiClientInput input, CancellationToken cancellationToken)
+    {
+        var name = input.Name.Trim();
+        if (name.Length is 0 or > 64)
+        {
+            throw new ManagementException("调用方名称不能为空，最长 64 个字符");
+        }
+
+        if (await db.ApiClients.AnyAsync(item => item.Name == name && item.Id != client.Id, cancellationToken))
+        {
+            throw new ManagementException($"调用方 {name} 已存在");
+        }
+
+        var appId = input.AppId.Trim();
+        if (appId.Length > 0 && await db.ApiClients.AnyAsync(item => item.AppId == appId && item.Id != client.Id, cancellationToken))
+        {
+            throw new ManagementException($"AppId {appId} 已被别的调用方使用");
+        }
+
+        try
+        {
+            ApiKeyAuthenticator.ParseNetworks(input.IpAllowlist);
+        }
+        catch (FormatException ex)
+        {
+            throw new ManagementException("IP 白名单格式不对：" + ex.Message);
+        }
+
+        var businesses = input.BusinessIds.Distinct().ToList();
+        if (!input.AllBusinesses && businesses.Count > 0
+            && await db.Businesses.CountAsync(item => businesses.Contains(item.Id), cancellationToken) != businesses.Count)
+        {
+            throw new ManagementException("选择的业务分组有的不存在");
+        }
+
+        client.Name = name;
+        client.AppId = appId;
+        client.Description = input.Description.Trim();
+        client.AllBusinesses = input.AllBusinesses;
+        client.BusinessIds = input.AllBusinesses ? "" : string.Join(",", businesses);
+        client.IpAllowlist = string.Join(",", input.IpAllowlist.Split([',', '，', '\n', ' '], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+    }
+
     /// <summary>
     /// 生成 Key：正式环境 <c>lbl_live_</c>，其他环境 <c>lbl_test_</c>，后面 32 位随机字母数字（约 190 位熵）。
     /// </summary>
@@ -130,10 +152,15 @@ internal sealed class ApiClientRepository(
         var prefix = environment.IsProduction() ? "lbl_live_" : "lbl_test_";
         return prefix + RandomNumberGenerator.GetString(Alphabet, 32);
     }
-
-    private static string Join(IEnumerable<string> templates)
-    {
-        var list = templates.Select(code => code.Trim()).Where(code => code.Length > 0).Distinct(StringComparer.Ordinal).ToList();
-        return list.Count == 0 ? "" : string.Join(",", list);
-    }
 }
+
+/// <summary>
+/// 新建、修改调用方时填的内容。
+/// </summary>
+/// <param name="Name">名称，全局唯一。</param>
+/// <param name="AppId">调用方系统的标识，可空，非空时唯一。</param>
+/// <param name="Description">说明。</param>
+/// <param name="AllBusinesses">能调用全部业务分组的模板。</param>
+/// <param name="BusinessIds">能调用的业务分组。</param>
+/// <param name="IpAllowlist">IP 白名单，逗号分隔；空表示不限。</param>
+internal sealed record ApiClientInput(string Name, string AppId, string Description, bool AllBusinesses, IReadOnlyList<int> BusinessIds, string IpAllowlist);

@@ -51,6 +51,8 @@ appsettings.*.local.json
 *.p12
 *.snk
 *.key
+# 管理后台 JWT 签名密钥（没配置时生成在数据目录里）
+admin-signing.key
 
 # AI 助手的个人设置（共享规则写在 AGENTS.md）
 .claude/settings.local.json

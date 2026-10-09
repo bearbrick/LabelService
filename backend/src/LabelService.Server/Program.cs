@@ -1,6 +1,7 @@
 using LabelService.Contracts;
 using LabelService.Contracts.Protocol;
 using LabelService.Rendering;
+using LabelService.Server.Admin;
 using LabelService.Server.Assets;
 using LabelService.Server.Auth;
 using LabelService.Server.Diagnostics;
@@ -23,11 +24,13 @@ builder.Services.AddLabelFonts(builder.Configuration);
 builder.Services.AddLabelAssets(builder.Configuration);
 builder.Services.AddApiClients();
 builder.Services.AddRenderLog(builder.Configuration);
+builder.Services.AddAdmin(builder.Configuration);
 
 var app = builder.Build();
 await app.InitializeTemplateStorageAsync();
 await app.InitializeApiClientsAsync();
 await app.InitializeRenderLogAsync();
+await app.InitializeAdminAsync();
 
 // 未处理的异常统一返回 RENDER_FAILED，异常本身由中间件写日志。
 app.UseExceptionHandler(errorApp => errorApp.Run(async http =>
@@ -38,6 +41,7 @@ app.UseExceptionHandler(errorApp => errorApp.Run(async http =>
 
 app.MapHealthChecks("/health");
 app.MapPublicApi();
+app.MapAdminApi();
 app.LoadFonts();
 app.LoadAssets();
 
