@@ -7,8 +7,9 @@ client/
 ├─ LabelService.Client.slnx
 ├─ Directory.Build.props          调用端全部项目的编译设置
 ├─ Directory.Packages.props       调用端的 NuGet 版本（只有 System.Text.Json）
+├─ build/pack.ps1                打包：nupkg（含 snupkg）和 zip，可选强名称和 Authenticode 签名
 ├─ src/
-│  └─ LabelService.Client/        SDK：net462、netstandard2.0、net8.0
+│  └─ LabelService.Client/        SDK：net462、netstandard2.0、net8.0；包里的 README.md、CHANGELOG.md 也在这里
 ├─ samples/
 │  └─ LabelService.Demo.WinForms/ 演示程序：net48、net10.0-windows
 └─ tests/
@@ -49,7 +50,20 @@ var file = await client.RenderAsync(new RenderRequest("BOX_LABEL", LabelFormat.P
 file.Save(Path.Combine(@"D:\Labels", file.FileName));
 ```
 
-完整的公开 API、重试和错误映射见设计书第 10 节和 `docs/contracts.md`。
+完整的公开 API、重试和错误映射见设计书第 10 节和 `docs/contracts.md`；给第三方看的说明（快速开始、错误码、常见问题）在 `src/LabelService.Client/README.md`，会打进 NuGet 包。
+
+## 发布
+
+```powershell
+# 在仓库根目录。输出到 artifacts/client：LabelService.Client.{版本}.nupkg、.snupkg、LabelService.Client-{版本}.zip
+powershell -NoProfile -ExecutionPolicy Bypass -File .\client\build\pack.ps1
+# 正式发布：指定版本、强名称密钥、代码签名证书（密码放环境变量 LABELSERVICE_CERT_PASSWORD）
+powershell -NoProfile -ExecutionPolicy Bypass -File .\client\build\pack.ps1 -Version 1.0.0 -StrongNameKey D:\keys\LabelService.snk -CertificatePath D:\keys\codesign.pfx
+```
+
+- 版本：调用端独立于后端发版，语义化版本，写在 `client/Directory.Build.props`（`VersionPrefix` + 预览版的 `VersionSuffix`，如 `1.0.0-preview.1`）。改了公开 API 同步设计书第 10 节和 `CHANGELOG.md`。
+- 签名：强名称密钥（.snk）和代码签名证书（.pfx）都不进仓库；没给时脚本照样打包，只是不签名（会提示）。证书由谁申请见设计书第 12 节的待定问题。
+- 脚本最后核对 nupkg 里有三个目标框架的 DLL、XML 注释和 README。zip 里还有演示程序源码和依赖说明。
 
 ## 要点
 
