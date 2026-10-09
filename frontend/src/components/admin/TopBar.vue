@@ -67,13 +67,14 @@ onBeforeUnmount(() => document.removeEventListener('click', close))
     <nav class="header-actions" aria-label="功能菜单">
       <button class="top-btn wide-only" type="button" :class="{ on: route.page === 'dashboard' }" @click="open('dashboard')"><AppIcon name="dashboard" /><span class="lbl">工作台</span></button>
       <div class="menu-wrap wide-only">
-        <button class="top-btn" type="button" :class="{ on: menu === 'res' || route.page === 'presets' || route.page === 'assets' }" @click.stop="toggle('res')">
+        <button class="top-btn" type="button" :class="{ on: menu === 'res' || route.page === 'presets' || route.page === 'assets' || route.page === 'layouts' }" @click.stop="toggle('res')">
           <AppIcon name="ruler" /><span class="lbl">资源</span><AppIcon name="chevD" small />
         </button>
         <div v-if="menu === 'res'" class="dropdown" role="menu" @click.stop>
           <h4>设计资源<span>所有业务共用</span></h4>
           <button class="dd-item" type="button" @click="open('presets')"><AppIcon name="ruler" />画布预设<span class="count">{{ catalog.presets.length }}</span></button>
           <button class="dd-item" type="button" @click="open('assets')"><AppIcon name="image" />素材与字体</button>
+          <button class="dd-item" type="button" @click="open('layouts')"><AppIcon name="cards" />拼版版式</button>
         </div>
       </div>
       <div v-if="can('api.test') || can('api.manage')" class="menu-wrap wide-only">
