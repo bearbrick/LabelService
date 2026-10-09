@@ -34,11 +34,22 @@ public sealed class FontRegistry : IDisposable
 
     private static readonly uint WeightAxis = Tag("wght");
 
+    /// <summary>
+    /// 设计器提供的模板字体名（每组别名的第一个）：思源黑体、思源宋体。
+    /// </summary>
+    public static IReadOnlyList<string> TemplateFamilies { get; } = AliasGroups.Select(group => group[0]).ToArray();
+
     private readonly Dictionary<string, FontFamily> families;
     private readonly List<SKTypeface> owned;
     private readonly FontFace? defaultFallback;
+    private readonly Dictionary<string, (string Path, bool IsVariable)> sources;
 
-    private FontRegistry(Dictionary<string, FontFamily> families, List<SKTypeface> owned, IReadOnlyList<string> files, IReadOnlyList<string> errors)
+    private FontRegistry(
+        Dictionary<string, FontFamily> families,
+        List<SKTypeface> owned,
+        IReadOnlyList<string> files,
+        IReadOnlyList<string> errors,
+        Dictionary<string, (string Path, bool IsVariable)> sources)
     {
         foreach (var family in families.Values)
         {
@@ -47,6 +58,7 @@ public sealed class FontRegistry : IDisposable
 
         this.families = families;
         this.owned = owned;
+        this.sources = sources;
         Files = files;
         Errors = errors;
         defaultFallback = families.Count == 0 ? new FontFace(SKTypeface.Default, fakeBold: false, fakeItalic: false) : null;
@@ -55,7 +67,7 @@ public sealed class FontRegistry : IDisposable
     /// <summary>
     /// 没有任何字体的注册表：文本用 Skia 的默认字体，并给 FONT_FALLBACK 警告。只适合不涉及文本的检查和基准。
     /// </summary>
-    public static FontRegistry Empty { get; } = new([], [], [], []);
+    public static FontRegistry Empty { get; } = new([], [], [], [], []);
 
     /// <summary>
     /// 已加载的字体家族名（字体文件里的名字）。
@@ -92,9 +104,10 @@ public sealed class FontRegistry : IDisposable
         var owned = new List<SKTypeface>();
         var files = new List<string>();
         var errors = new List<string>();
+        var sources = new Dictionary<string, (string Path, bool IsVariable)>(StringComparer.Ordinal);
         if (!Directory.Exists(directory))
         {
-            return new FontRegistry(families, owned, files, [$"字体目录不存在：{directory}"]);
+            return new FontRegistry(families, owned, files, [$"字体目录不存在：{directory}"], sources);
         }
 
         var paths = Directory.EnumerateFiles(directory)
@@ -113,6 +126,7 @@ public sealed class FontRegistry : IDisposable
 
                 owned.Add(typeface);
                 AddTypeface(families, owned, typeface);
+                sources.TryAdd(Normalize(typeface.FamilyName), (path, typeface.VariationDesignParameters.Any(item => item.Tag == WeightAxis)));
                 loaded++;
             }
 
@@ -126,7 +140,23 @@ public sealed class FontRegistry : IDisposable
             }
         }
 
-        return new FontRegistry(families, owned, files, errors);
+        return new FontRegistry(families, owned, files, errors, sources);
+    }
+
+    /// <summary>
+    /// 模板字体名对应的字体文件：和渲染时找到的是同一个家族（同样认别名），但不做降级，找不到返回 null。
+    /// 设计器通过 /fonts 加载同一份文件，保证所见即所得。一个家族有多个文件时取第一个加载的（按文件名排序）。
+    /// </summary>
+    public FontSource? SourceOf(string fontFamily)
+    {
+        var family = FindFamily(fontFamily);
+        if (family is null || !sources.TryGetValue(Normalize(family.Name), out var source))
+        {
+            return null;
+        }
+
+        var face = family.Face(bold: false, italic: false);
+        return new FontSource(source.Path, source.IsVariable, face.Ascent, face.Descent);
     }
 
     /// <summary>

@@ -24,6 +24,7 @@ public class RenderBenchmarks
     private LabelRenderer renderer = null!;
     private LabelTemplate template = null!;
     private Dictionary<string, JsonElement> data = null!;
+    private int boxSerial;
 
     /// <summary>
     /// 分辨率。203 是热敏标签机最常见的规格，300 是默认值。
@@ -72,6 +73,27 @@ public class RenderBenchmarks
     public int BoxLabelPng()
     {
         var values = FieldValidator.Validate(template.Fields, null, data).Values;
+        var result = renderer.Render(new RenderJob
+        {
+            Template = template,
+            Labels = [new LabelInstance(values)],
+            Format = LabelFormat.Png,
+            Dpi = Dpi,
+        });
+        return result.Content.Length;
+    }
+
+    /// <summary>
+    /// 成品箱标输出 PNG，每次箱号都不同：一维码、二维码的编码缓存不命中，更接近真实调用（每箱一个箱号）。
+    /// </summary>
+    [Benchmark]
+    public int BoxLabelPngUniqueBox()
+    {
+        var unique = new Dictionary<string, JsonElement>(data)
+        {
+            ["boxNo"] = JsonSerializer.SerializeToElement($"C26100{Interlocked.Increment(ref boxSerial):D5}"),
+        };
+        var values = FieldValidator.Validate(template.Fields, null, unique).Values;
         var result = renderer.Render(new RenderJob
         {
             Template = template,
