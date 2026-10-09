@@ -162,7 +162,7 @@ internal sealed partial class TemplatePublishValidator(ILabelRenderer renderer)
     /// <summary>
     /// 样例值：用字段的 sample；必填、没有样例也没有默认值的字段用占位值，并提示补样例。
     /// </summary>
-    private static Dictionary<string, JsonElement> SampleData(IReadOnlyList<FieldDefinition> fields, List<string> warnings)
+    internal static Dictionary<string, JsonElement> SampleData(IReadOnlyList<FieldDefinition> fields, List<string> warnings)
     {
         var data = new Dictionary<string, JsonElement>(StringComparer.Ordinal);
         foreach (var field in fields)

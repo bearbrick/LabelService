@@ -89,6 +89,16 @@ internal static class AdminResourceChecks
         check("发布得到版本 1 和试渲染耗时", published.GetProperty("version").GetInt32() == 1 && published.GetProperty("renderMs").GetDouble() > 0);
         check("发布后开放接口立即能用（开发 Key 可调用全部模板）", await RenderStatus(http, Fixtures.DevApiKey, "CARTON_LABEL") == 200);
 
+        var item = (await designer.JsonAsync(HttpMethod.Get, "/api/admin/templates")).EnumerateArray().Single(template => template.GetProperty("code").GetString() == "CARTON_LABEL");
+        var thumbnail = await designer.GetAsync("/api/admin/templates/CARTON_LABEL/thumbnail");
+        using (var image = SKBitmap.Decode(await thumbnail.Content.ReadAsByteArrayAsync()))
+        {
+            check("模板库列表带画布尺寸、DPI、字段和元素个数；缩略图是约 360 像素宽的 PNG",
+                item.GetProperty("width").GetDouble() == 80 && item.GetProperty("dpi").GetInt32() == 203
+                && item.GetProperty("fieldCount").GetInt32() == 1 && item.GetProperty("elementCount").GetInt32() == 1
+                && thumbnail.Content.Headers.ContentType?.MediaType == "image/png" && image is { Width: > 340 and < 380 });
+        }
+
         var versions = await designer.JsonAsync(HttpMethod.Get, "/api/admin/templates/CARTON_LABEL/versions");
         check("版本列表带发布说明和发布人", versions.EnumerateArray().First().GetProperty("note").GetString() == "首版"
             && versions.EnumerateArray().First().GetProperty("publishedBy").GetString()!.Contains("lifang"));
