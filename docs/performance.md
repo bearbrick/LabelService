@@ -62,4 +62,7 @@ dotnet run -c Release --project backend/tests/LabelService.Benchmarks -- --filte
 | 2026-10-09 | 同上，服务启动后第一次请求 | total ≈ 61 ms | 还没有预热（T-017） |
 | 2026-10-09 | BenchmarkDotNet（`--job short`），`BoxLabelPng`，不含 HTTP | 203dpi 6.1 ms、300dpi 13.2 ms；每次分配 10–17 KB | 同上，耗时主要在 PNG 编码 |
 
+| 2026-10-09 | BenchmarkDotNet（`--job short`），`BoxLabelPng`，加上 6 个文本元素（T-001，Noto Sans SC 可变字体） | 203dpi 5.65 ms、300dpi 11.91 ms；每次分配 49–66 KB | 同一台机器上改动前 5.22 ms、11.02 ms（+8%）；耗时仍主要在 PNG 编码 |
+| 2026-10-09 | 本机开发环境，单张箱标 PNG 300dpi（外框、横线、6 个文本），热请求 | total 中位数 11.4 ms，最大 14.5 ms | 第一次请求 62 ms（layout 20 ms，首次栅格化字形），等 T-017 预热 |
+
 实现新元素或格式后在这里追加一行，写明机器和条件。
