@@ -1,18 +1,20 @@
 using LabelService.Contracts;
 using LabelService.Contracts.Templates;
 using LabelService.Rendering.Binding;
+using LabelService.Rendering.Fonts;
 using SkiaSharp;
 
 namespace LabelService.Rendering.Elements;
 
 /// <summary>
-/// 渲染一张标签时各绘制器共用的上下文：分辨率、字段值、单位换算和警告收集。
+/// 渲染一张标签时各绘制器共用的上下文：分辨率、字段值、字体、单位换算和警告收集。
 /// </summary>
 internal sealed class RenderContext(
     int dpi,
     bool mono,
     IReadOnlyDictionary<string, object?> values,
     IReadOnlyDictionary<string, FieldDefinition> fields,
+    FontRegistry fonts,
     WarningList warnings)
 {
     /// <summary>
@@ -39,6 +41,11 @@ internal sealed class RenderContext(
     /// 本次渲染的警告。
     /// </summary>
     public WarningList Warnings { get; } = warnings;
+
+    /// <summary>
+    /// 字体注册表。
+    /// </summary>
+    public FontRegistry Fonts { get; } = fonts;
 
     /// <summary>
     /// 毫米换算成打印点。
