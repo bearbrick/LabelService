@@ -81,6 +81,13 @@
 | POST | `/assets` | res.manage | multipart，字段 `file`；PNG、JPG、SVG，≤ 1 MB；按内容判断类型，SVG 先清洗 |
 | PUT / DELETE | `/assets/{key}` | res.manage | `{ name }` 改名 / 删除（内置素材不能改、不能删） |
 | GET | `/fonts` | 登录 | `{ families[], files[] }` |
+| GET | `/layouts` | 登录 | 拼版版式 `[{ layout, enabled, updatedBy, updatedAt }]`，`layout` 是版式 JSON（`docs/contracts.md`“拼版”）；带 `slotWidth`、`slotHeight` 时只列格子尺寸相同的（模板详情页“可用的版式”） |
+| GET | `/layouts/{code}` | 登录 | 一个版式，同上 |
+| POST | `/layouts` | res.manage | `{ layout, enabled? }` 新建；长度按 0.1 mm 取整后检查（格子越界、重叠、旋转角度），不通过时 400，`details` 逐条列出（带格子序号）；编码重复 400 |
+| PUT | `/layouts/{code}` | res.manage | `{ layout, enabled? }` 修改或停用（编码不能改），立即生效：停用后开放接口返回 `LAYOUT_NOT_FOUND` |
+| DELETE | `/layouts/{code}` | res.manage | 删除版式 |
+| POST | `/layouts/preview` | tpl.view | 预览还没保存的版式：`{ layout, templateCode, version?, format?（png / pdf，默认 png）, dpi?, startSlot?, items?[{ data, copies }] }`；不给 `items` 时用模板样例值铺满一页 → PNG（多页时 ZIP）或 PDF，带 `X-Label-Count`、`X-Page-Count` |
+| POST | `/layouts/test-page` | 登录 | 打印校准测试页：`{ layout, format?（默认 pdf）, dpi? }`，每个格子画边框、中心十字和序号，按版式（含打印偏移）排一页 |
 | GET | `/clients` | api.manage | 调用方列表（只有 `keyPrefix`，没有 Key） |
 | POST | `/clients` | api.manage | `{ name, appId, description, allBusinesses, businessIds[], ipAllowlist }` → `{ client, apiKey }`（Key 只返回这一次） |
 | PUT | `/clients/{id}` | api.manage | 同上（不改 Key） |
