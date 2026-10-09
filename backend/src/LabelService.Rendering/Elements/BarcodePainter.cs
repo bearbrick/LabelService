@@ -156,22 +156,6 @@ internal sealed class BarcodePainter : IElementPainter
         /// </summary>
         public override double Rotation => ((Math.Round(Element.Rotation / 90) * 90 % 360) + 360) % 360;
 
-        /// <summary>
-        /// 旋转中心取到半个点上；转 90° 或 270° 时再让横纵坐标的小数部分相同，这样整点的条边转过去仍是整点。
-        /// </summary>
-        public override SKPoint Pivot
-        {
-            get
-            {
-                var x = MathF.Round(Bounds.MidX * 2) / 2;
-                var y = MathF.Round(Bounds.MidY * 2) / 2;
-                if (Rotation is 90 or 270 && (x - MathF.Floor(x)) != (y - MathF.Floor(y)))
-                {
-                    y += 0.5f;
-                }
-
-                return new SKPoint(x, y);
-            }
-        }
+        public override SKPoint Pivot => SymbolGeometry.Pivot(Bounds, Rotation);
     }
 }
