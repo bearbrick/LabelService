@@ -61,3 +61,8 @@ export function contains(outer: Box, inner: Box): boolean {
 export function boxFromPoints(x1: number, y1: number, x2: number, y2: number): Box {
   return { x: Math.min(x1, x2), y: Math.min(y1, y2), width: Math.abs(x2 - x1), height: Math.abs(y2 - y1) }
 }
+
+/** 把数值限制在 [min, max] 里。 */
+export function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value))
+}

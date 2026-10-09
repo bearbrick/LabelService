@@ -8,8 +8,12 @@ import { encode, moduleDots } from '../src/editor/barcode.ts'
 import { readClipboard, writeClipboard } from '../src/editor/clipboard.ts'
 import { contains, elementBounds, intersects } from '../src/editor/geometry.ts'
 import { History } from '../src/editor/history.ts'
+import { PLACEHOLDER_IMAGE, sampleRequest } from '../src/model/request.ts'
+import { fileSize, fmtTime, sizeText } from '../src/model/format.ts'
+import { barChart, niceStep } from '../src/model/chart.ts'
+import { gridStep, transformRules } from '../src/editor/overlays.ts'
 import { snapBox } from '../src/editor/snapping.ts'
-import { formatDate, formatNumber, keysIn, resolveText } from '../src/model/bindings.ts'
+import { formatDate, formatNumber, keysIn, renameKey, resolveText } from '../src/model/bindings.ts'
 import { cloneElements, makeElement, normalizeElement } from '../src/model/elements.ts'
 import type { FieldDefinition, LabelElement, LabelTemplate, RectElement } from '../src/model/template.ts'
 import { normalizeRotation, roundMm } from '../src/model/units.ts'
@@ -71,6 +75,9 @@ check('超过上限丢掉最早的', history.undo() === 'c' && history.undo() ==
 check('撤销后可以重做', history.redo() === 'c' && history.canRedo)
 history.push('x')
 check('撤销后再修改，丢掉后面的重做', !history.canRedo)
+history.undo()
+history.dropRedo()
+check('只读撤回后不能重做出来', !history.canRedo)
 
 // ---------- 几何与吸附 ----------
 const rotated = elementBounds({ x: 10, y: 30, width: 20, height: 0, rotation: 90 })
@@ -116,6 +123,35 @@ check('EAN-13 内容不对时给出中文提示', !badEan.ok && /数字/.test(ba
 const qr = encode('qr', '3100-0123|20261008-A|C2610080001', 'M')
 check('QR 编码', qr.ok && qr.code.kind === 'matrix' && qr.code.columns === qr.code.rows)
 check('模块宽度按打印点向下取整', moduleDots(64, 145, 300) === 5 && moduleDots(64, 145, 203) === 3)
+
+// ---------- 字段改名、调用样例 ----------
+check('改字段 key 保留格式、不动别的字段', renameKey('{{qty}}箱 {{ qty:0.00 }} {{qtyMax}}', 'qty', 'count') === '{{count}}箱 {{ count:0.00 }} {{qtyMax}}')
+const request = sampleRequest({
+  code: 'DEMO',
+  fields: [
+    { key: 'name', type: 'string', sample: '电源' },
+    { key: 'qty', type: 'number' },
+    { key: 'logo', type: 'image' },
+    { key: 'note', type: 'string', required: false },
+    { key: 'lot', type: 'string', default: 'A' },
+  ],
+})
+const data = request.data as Record<string, unknown>
+check('调用样例：有样例用样例，必填没样例给占位，可选和有默认值的不传', request.templateCode === 'DEMO' && data.name === '电源' && data.qty === 0 && data.logo === PLACEHOLDER_IMAGE && !('note' in data) && !('lot' in data))
+
+check('画布尺寸带纸张名', sizeText({ width: 297, height: 210 }) === 'A4 横向 · 297 × 210 mm' && sizeText({ width: 100, height: 60 }) === '100 × 60 mm')
+const now = Date.parse('2026-10-09T08:00:00Z')
+check('相对时间', fmtTime('2026-10-09T07:59:30Z', now) === '刚刚' && fmtTime('2026-10-09T07:30:00Z', now) === '30 分钟前' && fmtTime(null, now) === '—')
+check('文件大小', fileSize(512) === '512 B' && fileSize(2048) === '2.0 KB' && fileSize(3 * 1024 * 1024) === '3.00 MB')
+check('图表刻度取 1、2、5 的整倍数', niceStep(3) === 5 && niceStep(12) === 20 && niceStep(0.4) === 0.5)
+const chart = barChart([{ date: '2026-10-08', ok: 37, fail: 3 }, { date: '2026-10-09', ok: 0, fail: 0 }])
+check('柱状图：刻度盖住最大值、失败叠在成功上、空的一天没有柱子', chart.ticks.at(-1)!.v >= 40 && chart.bars[0].okPath !== '' && chart.bars[0].failPath !== '' && chart.bars[1].okPath === '' && chart.bars[0].label === '10/8')
+// ---------- 变换框、网格 ----------
+const hline = transformRules([{ ...makeElement('line', [], []), width: 30, height: 0 }])
+check('横线只能左右拉、不能旋转', hline.mode === 'hline' && !hline.rotate && hline.anchors.join() === 'middle-left,middle-right')
+const qrRules = transformRules([makeElement('qrcode', [], [])])
+check('二维码等比缩放，锁定后不能变换', qrRules.keepRatio && qrRules.anchors.length === 4 && transformRules([{ ...makeElement('rect', [], []), locked: true }]).locked)
+check('网格缩小到不足 6 像素时放大一档', gridStep(1, 10) === 1 && gridStep(1, 3) === 2 && gridStep(0.5, 0.01) === 100)
 
 // ---------- 示例模板 ----------
 const report = checkTemplate(sample)

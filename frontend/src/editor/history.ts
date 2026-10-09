@@ -26,6 +26,11 @@ export class History {
     return true
   }
 
+  /** 丢掉当前位置之后的记录（撤回一次不允许的修改后用，不能再重做出来）。 */
+  dropRedo(): void {
+    this.stack.splice(this.index + 1)
+  }
+
   /** 回到上一步，返回要恢复的快照；没有可撤销的返回 null。 */
   undo(): string | null {
     if (!this.canUndo) return null

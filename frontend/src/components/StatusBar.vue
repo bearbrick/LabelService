@@ -7,7 +7,12 @@ const cursor = computed(() => {
   const format = (value: number | null) => (value === null ? '—' : value.toFixed(1))
   return `X ${format(designer.ui.cursorX)} · Y ${format(designer.ui.cursorY)} mm`
 })
-const saved = computed(() => (designer.dirty ? '有修改，正在保存草稿…' : designer.savedAt ? `草稿已保存到本机 ${designer.savedAt}` : ''))
+const saved = computed(() => {
+  if (designer.readOnly) return '只读'
+  if (designer.saveError) return `草稿保存失败：${designer.saveError}`
+  if (designer.dirty) return '有修改，正在保存草稿…'
+  return designer.savedAt ? `草稿已保存到服务端 ${designer.savedAt}` : ''
+})
 </script>
 
 <template>

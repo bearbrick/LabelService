@@ -5,6 +5,7 @@ import { LABEL_ICONS } from '../model/icons.ts'
 import { ELEMENT_TYPES } from '../model/template.ts'
 import { assets, uploadAsset } from '../stores/assets.ts'
 import { addElement, toast } from '../stores/designer.ts'
+import { can } from '../stores/session.ts'
 import { endDrag, startDrag } from '../stores/drag.ts'
 import AppIcon from './AppIcon.vue'
 
@@ -67,23 +68,23 @@ async function onUpload(event: Event): Promise<void> {
     </div>
 
     <div class="sect">
-      <div class="sect-h"><span>图片素材</span><span class="muted">存在本机浏览器</span></div>
+      <div class="sect-h"><span>图片素材</span><span class="muted">素材库，所有业务共用</span></div>
       <div class="asset-grid">
         <div
           v-for="asset in assets"
-          :key="asset.id"
+          :key="asset.key"
           class="asset"
           :title="asset.name"
           role="button"
           tabindex="0"
           draggable="true"
-          @dragstart="startDrag($event, { kind: 'asset', id: asset.id, name: asset.name })"
+          @dragstart="startDrag($event, { kind: 'asset', id: asset.key, name: asset.name })"
           @dragend="endDrag()"
-          @click="addElement('image', { src: `asset:${asset.id}`, name: asset.name })"
+          @click="addElement('image', { src: `asset:${asset.key}`, name: asset.name })"
         >
           <img :src="asset.src" :alt="asset.name" />
         </div>
-        <label class="asset upload">
+        <label v-if="can('res.manage')" class="asset upload">
           <AppIcon name="upload" small />上传图片
           <input type="file" accept="image/png,image/jpeg,image/svg+xml" hidden @change="onUpload" />
         </label>

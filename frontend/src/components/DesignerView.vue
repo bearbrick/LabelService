@@ -42,8 +42,7 @@ function onKeyDown(event: KeyboardEvent): void {
   const key = event.key.toLowerCase()
   if (mod && key === 's') {
     event.preventDefault()
-    saveDraft()
-    toast('草稿已保存到本机')
+    void saveDraft().then((ok) => ok && toast(designer.readOnly ? '只读模板不保存' : '草稿已保存'))
     return
   }
 

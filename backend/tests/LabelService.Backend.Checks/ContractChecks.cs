@@ -69,7 +69,7 @@ internal static partial class ContractChecks
         var backendSample = JsonNode.Parse(File.ReadAllText(Path.Combine(backendRoot, "samples", "templates", "box-label.json")));
         check("前端的示例模板和后端一致", JsonNode.DeepEquals(frontendSample, backendSample));
 
-        // 图标和内置素材：设计器和服务端各一份（三个部分互不引用），按文本核对。
+        // 图标：设计器和服务端各一份（三个部分互不引用），按文本核对。图片素材设计器从服务端素材库读取，不再各存一份。
         var frontendIcons = FrontendIcon().Matches(File.ReadAllText(Path.Combine(repositoryRoot, "frontend", "src", "model", "icons.ts")))
             .ToDictionary(match => match.Groups["key"].Value, match => match.Groups["d"].Value);
         var iconRoot = Path.Combine(backendRoot, "assets", "icons");
@@ -83,11 +83,9 @@ internal static partial class ContractChecks
             .ToArray();
         check("设计器和服务端的图标一致（frontend/src/model/icons.ts 对 backend/assets/icons）" + (iconMismatch.Length > 0 ? "：" + string.Join(", ", iconMismatch) : ""),
             frontendIcons.Count > 0 && iconMismatch.Length == 0);
-        var builtinAssets = FrontendAsset().Matches(File.ReadAllText(Path.Combine(repositoryRoot, "frontend", "src", "stores", "assets.ts")))
-            .Select(match => match.Groups["id"].Value)
-            .ToArray();
-        check("设计器的内置素材在服务端都有（backend/assets/images）",
-            builtinAssets.Length > 0 && builtinAssets.All(id => Directory.GetFiles(Path.Combine(backendRoot, "assets", "images"), id + ".*").Length > 0));
+        var frontendAssets = File.ReadAllText(Path.Combine(repositoryRoot, "frontend", "src", "stores", "assets.ts"));
+        check("设计器的图片素材从服务端素材库读取（frontend/src/stores/assets.ts 不自带素材）",
+            frontendAssets.Contains("listAssets") && !frontendAssets.Contains("data:image"));
     }
 
     [GeneratedRegex(@"'(?<key>gb191/[^']+)': \{ name: '[^']+', d: '(?<d>[^']+)' \}")]
@@ -95,9 +93,6 @@ internal static partial class ContractChecks
 
     [GeneratedRegex(@"<path d=""(?<d>[^""]+)""")]
     private static partial Regex SvgPath();
-
-    [GeneratedRegex(@"id: '(?<id>[^']+)',\s*name:[^\n]*\n\s*builtin: true")]
-    private static partial Regex FrontendAsset();
 
     private static IEnumerable<string> BoundTexts(LabelElement element) => element switch
     {
