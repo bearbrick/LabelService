@@ -328,7 +328,7 @@ footer { margin-top: 48px; font-size: 13px; color: var(--ink-3); }
           <thead><tr><th>表</th><th>主要字段</th><th>说明</th></tr></thead>
           <tbody>
             <tr><td><code>canvas_preset</code></td><td>id, name, width_mm, height_mm, sort, enabled</td><td>画布预设</td></tr>
-            <tr><td><code>sheet_layout</code></td><td>id, code, name, paper_width_mm, paper_height_mm, slot_width_mm, slot_height_mm, slots_json, offset_x_mm, offset_y_mm, enabled, updated_at</td><td>slots_json 存每个格子的位置和旋转，数组顺序就是填充顺序；版式不分版本，修改立即生效</td></tr>
+            <tr><td><code>sheet_layout</code></td><td>id, code, name, paper_width_mm, paper_height_mm, slot_width_mm, slot_height_mm, slots_json, offset_x_mm, offset_y_mm, cut_lines, enabled, updated_at</td><td>slots_json 存每个格子的位置和旋转，数组顺序就是填充顺序；cut_lines 表示是否画格子边框（裁切线）；版式不分版本，修改立即生效</td></tr>
             <tr><td><code>label_template</code></td><td>id, code, name, category, status, latest_version, created_by, updated_at</td><td>code 唯一索引</td></tr>
             <tr><td><code>label_template_version</code></td><td>id, template_id, version_no, content_json, status, published_by, published_at</td><td>status：draft / published；content_json 存整份模板 JSON</td></tr>
             <tr><td><code>asset</code></td><td>id, kind, name, file_path, sha256, size, created_at</td><td>kind：image / icon / font。文件放文件存储，表里只存元数据</td></tr>
@@ -856,8 +856,8 @@ X-Api-Key: ********
   "items": [ { "data": { "boxNo": "C2610080001" } }, { "data": { "boxNo": "C2610080002" } } ]
 }</code></pre>
         <ul>
-          <li><code>layout</code>：版式编码。版式不存在返回 <code>LAYOUT_NOT_FOUND</code>；模板尺寸和格子尺寸不一致返回 <code>LAYOUT_SIZE_MISMATCH</code>；格式只能是 pdf 或 png</li>
-          <li><code>startSlot</code>：第一页从第几个格子开始，默认 1，贴过一部分的不干胶纸可以接着用</li>
+          <li><code>layout</code>：版式编码。版式不存在返回 <code>LAYOUT_NOT_FOUND</code>；模板尺寸和格子尺寸不一致返回 <code>LAYOUT_SIZE_MISMATCH</code>；格式只能是 pdf 或 png（zpl 返回 <code>FORMAT_INVALID</code>）。PDF 是一个多页文件，PNG 一页一张图、多页时打包 ZIP，批量的 <code>output</code> 不起作用</li>
+          <li><code>startSlot</code>：第一页从第几个格子开始，默认 1，贴过一部分的不干胶纸可以接着用；超出版式的格子数返回 <code>START_SLOT_INVALID</code></li>
           <li>单张接口的 <code>copies</code> 用来铺格子：<code>copies: 10</code> 就是一页 10 张相同的标签；用了版式时 PNG 也可以多份</li>
           <li>响应头多一个 <code>X-Page-Count</code>（页数）；<code>X-Label-Count</code> 仍是标签张数，批量上限也按标签张数算</li>
         </ul>
@@ -877,6 +877,7 @@ X-Api-Key: ********
             <tr><td>404</td><td><code>TEMPLATE_NOT_FOUND</code></td><td>模板或版本不存在，或者还没有发布过</td></tr>
             <tr><td>404</td><td><code>LAYOUT_NOT_FOUND</code></td><td>拼版版式不存在或已停用</td></tr>
             <tr><td>400</td><td><code>LAYOUT_SIZE_MISMATCH</code></td><td>模板尺寸和版式的格子尺寸不一致</td></tr>
+            <tr><td>400</td><td><code>START_SLOT_INVALID</code></td><td>startSlot 不在 1 到版式的格子数之间</td></tr>
             <tr><td>400</td><td><code>INVALID_JSON</code>、<code>FORMAT_INVALID</code>、<code>DPI_INVALID</code>、<code>OUTPUT_INVALID</code>、<code>COPIES_INVALID</code></td><td>请求体不是合法 JSON，或格式、DPI、输出方式、份数的取值不对（PNG 单张只能 1 份）</td></tr>
             <tr><td>400</td><td><code>FIELD_REQUIRED</code></td><td>缺少必填字段</td></tr>
             <tr><td>400</td><td><code>FIELD_TYPE_INVALID</code></td><td>字段值的类型或格式不对</td></tr>
@@ -1106,6 +1107,7 @@ catch (LabelServiceException ex) when (ex.IsTransient)
             <tr><td>403</td><td><code>TEMPLATE_FORBIDDEN</code></td><td>否</td><td>在“调用方与密钥”里放开对应业务</td></tr>
             <tr><td>404</td><td><code>TEMPLATE_NOT_FOUND</code></td><td>否</td><td>核对模板编码，确认模板已发布</td></tr>
             <tr><td>400</td><td><code>FIELD_REQUIRED</code> 等</td><td>否</td><td>按 ex.Errors 修正数据</td></tr>
+            <tr><td>404 / 400</td><td><code>LAYOUT_NOT_FOUND</code>、<code>LAYOUT_SIZE_MISMATCH</code>、<code>START_SLOT_INVALID</code></td><td>否</td><td>核对版式编码，换一个格子尺寸和模板相同的版式，或改小 StartSlot</td></tr>
             <tr><td>413</td><td><code>BATCH_TOO_LARGE</code></td><td>否</td><td>拆成多批</td></tr>
             <tr><td>500</td><td><code>RENDER_FAILED</code></td><td>否</td><td>带 traceId 联系标签服务管理员</td></tr>
           </tbody>

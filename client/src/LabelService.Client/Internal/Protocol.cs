@@ -12,6 +12,7 @@ internal static class HeaderNames
     public const string RequestId = "X-Request-Id";
     public const string TemplateVersion = "X-Template-Version";
     public const string LabelCount = "X-Label-Count";
+    public const string PageCount = "X-Page-Count";
     public const string LabelDpi = "X-Label-Dpi";
     public const string TraceId = "X-Trace-Id";
     public const string ServerTiming = "Server-Timing";

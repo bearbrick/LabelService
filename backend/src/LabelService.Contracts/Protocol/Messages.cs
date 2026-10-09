@@ -38,8 +38,20 @@ public sealed class RenderApiRequest
         get; set;
     }
 
-    /// <summary>份数，默认 1，最大 100。</summary>
+    /// <summary>份数，默认 1，最大 100。用了版式时就是铺满格子的张数，PNG 也可以多份。</summary>
     public int? Copies
+    {
+        get; set;
+    }
+
+    /// <summary>拼版版式编码，不传则一页一张标签。用了版式时 format 只能是 pdf、png。</summary>
+    public string? Layout
+    {
+        get; set;
+    }
+
+    /// <summary>用了版式时第一页从第几个格子开始，默认 1。</summary>
+    public int? StartSlot
     {
         get; set;
     }
@@ -86,8 +98,20 @@ public sealed class BatchRenderApiRequest
         get; set;
     }
 
-    /// <summary>merge 或 zip，默认 merge；PNG 只能用 zip。</summary>
+    /// <summary>merge 或 zip，默认 merge；PNG 只能用 zip。用了版式时不起作用（按页输出）。</summary>
     public string? Output
+    {
+        get; set;
+    }
+
+    /// <summary>拼版版式编码，不传则一页一张标签。用了版式时 format 只能是 pdf、png。</summary>
+    public string? Layout
+    {
+        get; set;
+    }
+
+    /// <summary>用了版式时第一页从第几个格子开始，默认 1。</summary>
+    public int? StartSlot
     {
         get; set;
     }
