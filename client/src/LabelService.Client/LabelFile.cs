@@ -61,6 +61,14 @@ public sealed class LabelFile
         get; internal set;
     }
 
+    /// <summary>
+    /// 页数：用了拼版版式时是纸张页数（X-Page-Count）；不用版式时没有这个头，等于 <see cref="LabelCount"/>。
+    /// </summary>
+    public int PageCount
+    {
+        get; internal set;
+    }
+
     /// <summary>实际使用的 DPI（X-Label-Dpi）。</summary>
     public int Dpi
     {

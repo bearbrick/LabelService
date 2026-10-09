@@ -80,8 +80,24 @@ public sealed class RenderRequest
         get; set;
     }
 
-    /// <summary>份数，1–100。PNG 只能 1 份。</summary>
+    /// <summary>份数，1–100。PNG 只能 1 份；用了 <see cref="Layout"/> 时份数就是铺几个格子，PNG 也可以多份。</summary>
     public int Copies { get; set; } = 1;
+
+    /// <summary>
+    /// 拼版版式编码（管理后台“拼版版式”里维护）。设了以后按版式把标签排到 A4 等纸上，只支持 PDF 和 PNG；不设则一页一张标签。
+    /// </summary>
+    public string? Layout
+    {
+        get; set;
+    }
+
+    /// <summary>
+    /// 用了版式时第一页从第几个格子开始（从 1 开始），贴过一部分的不干胶纸可以接着用；不设则从第 1 格开始。
+    /// </summary>
+    public int? StartSlot
+    {
+        get; set;
+    }
 
     /// <summary>
     /// 字段数据。值可以是 string、数字、bool、DateTime、DateTimeOffset、byte[]（图片）或枚举；null 不发送。
@@ -148,8 +164,24 @@ public sealed class BatchRenderRequest
         get; set;
     }
 
-    /// <summary>输出方式。PNG 默认且只能用 Zip，其余默认 Merge。</summary>
+    /// <summary>输出方式。PNG 默认且只能用 Zip，其余默认 Merge。用了 <see cref="Layout"/> 时不起作用（PDF 一个文件，PNG 多页打包 ZIP）。</summary>
     public BatchOutput Output
+    {
+        get; set;
+    }
+
+    /// <summary>
+    /// 拼版版式编码（管理后台“拼版版式”里维护）。设了以后按版式把标签排到 A4 等纸上，只支持 PDF 和 PNG；不设则一页一张标签。
+    /// </summary>
+    public string? Layout
+    {
+        get; set;
+    }
+
+    /// <summary>
+    /// 用了版式时第一页从第几个格子开始（从 1 开始），贴过一部分的不干胶纸可以接着用；不设则从第 1 格开始。
+    /// </summary>
+    public int? StartSlot
     {
         get; set;
     }

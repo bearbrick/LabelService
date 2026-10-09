@@ -6,7 +6,7 @@ using LabelService.Client;
 namespace LabelService.Client.Checks;
 
 /// <summary>
-/// 客户端 SDK：请求头、请求体、响应头解析、重试、错误映射、本地预校验。服务端用假的 HttpMessageHandler 代替。
+/// 客户端 SDK：请求头、请求体、响应头解析、重试、错误映射、本地预校验、拼版参数。服务端用假的 HttpMessageHandler 代替。
 /// </summary>
 internal static class ClientChecks
 {
@@ -99,6 +99,41 @@ internal static class ClientChecks
                 && batchBody.Contains("\"output\":\"merge\"") && batchBody.Contains("\"common\":{\"batchNo\":\"20261008-A\"}")
                 && batchBody.Contains("{\"data\":{\"boxNo\":\"C2\"},\"copies\":2}"));
         }
+
+        await CheckLayoutAsync(check);
+    }
+
+    private static async Task CheckLayoutAsync(Action<string, bool> check)
+    {
+        FakeHandler handler = null!;
+        handler = new FakeHandler((_, _, _) =>
+        {
+            // 请求带了 layout 时服务端才返回 X-Page-Count。
+            var response = PngResponse();
+            if (handler.Requests[^1].Body!.Contains("\"layout\""))
+            {
+                response.Headers.Add("X-Page-Count", "2");
+            }
+
+            return Task.FromResult(response);
+        });
+        using var client = Client(handler);
+        var sheet = await client.RenderAsync(new RenderRequest("BOX_LABEL", LabelFormat.Png) { Layout = "A4_100x60_2x4", StartSlot = 3, Copies = 8 });
+        var body = handler.Requests[0].Body!;
+        check("拼版：请求体带 layout、startSlot；用了版式时 PNG 单张可以多份；PageCount 取 X-Page-Count",
+            body.Contains("\"layout\":\"A4_100x60_2x4\"") && body.Contains("\"startSlot\":3") && body.Contains("\"copies\":8") && sheet.PageCount == 2);
+
+        var plain = await client.RenderAsync(new RenderRequest("BOX_LABEL", LabelFormat.Pdf));
+        check("不用版式时请求体没有 layout，PageCount 等于 LabelCount", plain.PageCount == 1 && !handler.Requests[1].Body!.Contains("layout"));
+
+        var batch = new BatchRenderRequest("BOX_LABEL", LabelFormat.Png) { Layout = "A4_100x60_2x4", Output = BatchOutput.Merge };
+        batch.AddItem().Set("boxNo", "C1");
+        await client.RenderBatchAsync(batch);
+        check("拼版批量 PNG 不要求 Zip，请求体带 layout", handler.Requests[2].Body!.Contains("\"layout\":\"A4_100x60_2x4\""));
+        check("本地预校验：ZPL 不能拼版、StartSlot 从 1 开始",
+            ThrowsArgument(() => client.RenderAsync(new RenderRequest("A", LabelFormat.Zpl) { Layout = "A4" }))
+            && ThrowsArgument(() => client.RenderAsync(new RenderRequest("A", LabelFormat.Pdf) { Layout = "A4", StartSlot = 0 }))
+            && handler.Requests.Count == 3);
     }
 
     private static LabelServiceClient Client(HttpMessageHandler handler, LabelServiceClientOptions? options = null)

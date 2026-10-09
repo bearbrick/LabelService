@@ -55,6 +55,18 @@ internal static class LiveServerChecks
         check("端到端：SDK 批量 PNG 默认打包成 zip",
             zipped is { LabelCount: 3, IsZip: true } && zipped.Content.Length > 4 && zipped.Content[0] == (byte)'P' && zipped.Content[1] == (byte)'K');
 
+        var sheet = new RenderRequest("BOX_LABEL", LabelFormat.Pdf) { Layout = "A4_100x60_2x4", Copies = 8 }
+            .Set("partName", "电源适配器").Set("partNo", "3100-0123").Set("qty", 50).Set("batchNo", "20261008-A").Set("boxNo", "C2610080001");
+        var onePage = await client.RenderAsync(sheet);
+        var pages = Batch(LabelFormat.Pdf);
+        pages.Layout = "A4_100x60_2x4";
+        pages.StartSlot = 7;
+        var twoPages = await client.RenderBatchAsync(pages);
+        check("端到端：拼版 PDF，单张 8 份是 1 页；批量 3 张从第 7 格开始是 2 页（PageCount 来自 X-Page-Count）",
+            onePage is { LabelCount: 8, PageCount: 1 } && twoPages is { LabelCount: 3, PageCount: 2, IsZip: false });
+        sheet.Layout = "A4_NOPE";
+        check("端到端：版式不存在映射为 LAYOUT_NOT_FOUND", await Fails(() => client.RenderAsync(sheet)) is { ErrorCode: LabelErrorCodes.LayoutNotFound, StatusCode: 404 });
+
         var invalid = await Fails(() => client.RenderAsync(new RenderRequest("BOX_LABEL", LabelFormat.Png).Set("qty", "abc")));
         check("端到端：服务端的错误码和明细原样传给调用方",
             invalid is { ErrorCode: LabelErrorCodes.FieldRequired, StatusCode: 400 }

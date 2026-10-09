@@ -20,12 +20,14 @@ internal static class Payloads
 
         RequireTemplateCode(request.TemplateCode);
         RequireCopies(request.Copies, "Copies");
-        if (request.Format == LabelFormat.Png && request.Copies != 1)
+        var sheet = Sheet(request.Layout, request.StartSlot, request.Format);
+        if (request.Format == LabelFormat.Png && request.Copies != 1 && !sheet)
         {
-            throw new ArgumentException("PNG 单张只能 1 份；多份请用 RenderBatchAsync 并选 Zip。", nameof(request));
+            throw new ArgumentException("PNG 单张只能 1 份；多份请用 RenderBatchAsync 并选 Zip，或者用拼版版式。", nameof(request));
         }
 
         var body = Common(request.TemplateCode, request.Version, request.Format, request.Dpi, request.Mono);
+        AddSheet(body, request.Layout, request.StartSlot);
         body["copies"] = request.Copies;
         body["data"] = Values(request.Data);
         return JsonSerializer.SerializeToUtf8Bytes(body, ClientJson.Options);
@@ -44,7 +46,8 @@ internal static class Payloads
             throw new ArgumentException("批量请求至少要有一条。", nameof(request));
         }
 
-        if (request.Format == LabelFormat.Png && request.Output != BatchOutput.Zip)
+        var sheet = Sheet(request.Layout, request.StartSlot, request.Format);
+        if (request.Format == LabelFormat.Png && request.Output != BatchOutput.Zip && !sheet)
         {
             throw new ArgumentException("PNG 批量只能用 BatchOutput.Zip。", nameof(request));
         }
@@ -65,6 +68,7 @@ internal static class Payloads
         }
 
         var body = Common(request.TemplateCode, request.Version, request.Format, request.Dpi, request.Mono);
+        AddSheet(body, request.Layout, request.StartSlot);
         body["output"] = request.Output == BatchOutput.Zip ? "zip" : "merge";
         body["common"] = Values(request.Common);
         body["items"] = items;
@@ -159,6 +163,43 @@ internal static class Payloads
         }
 
         return body;
+    }
+
+    /// <summary>
+    /// 拼版参数的本地校验：只支持 PDF 和 PNG，StartSlot 从 1 开始（上限要看版式，由服务端检查）。返回是否用了版式。
+    /// </summary>
+    private static bool Sheet(string? layout, int? startSlot, LabelFormat format)
+    {
+        if (layout == null || layout.Length == 0)
+        {
+            return false;
+        }
+
+        if (format == LabelFormat.Zpl)
+        {
+            throw new ArgumentException("ZPL 不支持拼版，Layout 只能和 PDF、PNG 一起用。", "Format");
+        }
+
+        if (startSlot != null && startSlot.Value < 1)
+        {
+            throw new ArgumentException("StartSlot 从 1 开始。", "StartSlot");
+        }
+
+        return true;
+    }
+
+    private static void AddSheet(Dictionary<string, object?> body, string? layout, int? startSlot)
+    {
+        if (layout == null || layout.Length == 0)
+        {
+            return;
+        }
+
+        body["layout"] = layout;
+        if (startSlot != null)
+        {
+            body["startSlot"] = startSlot.Value;
+        }
     }
 
     private static void RequireTemplateCode(string? templateCode)
