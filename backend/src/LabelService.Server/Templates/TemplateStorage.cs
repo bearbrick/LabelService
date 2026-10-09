@@ -1,11 +1,12 @@
 using LabelService.Server.Data;
+using LabelService.Server.Layouts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
 namespace LabelService.Server.Templates;
 
 /// <summary>
-/// 模板存储的注册和启动初始化。来源由 LabelService:Templates:Source 决定，默认数据库。
+/// 模板存储（连同拼版版式）的注册和启动初始化。来源由 LabelService:Templates:Source 决定，默认数据库。
 /// </summary>
 internal static class TemplateStorage
 {
@@ -30,6 +31,7 @@ internal static class TemplateStorage
         services.AddSingleton<FileTemplateStore>();
         services.AddSingleton<TemplatePublishValidator>();
         services.AddSingleton<TemplateRepository>();
+        services.AddLayoutStorage();
         services.AddSingleton<ITemplateStore>(provider =>
             provider.GetRequiredService<IOptions<TemplateStoreOptions>>().Value.Source == TemplateSource.Files
                 ? provider.GetRequiredService<FileTemplateStore>()
@@ -48,6 +50,7 @@ internal static class TemplateStorage
         if (options.Source == TemplateSource.Files)
         {
             services.GetRequiredService<ITemplateStore>();
+            LayoutStorage.LoadFiles(services, options.ResolveSeedLayoutDirectory(), logger);
             return;
         }
 
@@ -69,6 +72,7 @@ internal static class TemplateStorage
 
         var count = await repository.LoadPublishedAsync();
         logger.LogInformation("模板数据库 {Directory}：已加载 {Count} 个已发布版本", directory, count);
+        await LayoutStorage.InitializeDatabaseAsync(services, app.Environment.IsDevelopment(), options.ResolveSeedLayoutDirectory(), logger);
     }
 
     /// <summary>

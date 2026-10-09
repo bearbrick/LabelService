@@ -92,6 +92,16 @@ internal sealed class TemplateStoreOptions
     /// 模板 JSON 目录的绝对路径。
     /// </summary>
     public string ResolveSeedDirectory() => Path.Combine(AppContext.BaseDirectory, SeedDirectory);
+
+    /// <summary>
+    /// 拼版版式 JSON 目录，相对于程序输出目录。来源是 Files 时从这里加载；开发环境版式表是空的时候从这里导入示例版式。
+    /// </summary>
+    public string SeedLayoutDirectory { get; set; } = "SeedLayouts";
+
+    /// <summary>
+    /// 版式 JSON 目录的绝对路径。
+    /// </summary>
+    public string ResolveSeedLayoutDirectory() => Path.Combine(AppContext.BaseDirectory, SeedLayoutDirectory);
 }
 
 /// <summary>

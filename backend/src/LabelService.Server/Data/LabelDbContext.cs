@@ -37,6 +37,9 @@ internal sealed class LabelDbContext(DbContextOptions<LabelDbContext> options) :
     /// <summary>角色。</summary>
     public DbSet<RoleRecord> Roles => Set<RoleRecord>();
 
+    /// <summary>拼版版式。</summary>
+    public DbSet<SheetLayoutRecord> SheetLayouts => Set<SheetLayoutRecord>();
+
     /// <inheritdoc />
     public override int SaveChanges(bool acceptAllChangesOnSuccess)
     {
@@ -161,6 +164,15 @@ internal sealed class LabelDbContext(DbContextOptions<LabelDbContext> options) :
             role.Property(item => item.Description).HasMaxLength(256);
             role.Property(item => item.Permissions).HasMaxLength(1024);
             role.HasIndex(item => item.Name).IsUnique();
+        });
+
+        modelBuilder.Entity<SheetLayoutRecord>(layout =>
+        {
+            layout.ToTable("sheet_layout");
+            layout.Property(item => item.Code).HasMaxLength(64);
+            layout.Property(item => item.Name).HasMaxLength(128);
+            layout.Property(item => item.UpdatedBy).HasMaxLength(64);
+            layout.HasIndex(item => item.Code).IsUnique();
         });
 
         UseSnakeCaseColumns(modelBuilder);

@@ -53,6 +53,7 @@
   <ItemGroup>
     <!-- 示例模板：开发环境首次建库时导入为已发布版本；模板来源配置为 Files 时直接从这里加载。 -->
     <Content Include="..\..\samples\templates\*.json" LinkBase="SeedTemplates" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="..\..\samples\layouts\*.json" LinkBase="SeedLayouts" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

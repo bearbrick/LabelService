@@ -366,6 +366,80 @@ namespace LabelService.Server.Data.Migrations
                     b.ToTable("app_role", (string)null);
                 });
 
+            modelBuilder.Entity("LabelService.Server.Data.SheetLayoutRecord", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("code");
+
+                    b.Property<bool>("CutLines")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("cut_lines");
+
+                    b.Property<bool>("Enabled")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("enabled");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("name");
+
+                    b.Property<double>("OffsetXMm")
+                        .HasColumnType("REAL")
+                        .HasColumnName("offset_x_mm");
+
+                    b.Property<double>("OffsetYMm")
+                        .HasColumnType("REAL")
+                        .HasColumnName("offset_y_mm");
+
+                    b.Property<double>("PaperHeightMm")
+                        .HasColumnType("REAL")
+                        .HasColumnName("paper_height_mm");
+
+                    b.Property<double>("PaperWidthMm")
+                        .HasColumnType("REAL")
+                        .HasColumnName("paper_width_mm");
+
+                    b.Property<double>("SlotHeightMm")
+                        .HasColumnType("REAL")
+                        .HasColumnName("slot_height_mm");
+
+                    b.Property<double>("SlotWidthMm")
+                        .HasColumnType("REAL")
+                        .HasColumnName("slot_width_mm");
+
+                    b.Property<string>("SlotsJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("slots_json");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("updated_at");
+
+                    b.Property<string>("UpdatedBy")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("updated_by");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.ToTable("sheet_layout", (string)null);
+                });
+
             modelBuilder.Entity("LabelService.Server.Data.TemplateRecord", b =>
                 {
                     b.Property<int>("Id")
