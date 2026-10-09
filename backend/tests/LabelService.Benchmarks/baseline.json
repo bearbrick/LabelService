@@ -1,0 +1,20 @@
+{
+  "Machine": "AMD Ryzen AI 9 H 465 w/ Radeon 880M，20 个逻辑核，.NET 10.0.9 (10.0.9, 10.0.926.27113)",
+  "Updated": "2026-10-10",
+  "Results": {
+    "RenderBenchmarks.BoxLabelPdf(Dpi=203)": 3.104,
+    "RenderBenchmarks.BoxLabelPdf(Dpi=300)": 2.967,
+    "RenderBenchmarks.BoxLabelPng(Dpi=203)": 5.491,
+    "RenderBenchmarks.BoxLabelPng(Dpi=300)": 11.655,
+    "RenderBenchmarks.BoxLabelPngUniqueBox(Dpi=203)": 5.75,
+    "RenderBenchmarks.BoxLabelPngUniqueBox(Dpi=300)": 11.598,
+    "RenderBenchmarks.BoxLabelZpl(Dpi=203)": 0.988,
+    "RenderBenchmarks.BoxLabelZpl(Dpi=300)": 2.013,
+    "TemplateBenchmarks.Render(Template=a4-shipping-mark, Format=Pdf)": 6.258,
+    "TemplateBenchmarks.Render(Template=a4-shipping-mark, Format=Png)": 115.309,
+    "TemplateBenchmarks.Render(Template=a4-shipping-mark, Format=Zpl)": 19.833,
+    "TemplateBenchmarks.Render(Template=box-label, Format=Pdf)": 2.976,
+    "TemplateBenchmarks.Render(Template=box-label, Format=Png)": 11.656,
+    "TemplateBenchmarks.Render(Template=box-label, Format=Zpl)": 2.016
+  }
+}

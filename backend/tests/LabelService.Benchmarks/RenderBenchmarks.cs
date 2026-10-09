@@ -45,13 +45,13 @@ public class RenderBenchmarks
             ?? throw new InvalidOperationException("缺少内嵌模板 templates/box-label.json");
         template = JsonSerializer.Deserialize<LabelTemplate>(stream, LabelJson.Options)!;
         data = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(Data)!;
-        fonts = FontRegistry.Load(FontDirectory());
+        fonts = FontRegistry.Load(BenchmarkPaths.FontDirectory());
         if (!fonts.HasDefaultFamily)
         {
             throw new InvalidOperationException("backend/assets/fonts 里没有思源黑体，见那里的 README");
         }
 
-        var root = Path.GetDirectoryName(FontDirectory())!;
+        var root = Path.GetDirectoryName(BenchmarkPaths.FontDirectory())!;
         assets = AssetLibrary.Load(Path.Combine(root, "icons"), [Path.Combine(root, "images")]);
         renderer = new LabelRenderer(fonts, assets);
     }
@@ -127,17 +127,5 @@ public class RenderBenchmarks
             Dpi = Dpi,
         });
         return result.Content.Length;
-    }
-
-    private static string FontDirectory()
-    {
-        // BenchmarkDotNet 在 bin 下的子目录里运行，往上找到 backend 目录。
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (directory != null && !File.Exists(Path.Combine(directory.FullName, "LabelService.Backend.slnx")))
-        {
-            directory = directory.Parent;
-        }
-
-        return Path.Combine(directory?.FullName ?? throw new DirectoryNotFoundException("未找到 LabelService.Backend.slnx"), "assets", "fonts");
     }
 }
