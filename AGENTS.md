@@ -49,7 +49,7 @@
 
 ## 3. 常用命令
 
-在仓库根目录执行。需要 .NET SDK 10.0.100 以上；前端需要 Node 20.19+ 或 22.12+。
+在仓库根目录执行。需要 .NET SDK 10.0.100 以上；前端需要 Node 22.18+ 或 24（前端检查程序靠 Node 自带的类型擦除直接运行 .ts）。
 
 **统一验证（交付前必须通过）**：
 
@@ -81,6 +81,7 @@ dotnet run --project client/tests/LabelService.Client.Checks
 
 ```powershell
 cd frontend; npm ci; npm run dev        # 开发，http://localhost:5173
+cd frontend; npm run check              # 检查程序（不依赖浏览器的模块）
 cd frontend; npm run build              # 类型检查 + 打包
 ```
 
@@ -127,7 +128,10 @@ cd frontend; npm run build              # 类型检查 + 打包
 
 **TypeScript / Vue（frontend）**
 
-- 严格模式，`npm run build`（含 vue-tsc）必须通过。
+- 严格模式，`npm run check` 和 `npm run build`（含 vue-tsc）必须通过。
+- `src/model/` 和 `src/editor/` 里的纯逻辑模块要能被 Node 直接运行：相对导入写 `.ts` 扩展名、只用可擦除的语法（不用 enum、namespace、构造函数参数属性）、不碰 DOM；新增这类模块时在 `tests/checks.ts` 补检查。
+- 所有模板修改通过 `src/stores/designer.ts` 的操作函数，改完调 `commit()` 记录撤销；画布（`src/editor/stage.ts`）只在拖动、变换结束时写坐标。
+- 开发环境下 `window.__labelDesigner` 暴露 store，浏览器里调试和自动化测试用它驱动，不要另写调试入口。
 - 模板模型只从 `src/model/template.ts` 导入，长度一律 mm，换算只用 `src/model/units.ts`。
 - 画布状态就是模板 JSON；不要另造一份元素状态再同步。
 
