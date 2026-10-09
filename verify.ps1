@@ -24,17 +24,18 @@ function Invoke-Step([string]$Title, [scriptblock]$Command) {
     }
 }
 
-# 临时启动后端服务（开发环境配置、独立端口），跑完调用端检查后关闭。
+# 临时启动后端服务（开发环境配置、独立端口、临时数据目录），跑完调用端检查后关闭并删除数据目录。
 function Invoke-ClientChecksWithServer {
     $port = 5089
     $url = "http://127.0.0.1:$port/"
     $bin = Join-Path $root 'backend/src/LabelService.Server/bin/Debug/net10.0'
     $log = Join-Path ([IO.Path]::GetTempPath()) "labelservice-verify-$port.log"
+    $data = Join-Path ([IO.Path]::GetTempPath()) ('labelservice-verify-data-' + [Guid]::NewGuid().ToString('N'))
     $previous = $env:ASPNETCORE_ENVIRONMENT
     $env:ASPNETCORE_ENVIRONMENT = 'Development'
     Write-Host ''
     Write-Host "==> 启动后端服务 $url（日志：$log）" -ForegroundColor Cyan
-    $server = Start-Process -FilePath 'dotnet' -ArgumentList @('LabelService.Server.dll', '--urls', "http://127.0.0.1:$port") `
+    $server = Start-Process -FilePath 'dotnet' -ArgumentList @('LabelService.Server.dll', '--urls', "http://127.0.0.1:$port", "--LabelService:Data:Directory=$data") `
         -WorkingDirectory $bin -NoNewWindow -PassThru -RedirectStandardOutput $log -RedirectStandardError "$log.err"
     $env:ASPNETCORE_ENVIRONMENT = $previous
     try {
@@ -60,7 +61,10 @@ function Invoke-ClientChecksWithServer {
         Remove-Item Env:LABEL_SERVICE_URL -ErrorAction SilentlyContinue
         if (-not $server.HasExited) {
             Stop-Process -Id $server.Id -Force
+            $server.WaitForExit(10000) | Out-Null
         }
+
+        Remove-Item $data -Recurse -Force -ErrorAction SilentlyContinue
     }
 }
 
