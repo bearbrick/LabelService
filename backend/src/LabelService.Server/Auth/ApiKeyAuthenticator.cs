@@ -1,7 +1,9 @@
 using System.Collections.Frozen;
+using System.Net;
 using System.Security.Cryptography;
 using System.Text;
 using LabelService.Server.Data;
+using LabelService.Server.Templates;
 using Microsoft.Extensions.Options;
 
 namespace LabelService.Server.Auth;
@@ -10,9 +12,9 @@ namespace LabelService.Server.Auth;
 /// 按 X-Api-Key 识别调用方。只保存 Key 的 SHA-256，查表在内存里完成，不访问数据库（R3）。
 /// </summary>
 /// <remarks>
-/// 调用方来自两处：配置文件（开发环境的测试 Key 等）和数据库 api_client 表。启动时加载，调用方变更（新建、改权限、
-/// 停用、重置 Key）后由 <see cref="ApiClientRepository"/> 调 <see cref="Load"/> 整体替换快照，旧 Key 立即失效。
-/// 读不加锁。同一个 Key 在两处都有时以数据库为准。
+/// 调用方来自两处：配置文件（开发环境的测试 Key 等，按模板编码授权）和数据库 api_client 表（按业务分组授权、可设 IP 白名单，ADR 0006）。
+/// 启动时加载，调用方变更（新建、改权限、停用、重置 Key）后由 <see cref="ApiClientRepository"/> 调 <see cref="Load"/> 整体替换快照，
+/// 旧 Key 立即失效。读不加锁。同一个 Key 在两处都有时以数据库为准。
 /// </remarks>
 internal sealed class ApiKeyAuthenticator
 {
@@ -56,12 +58,19 @@ internal sealed class ApiKeyAuthenticator
         var next = new Dictionary<string, ApiClient>(StringComparer.Ordinal);
         foreach (var client in configured.Where(client => client.Enabled && !string.IsNullOrWhiteSpace(client.KeySha256)))
         {
-            next[client.KeySha256.Trim().ToLowerInvariant()] = new ApiClient(null, client.Name, client.AllowedTemplates.ToHashSet(StringComparer.Ordinal));
+            var templates = client.AllowedTemplates.ToHashSet(StringComparer.Ordinal);
+            next[client.KeySha256.Trim().ToLowerInvariant()] = new ApiClient(null, client.Name, templates.Contains("*"), FrozenSet<int>.Empty, templates, []);
         }
 
         foreach (var record in records.Where(record => record.Enabled))
         {
-            next[record.ApiKeyHash] = new ApiClient(record.Id, record.Name, ParseTemplates(record.AllowedTemplates));
+            next[record.ApiKeyHash] = new ApiClient(
+                record.Id,
+                record.Name,
+                record.AllBusinesses,
+                ParseIds(record.BusinessIds),
+                FrozenSet<string>.Empty,
+                ParseNetworks(record.IpAllowlist));
         }
 
         clientsByHash = next.ToFrozenDictionary(StringComparer.Ordinal);
@@ -74,10 +83,39 @@ internal sealed class ApiKeyAuthenticator
         Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(apiKey)));
 
     /// <summary>
-    /// 解析逗号分隔的模板编码列表。
+    /// 解析逗号分隔的 ID 列表，忽略非法项。
     /// </summary>
-    public static IReadOnlySet<string> ParseTemplates(string value) =>
-        value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToHashSet(StringComparer.Ordinal);
+    public static IReadOnlySet<int> ParseIds(string value) =>
+        value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(item => int.TryParse(item, out var id) ? id : (int?)null)
+            .OfType<int>()
+            .ToFrozenSet();
+
+    /// <summary>
+    /// 解析 IP 白名单：CIDR（10.20.1.0/24）或单个地址，逗号分隔。
+    /// </summary>
+    /// <exception cref="FormatException">有一项不是合法的地址或网段。</exception>
+    public static IReadOnlyList<IPNetwork> ParseNetworks(string value)
+    {
+        var networks = new List<IPNetwork>();
+        foreach (var item in value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            if (IPNetwork.TryParse(item, out var network))
+            {
+                networks.Add(network);
+            }
+            else if (IPAddress.TryParse(item, out var address))
+            {
+                networks.Add(new IPNetwork(address, address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork ? 32 : 128));
+            }
+            else
+            {
+                throw new FormatException($"“{item}”不是合法的 IP 地址或网段");
+            }
+        }
+
+        return networks;
+    }
 }
 
 /// <summary>
@@ -85,14 +123,44 @@ internal sealed class ApiKeyAuthenticator
 /// </summary>
 /// <param name="Id">数据库里的调用方 ID；配置文件里的调用方为 null。</param>
 /// <param name="Name">调用方名称，写进调用日志和指标。</param>
-/// <param name="AllowedTemplates">允许使用的模板编码；包含 * 表示全部。</param>
-internal sealed record ApiClient(int? Id, string Name, IReadOnlySet<string> AllowedTemplates)
+/// <param name="AllBusinesses">能调用全部模板。</param>
+/// <param name="Businesses">能调用的业务分组 ID。</param>
+/// <param name="Templates">能调用的模板编码（配置文件里的调用方用）。</param>
+/// <param name="Networks">IP 白名单；空表示不限。</param>
+internal sealed record ApiClient(
+    int? Id,
+    string Name,
+    bool AllBusinesses,
+    IReadOnlySet<int> Businesses,
+    IReadOnlySet<string> Templates,
+    IReadOnlyList<IPNetwork> Networks)
 {
     /// <summary>
-    /// 是否允许使用某个模板。
+    /// 是否允许使用某个已发布的模板：全部、模板编码在列表里，或者模板所属的业务分组在授权范围里。
     /// </summary>
-    public bool CanUse(string templateCode) =>
-        AllowedTemplates.Contains("*") || AllowedTemplates.Contains(templateCode);
+    public bool CanUse(PublishedTemplate template) =>
+        AllBusinesses
+        || Templates.Contains(template.Template.Code)
+        || (template.BusinessId is { } business && Businesses.Contains(business));
+
+    /// <summary>
+    /// 来源 IP 是否在白名单里；没设白名单时总是允许。
+    /// </summary>
+    public bool AllowsIp(IPAddress? address)
+    {
+        if (Networks.Count == 0)
+        {
+            return true;
+        }
+
+        if (address is null)
+        {
+            return false;
+        }
+
+        var normalized = address.IsIPv4MappedToIPv6 ? address.MapToIPv4() : address;
+        return Networks.Any(network => network.Contains(normalized));
+    }
 }
 
 /// <summary>

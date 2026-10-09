@@ -49,6 +49,10 @@ internal static class BatchRenderEndpoint
 
         call.Client = client.Name;
         call.ClientId = client.Id;
+        if (!client.AllowsIp(http.Connection.RemoteIpAddress))
+        {
+            return call.Fail(ErrorCodes.Unauthorized, $"来源 IP {http.Connection.RemoteIpAddress} 不在调用方 {client.Name} 的白名单里");
+        }
         var (body, readError) = await PublicApiEndpoints.ReadJsonAsync<BatchRenderApiRequest>(http);
         if (readError is not null)
         {
@@ -116,7 +120,7 @@ internal static class BatchRenderEndpoint
 
         call.TemplateVersion = published.Version;
 
-        if (!client.CanUse(body.TemplateCode))
+        if (!client.CanUse(published))
         {
             return call.Fail(ErrorCodes.TemplateForbidden, $"调用方 {client.Name} 无权使用模板 {body.TemplateCode}");
         }

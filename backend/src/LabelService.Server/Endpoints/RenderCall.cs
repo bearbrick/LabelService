@@ -26,6 +26,7 @@ internal sealed class RenderCall : IDisposable
     private readonly RenderLogWriter? renderLog;
     private readonly long started = Stopwatch.GetTimestamp();
     private bool finished;
+    private string? failureMessage;
 
     /// <summary>
     /// 开始一次请求并计入并发数。
@@ -91,6 +92,7 @@ internal sealed class RenderCall : IDisposable
     /// </summary>
     public IResult Fail(string code, string message, IReadOnlyList<ErrorDetail>? errors = null, int? statusCode = null)
     {
+        failureMessage = message;
         Finish(code, 0);
         return ApiErrors.Create(http, code, message, errors, statusCode);
     }
@@ -165,7 +167,9 @@ internal sealed class RenderCall : IDisposable
             Timings.ToServerTimingHeader());
         renderLog?.TryWrite(new RenderLogRecord
         {
-            RequestId = RequestId.Length > 0 ? RequestId : ApiErrors.TraceId(http),
+            RequestId = RequestId,
+            TraceId = ApiErrors.TraceId(http),
+            Ip = http.Connection.RemoteIpAddress?.ToString() ?? "",
             Endpoint = endpoint,
             ClientId = ClientId,
             ClientName = Client,
@@ -178,6 +182,7 @@ internal sealed class RenderCall : IDisposable
             IsSlow = slow,
             Status = result is "ok" or "aborted" ? result : "error",
             ErrorCode = result is "ok" or "aborted" ? null : result,
+            ErrorMessage = failureMessage is { Length: > 512 } ? failureMessage[..512] : failureMessage,
             CreatedAt = DateTime.UtcNow,
         });
     }
