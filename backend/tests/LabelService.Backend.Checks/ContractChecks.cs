@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using LabelService.Contracts;
+using LabelService.Contracts.Layouts;
 using LabelService.Contracts.Protocol;
 using LabelService.Contracts.Templates;
 using LabelService.Rendering.Binding;
@@ -68,6 +69,22 @@ internal static partial class ContractChecks
         var frontendSample = JsonNode.Parse(File.ReadAllText(Path.Combine(repositoryRoot, "frontend", "src", "samples", "box-label.json")));
         var backendSample = JsonNode.Parse(File.ReadAllText(Path.Combine(backendRoot, "samples", "templates", "box-label.json")));
         check("前端的示例模板和后端一致", JsonNode.DeepEquals(frontendSample, backendSample));
+
+        // 拼版版式（T-018、T-019）：前端 frontend/src/model/layout.ts 是 SheetLayout 的镜像，按 JSON 属性名核对。
+        var frontendLayout = File.ReadAllText(Path.Combine(repositoryRoot, "frontend", "src", "model", "layout.ts"));
+        var layoutJson = JsonSerializer.SerializeToNode(new SheetLayout { Slots = [new SheetSlot()] }, LabelJson.Options)!.AsObject();
+        var layoutKeys = layoutJson.Select(pair => pair.Key)
+            .Concat(layoutJson.SelectMany(pair => pair.Value switch
+            {
+                JsonObject child => child.Select(inner => inner.Key),
+                JsonArray { Count: > 0 } array when array[0] is JsonObject item => item.Select(inner => inner.Key),
+                _ => [],
+            }))
+            .Distinct()
+            .ToArray();
+        var missingLayoutKeys = layoutKeys.Where(key => !Regex.IsMatch(frontendLayout, $@"^\s+{key}: ", RegexOptions.Multiline)).ToArray();
+        check("前端的版式模型（frontend/src/model/layout.ts）和后端 SheetLayout 的属性一致" + (missingLayoutKeys.Length > 0 ? "：缺 " + string.Join(", ", missingLayoutKeys) : ""),
+            layoutKeys.Length >= 10 && missingLayoutKeys.Length == 0);
 
         // 图标：设计器和服务端各一份（三个部分互不引用），按文本核对。图片素材设计器从服务端素材库读取，不再各存一份。
         var frontendIcons = FrontendIcon().Matches(File.ReadAllText(Path.Combine(repositoryRoot, "frontend", "src", "model", "icons.ts")))

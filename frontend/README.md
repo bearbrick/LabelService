@@ -6,6 +6,7 @@
 
 - **设计器**（T-013）：7 种元素拖入画布，选择、移动、缩放、旋转，网格吸附和对齐参考线，对齐与分布，撤销重做，层级、锁定、隐藏，直接编辑文本（输入 `{{` 补全字段），复制粘贴，缩放平移，mm 标尺，样例值和占位符切换。
 - **管理后台**（T-014，按原型 `docs/prototypes/label-designer-prototype.html`）：登录（首次登录必须改密码）、工作台、按业务分组的模板库（服务端缩略图）、模板工作区（设计、数据源、接口调试、版本记录）、业务分组、画布预设、素材与字体、调用方与密钥、调用日志、操作日志、用户、角色权限、个人设置。接口见 `docs/admin-api.md`。
+- **拼版设计器**（T-019，ADR 0005）：资源菜单的“拼版版式”。新建时选纸张和一个已发布的模板（格子尺寸取模板尺寸），先按纸张排满；左侧只列同尺寸的模板，拖到纸上生成格子，格子里显示服务端渲染的预览位图；网格吸附、对齐参考线、对齐和等间距分布、方向键微调 0.1 mm、旋转 90°、撤销重做；自动排列（行列、页边距、间距）；先行后列、先列后行重新编号或改单个格子的序号；越界、重叠的格子标红，不能保存；打印偏移、裁切线；样例值一页预览、上传一批数据预览多页、打印校准测试页（都在对话框里显示，可以下载）。接口见 `docs/admin-api.md` 的 `/layouts`。
 - 模板从服务端打开，修改后 1 秒自动保存为服务端草稿；发布前服务端检查并试渲染；历史版本可以复制回草稿。没有编辑权限时设计器只读（改动会被撤回）。模板 JSON 仍可导入（替换当前内容，可撤销）、导出。
 
 开发时先启动后端（`dotnet run --project backend/src/LabelService.Server`），首次登录用 `admin` / `admin123`，按提示改密码。
@@ -21,9 +22,11 @@ frontend/
    ├─ style.css  admin.css           设计器样式（沿用 DB Studio）、管理后台样式（从原型移植）
    ├─ api/                           管理接口客户端
    │  ├─ http.ts                     带登录令牌的请求、统一错误（ApiError），401 时回登录页
-   │  └─ admin.ts                    和 docs/admin-api.md 对应的类型和函数
+   │  ├─ admin.ts                    和 docs/admin-api.md 对应的类型和函数
+   │  └─ layouts.ts                  拼版版式的增删改、预览、测试页
    ├─ model/                         纯数据和规则（Node 能直接运行，不碰 DOM）
    │  ├─ template.ts                 模板 JSON 的 TypeScript 镜像（契约）
+   │  ├─ layout.ts                   拼版版式 JSON 的镜像（契约），越界和重叠检查、自动排列、重新编号、页数
    │  ├─ units.ts                    mm、pt、打印点换算
    │  ├─ elements.ts                 新建元素、补全默认值、复制
    │  ├─ bindings.ts                 {{key:format}} 预览替换和 .NET 格式子集、字段改名
@@ -33,6 +36,7 @@ frontend/
    │  └─ fonts.ts  icons.ts
    ├─ editor/                        画布引擎
    │  ├─ stage.ts                    Konva 舞台：节点同步、选择框、拖动吸附、缩放平移
+   │  ├─ sheetStage.ts               拼版画布：纸张、格子位图、拖动吸附、拖入模板
    │  ├─ draw.ts                     按元素类型绘制（和服务端绘制器规则一致）
    │  ├─ rulers.ts                   mm 标尺
    │  ├─ barcode.ts                  bwip-js 编码和缓存
@@ -41,6 +45,7 @@ frontend/
    ├─ stores/                        状态和操作
    │  ├─ designer.ts                 模板、选择、撤销、自动保存、只读、元素和字段操作
    │  ├─ workspace.ts                模板工作区：从服务端打开、保存草稿、发布、版本、回滚、换分组
+   │  ├─ sheet.ts                    拼版设计器：正在编辑的版式、选择、撤销、格子操作、保存
    │  ├─ session.ts                  登录状态、权限点 can()、业务范围 inScope()
    │  ├─ router.ts                   hash 路由（#/templates/3、#/t/编码/fields…）
    │  ├─ catalog.ts                  共用列表：业务分组、模板、画布预设、角色
@@ -50,7 +55,8 @@ frontend/
    ├─ pages/                         管理后台的页面（每页一个文件）
    ├─ components/                    设计器：工具栏、左侧面板、画布、属性面板、状态栏
    │  ├─ admin/                      顶栏、模板树、弹窗、新建模板、缩略图、接口调试面板
-   │  └─ workspace/                  模板工作区的数据源、版本记录、发布对话框
+   │  ├─ workspace/                  模板工作区的数据源、版本记录、发布对话框
+   │  └─ sheet/                      拼版设计器：工具栏和快捷键、左侧模板和自动排列、画布、右侧属性和预览
    └─ samples/box-label.json         示例模板（和 backend/samples/templates 保持一致）
 ```
 
@@ -79,4 +85,6 @@ npm run build     # 类型检查（vue-tsc）+ 打包
 - 画布每个元素记“内容签名”，只有内容变了才重画；100 个元素时拖动一帧约 3.5 ms（目标 20 ms 以内）。
 - 字体：`index.html` 引入服务端的 `/fonts/fonts.css`，画布用和服务端渲染同一份字体文件（家族名 `LabelService SourceHanSansSC` 等），度量也按服务端的值覆盖；服务端没有字体时退回本机字体。文字按 100 倍字号排版再缩小（`editor/draw.ts` 的 `TEXT_SCALE`），避免浏览器把字体度量取整到整像素带来的偏差。
 - 服务端预览（T-016）：模板工作区的“服务端预览”把当前内容（不用先保存）发给 `POST /api/admin/preview`；在设计页打开、按模板 DPI 预览时可以“和画布对比”，叠加显示并逐个元素量位置偏差（`editor/compare.ts`），示例箱标最大 0.085 mm。
+- `src/model/layout.ts` 是后端 `Contracts/Layouts/SheetLayout.cs` 的镜像（ADR 0005），后端检查程序按属性名核对；越界、重叠的规则和容差（0.05 mm）和服务端保存前的检查一致。
+- 拼版画布的格子画的是服务端缩略图（一张位图），24 个格子一帧约 0.5 ms，和模板有多少元素无关。对齐、分布直接用 `editor/arrange.ts`（它接受任意矩形），吸附用 `editor/snapping.ts`，撤销用 `editor/history.ts`。
 - 不引用 `frontend/` 以外的文件（后端检查程序会拦）。

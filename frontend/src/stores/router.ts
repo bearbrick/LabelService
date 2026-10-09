@@ -1,5 +1,5 @@
 /**
- * 简单的 hash 路由，不引入 vue-router：地址形如 `#/templates/3`、`#/t/BOX_LABEL/fields`、`#/calllogs`。
+ * 简单的 hash 路由，不引入 vue-router：地址形如 `#/templates/3`、`#/t/BOX_LABEL/fields`、`#/calllogs`、`#/layouts/A4_100x60_2x4`。
  * 页面切换只改地址，route 跟着 hashchange 更新；刷新页面停在原来的位置。
  */
 import { reactive } from 'vue'
@@ -10,6 +10,7 @@ export const PAGES = [
   'workspace',
   'business',
   'presets',
+  'layouts',
   'assets',
   'clients',
   'apitest',

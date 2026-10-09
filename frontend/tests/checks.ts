@@ -15,6 +15,8 @@ import { gridStep, transformRules } from '../src/editor/overlays.ts'
 import { compareElements, inkEdges } from '../src/editor/compare.ts'
 import { snapBox } from '../src/editor/snapping.ts'
 import { formatDate, formatNumber, keysIn, renameKey, resolveText } from '../src/model/bindings.ts'
+import { arrange, checkLayout, fitGrid, footprint, moveSlot, newLayout, normalizeLayout, pageCount, renumber, suggestCode } from '../src/model/layout.ts'
+import type { SheetLayout } from '../src/model/layout.ts'
 import { cloneElements, makeElement, normalizeElement } from '../src/model/elements.ts'
 import type { FieldDefinition, LabelElement, LabelTemplate, RectElement } from '../src/model/template.ts'
 import { normalizeRotation, roundMm } from '../src/model/units.ts'
@@ -175,5 +177,43 @@ check('示例模板没有问题', report.errors.length === 0 && report.undefined
 const broken: LabelTemplate = { ...sample, fields: [...sample.fields, { key: '1bad', type: 'string' }, { key: 'qty', type: 'number' }] }
 const brokenReport = checkTemplate(broken)
 check('检查出不合法和重复的字段 key', brokenReport.errors.some((e) => e.includes('1bad')) && brokenReport.errors.some((e) => e.includes('qty') && e.includes('重复')))
+
+// ---------- 拼版版式（T-019） ----------
+const a4 = { width: 210, height: 297 }
+const box100x60 = { width: 100, height: 60 }
+const fresh = newLayout('A4_100x60_2x4', 'A4 · 100×60', a4, box100x60)
+check('新建版式按纸张排满：A4 放 100×60 是 2 列 × 4 行，整体居中，和服务端示例版式的坐标一样',
+  fresh.slots.length === 8 && fresh.slots[0].x === 5 && fresh.slots[0].y === 28.5 && fresh.slots[1].x === 105 && fresh.slots[7].y === 208.5 && checkLayout(fresh).messages.length === 0)
+check('默认编码 A4_100x60_2x4（列 × 行）', suggestCode('A4 纵向', box100x60, 4, 2) === 'A4_100x60_2x4')
+check('旋转 90°、270° 时格子所占的宽高互换', footprint(box100x60, { x: 0, y: 0, rotation: 90 }).width === 60 && footprint(box100x60, { x: 0, y: 0, rotation: 180 }).width === 100)
+const rotatedGrid = fitGrid(a4, box100x60, true)
+check('竖着放：A4 能放 3 列 × 2 行', rotatedGrid.cols === 3 && rotatedGrid.rows === 2 && arrange(box100x60, { ...rotatedGrid, gapX: 0, gapY: 0, rotate: true, order: 'rows' }).every((slot) => slot.rotation === 90))
+check('先列后行排列：第二个格子在第一个下面', (() => {
+  const slots = arrange(box100x60, { rows: 4, cols: 2, marginTop: 28.5, marginLeft: 5, gapX: 0, gapY: 0, rotate: false, order: 'cols' })
+  return slots[1].x === 5 && slots[1].y === 88.5 && slots[4].x === 105
+})())
+
+const withProblems: SheetLayout = { ...fresh, slots: [{ x: 5, y: 10, rotation: 0 }, { x: 90, y: 10, rotation: 0 }, { x: 150, y: 250, rotation: 0 }, { x: 5, y: 100, rotation: 45 }] }
+const found = checkLayout(withProblems)
+check('版式检查：重叠、越界、旋转角度，带格子序号，和服务端的说法一致；出问题的格子标红',
+  found.messages.includes('第 2 个格子和第 1 个格子重叠') && found.messages.includes('第 3 个格子超出了纸张') && found.messages.some((m) => m.startsWith('第 4 个格子的旋转'))
+  && [0, 1, 2, 3].every((index) => found.badSlots.has(index)))
+check('贴边 0.05 mm 以内不算重叠', checkLayout({ ...fresh, slots: [{ x: 5, y: 10, rotation: 0 }, { x: 105.04, y: 10, rotation: 0 }] }).messages.length === 0)
+check('编码不合规、没有格子都报出来', checkLayout({ ...fresh, code: '1A', slots: [] }).messages.length === 2)
+
+const shuffled = [fresh.slots[5], fresh.slots[0], fresh.slots[3], fresh.slots[6], fresh.slots[1], fresh.slots[7], fresh.slots[2], fresh.slots[4]]
+check('重新编号：先行后列恢复成一行一行从左到右', JSON.stringify(renumber(shuffled, 'rows')) === JSON.stringify(fresh.slots))
+const byColumns = renumber(shuffled, 'cols')
+check('重新编号：先列后行是一列一列从上到下', byColumns[0].x === 5 && byColumns[3].x === 5 && byColumns[3].y === 208.5 && byColumns[4].x === 105 && byColumns[4].y === 28.5)
+check('重新编号时同一行允许 1 mm 以内的错位', renumber([{ x: 105, y: 10.6, rotation: 0 }, { x: 5, y: 10, rotation: 0 }], 'rows')[0].x === 5)
+check('手动调整顺序：把第 3 个移到第 1 个', (() => {
+  const moved = moveSlot(fresh.slots, 2, 0)
+  return moved[0].y === 88.5 && moved[1].x === 5 && moved[1].y === 28.5 && moved.length === 8
+})())
+check('页数：8 格的版式 19 张从第 3 格开始是 3 页', pageCount(8, 19, 3) === 3 && pageCount(8, 8) === 1 && pageCount(8, 0) === 0)
+check('长度按 0.1 mm 取整', normalizeLayout({ ...fresh, slots: [{ x: 5.04, y: 10.06, rotation: 90 }], offset: { x: -0.26, y: 0 } }).slots[0].y === 10.1)
+const slotBoxes = [{ x: 3, y: 0, width: 60, height: 100 }, { x: 70, y: 5, width: 100, height: 60 }]
+alignElements(slotBoxes, 'top', a4)
+check('对齐也能用在格子所占的矩形上（arrange.ts 接受任意矩形）', slotBoxes[0].y === 0 && slotBoxes[1].y === 0)
 
 console.log(`前端检查全部通过：${passed} 项`)

@@ -46,7 +46,7 @@ const kpis = computed(() => {
     list.push(
       { label: '今日调用', value: today.total, unit: '次', note: `生成 ${today.labels.toLocaleString()} 张` },
       { label: '成功率', value: rate, unit: today.total ? '%' : '', note: `失败 ${today.errors} 次` },
-      { label: '单张 P95', value: today.p95Ms === null ? '—' : Number(today.p95Ms.toFixed(1)), unit: today.p95Ms === null ? '' : 'ms', note: `目标 ≤ 100 ms · 慢调用 ${today.slow} 次 · 平均 ${today.averageMs.toFixed(1)} ms` },
+      { label: '单张 P95', value: today.p95Ms == null ? '—' : Number(today.p95Ms.toFixed(1)), unit: today.p95Ms == null ? '' : 'ms', note: `目标 ≤ 100 ms · 慢调用 ${today.slow} 次 · 平均 ${today.averageMs.toFixed(1)} ms` },
     )
   }
 

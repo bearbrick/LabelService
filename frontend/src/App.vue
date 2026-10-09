@@ -17,6 +17,7 @@ import BusinessPage from './pages/BusinessPage.vue'
 import CallLogsPage from './pages/CallLogsPage.vue'
 import ClientsPage from './pages/ClientsPage.vue'
 import DashboardPage from './pages/DashboardPage.vue'
+import LayoutsPage from './pages/LayoutsPage.vue'
 import LoginPage from './pages/LoginPage.vue'
 import OpLogsPage from './pages/OpLogsPage.vue'
 import PresetsPage from './pages/PresetsPage.vue'
@@ -39,6 +40,7 @@ const PAGES: Record<Page, { component: Component; permission?: string }> = {
   workspace: { component: WorkspacePage, permission: 'tpl.view' },
   business: { component: BusinessPage },
   presets: { component: PresetsPage },
+  layouts: { component: LayoutsPage },
   assets: { component: AssetsPage },
   clients: { component: ClientsPage, permission: 'api.manage' },
   apitest: { component: ApiTestPage, permission: 'api.test' },
