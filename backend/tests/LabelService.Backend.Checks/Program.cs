@@ -1,7 +1,7 @@
 namespace LabelService.Backend.Checks;
 
 /// <summary>
-/// 后端检查程序入口。按“契约 → 纯函数 → 渲染 → 服务端 → 架构与仓库规范”的顺序执行，任何一项失败立即抛异常退出。
+/// 后端检查程序入口。按“契约 → 纯函数 → 渲染 → 服务端 → 模板存储 → 架构与仓库规范”的顺序执行，任何一项失败立即抛异常退出。
 /// </summary>
 internal static class Program
 {
@@ -16,6 +16,7 @@ internal static class Program
         ValidationChecks.Run(backendRoot, Check);
         RenderChecks.Run(backendRoot, Check);
         await ServerChecks.RunAsync(backendRoot, Check);
+        await StorageChecks.RunAsync(backendRoot, Check);
         ArchitectureChecks.Run(backendRoot, repositoryRoot, Check);
         Console.WriteLine($"后端检查全部通过：{passed} 项");
         return 0;
