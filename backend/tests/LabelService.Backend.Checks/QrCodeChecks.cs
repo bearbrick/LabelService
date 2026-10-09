@@ -61,6 +61,8 @@ internal static class QrCodeChecks
         var low = MatrixSymbols.Encode(TwoDimensionalSymbology.Qr, ErrorCorrectionLevel.L, "3100-0123|20261008-A|C2610080001|EC", "q");
         var high = MatrixSymbols.Encode(TwoDimensionalSymbology.Qr, ErrorCorrectionLevel.H, "3100-0123|20261008-A|C2610080001|EC", "q");
         check("ecLevel 对 QR 生效：H 比 L 模块多", high.Columns > low.Columns);
+        var compact = MatrixSymbols.Encode(TwoDimensionalSymbology.Qr, ErrorCorrectionLevel.M, "3100-0123|20261008-A|C2610080001", "c");
+        check("QR 用混合模式最小编码：示例箱标的内容在 M 级是版本 2（25×25），和设计器的 bwip-js 一样", compact.Columns == 25);
         var pdf = MatrixSymbols.Encode(TwoDimensionalSymbology.Pdf417, ErrorCorrectionLevel.M, "ROW-HEIGHT", "p");
         check("PDF417 每行高 3 个模块（和设计器一致）",
             pdf.Rows % 3 == 0 && Enumerable.Range(0, pdf.Rows / 3).All(row => Enumerable.Range(0, pdf.Columns).All(x => pdf[x, row * 3] == pdf[x, row * 3 + 1] && pdf[x, row * 3] == pdf[x, row * 3 + 2])));

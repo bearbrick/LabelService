@@ -25,6 +25,8 @@ export interface CanvasController {
   zoomFit(): void
   requestFit(): void
   editText(id: string): void
+  /** 把纸张导出成指定像素尺寸的白底图片（和服务端预览对比用）。 */
+  snapshot(width: number, height: number): HTMLCanvasElement | null
 }
 
 export interface Toast {
@@ -250,6 +252,11 @@ export function setPage(width: number, height: number): void {
   designer.template.page.height = roundMm(height)
   commit()
   canvas?.zoomFit()
+}
+
+/** 当前画布的纸张快照；设计器没打开时返回 null。 */
+export function canvasSnapshot(width: number, height: number): HTMLCanvasElement | null {
+  return canvas?.snapshot(width, height) ?? null
 }
 
 /* ---------------- 选择 ---------------- */

@@ -9,7 +9,7 @@ export default defineConfig({
   },
   server: {
     port: 5173,
-    // 开发时把接口请求转给本地服务端（dotnet run --project backend/src/LabelService.Server）。
-    proxy: { '/api': 'http://localhost:5080' },
+    // 开发时把接口请求和字体转给本地服务端（dotnet run --project backend/src/LabelService.Server）。
+    proxy: { '/api': 'http://localhost:5080', '/fonts': 'http://localhost:5080' },
   },
 })

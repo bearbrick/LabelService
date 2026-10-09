@@ -71,6 +71,9 @@ internal static class MatrixSymbols
                     ErrorCorrectionLevel.H => ZXing.QrCode.Internal.ErrorCorrectionLevel.H,
                     _ => ZXing.QrCode.Internal.ErrorCorrectionLevel.M,
                 };
+
+                // 混合模式最小编码（数字、字母数字、字节分段），和设计器的 bwip-js 一样，同样的内容选出同样的版本（尺寸）。
+                hints[EncodeHintType.QR_COMPACT] = true;
                 break;
             case TwoDimensionalSymbology.DataMatrix:
                 hints[EncodeHintType.DATA_MATRIX_SHAPE] = SymbolShapeHint.FORCE_SQUARE;

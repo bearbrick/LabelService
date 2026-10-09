@@ -79,4 +79,8 @@ dotnet run -c Release --project backend/tests/LabelService.Benchmarks -- --filte
 
 | 2026-10-09 | 调用日志查询（T-009），label-log.db 100 万行，按模板、调用方、结果、时间筛选取一页 50 条 | 最慢 1.1 ms | 要求 < 200 ms；每种筛选条件和时间组成复合索引，翻页用 keyset；检查程序默认灌 20 万行，`LABEL_LOG_PERF_ROWS=1000000` 测 100 万行 |
 
+| 2026-10-09 | BenchmarkDotNet（`--job short`），`BoxLabelPng` 和新增的 `BoxLabelPngUniqueBox`（每次箱号不同，条码编码缓存不命中），二维码改为混合模式最小编码（T-016） | 固定箱号 203dpi 5.52 ms、300dpi 11.55 ms；每次换箱号 5.84 ms、11.70 ms，每次分配 174–191 KB | 改动前（同一轮）固定箱号 5.52 ms、11.71 ms，换箱号 5.82 ms、12.05 ms、分配 121–140 KB：耗时在误差范围内，最小编码每次多分配约 50 KB |
+
+| 2026-10-09 | 服务端预览（T-016），`POST /api/admin/preview` 示例箱标 300dpi，本机开发服务，热请求 | 服务端约 20–55 ms（含 PNG 编码），往返 36–94 ms | 只给设计器用，不在开放接口的 100 ms 预算里；设计器画布和服务端 PNG 的元素位置最大偏差 0.085 mm（1 个点），要求 ≤ 0.2 mm |
+
 实现新元素或格式后在这里追加一行，写明机器和条件。

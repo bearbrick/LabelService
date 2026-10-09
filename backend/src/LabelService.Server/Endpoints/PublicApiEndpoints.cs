@@ -26,7 +26,7 @@ internal static class PublicApiEndpoints
         api.MapGet("/templates/{code}/schema", GetSchema);
         api.MapPost("/render/batch", BatchRenderEndpoint.RenderBatchAsync);
         api.MapPost("/preview", (HttpContext http) =>
-            ApiErrors.Create(http, ApiErrors.NotImplemented, "服务端预览尚未实现（T-016）", statusCode: 501));
+            ApiErrors.Create(http, ApiErrors.NotImplemented, "服务端预览在管理接口 POST /api/admin/preview（需要登录，见 ADR 0007）", statusCode: 501));
         return app;
     }
 

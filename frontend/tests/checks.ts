@@ -12,6 +12,7 @@ import { PLACEHOLDER_IMAGE, sampleRequest } from '../src/model/request.ts'
 import { fileSize, fmtTime, sizeText } from '../src/model/format.ts'
 import { barChart, niceStep } from '../src/model/chart.ts'
 import { gridStep, transformRules } from '../src/editor/overlays.ts'
+import { compareElements, inkEdges } from '../src/editor/compare.ts'
 import { snapBox } from '../src/editor/snapping.ts'
 import { formatDate, formatNumber, keysIn, renameKey, resolveText } from '../src/model/bindings.ts'
 import { cloneElements, makeElement, normalizeElement } from '../src/model/elements.ts'
@@ -152,6 +153,21 @@ check('横线只能左右拉、不能旋转', hline.mode === 'hline' && !hline.r
 const qrRules = transformRules([makeElement('qrcode', [], [])])
 check('二维码等比缩放，锁定后不能变换', qrRules.keepRatio && qrRules.anchors.length === 4 && transformRules([{ ...makeElement('rect', [], []), locked: true }]).locked)
 check('网格缩小到不足 6 像素时放大一档', gridStep(1, 10) === 1 && gridStep(1, 3) === 2 && gridStep(0.5, 0.01) === 100)
+
+// ---------- 画布和服务端 PNG 的位置对比 ----------
+function blank(width: number, height: number): { data: Uint8ClampedArray; width: number; height: number } {
+  return { data: new Uint8ClampedArray(width * height * 4).fill(255), width, height }
+}
+function ink(image: { data: Uint8ClampedArray; width: number }, x0: number, y0: number, x1: number, y1: number): void {
+  for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) image.data.fill(0, (y * image.width + x) * 4, (y * image.width + x) * 4 + 3)
+}
+const inkA = blank(100, 60)
+const inkB = blank(100, 60)
+ink(inkA, 20, 20, 39, 29)
+ink(inkB, 22, 20, 41, 29)
+check('墨迹外框', JSON.stringify(inkEdges(inkA, { left: 0, top: 0, right: 99, bottom: 59 })) === JSON.stringify({ left: 20, top: 20, right: 39, bottom: 29 }))
+const offsets = compareElements([{ ...makeElement('rect', [], []), id: 'r1', x: 2, y: 2, width: 2, height: 1 }], inkA, inkB, 10)
+check('位置对比：错开 2 像素、每 mm 10 像素，偏差 0.2 mm', Math.abs(offsets[0].maxMm - 0.2) < 1e-9)
 
 // ---------- 示例模板 ----------
 const report = checkTemplate(sample)
