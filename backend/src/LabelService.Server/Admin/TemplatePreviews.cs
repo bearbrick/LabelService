@@ -5,6 +5,7 @@ using LabelService.Contracts.Templates;
 using LabelService.Rendering;
 using LabelService.Rendering.Validation;
 using LabelService.Server.Templates;
+using SkiaSharp;
 
 namespace LabelService.Server.Admin;
 
@@ -12,7 +13,8 @@ namespace LabelService.Server.Admin;
 /// 模板缩略图：用当前内容（草稿或最新发布版本）和样例值渲染一张小 PNG，模板库的卡片用。
 /// </summary>
 /// <remarks>
-/// 宽度约 360 像素（按画布宽度算 DPI），按“模板编码 + 修改时间”缓存，模板改了自动换新的；缓存有上限，超过时清空。
+/// 按模板自己的 DPI 渲染（和发布检查一致：低 DPI 下条码模块可能不足 1 个打印点，渲染会失败），再缩小到约 360 像素宽。
+/// 按“模板编码 + 修改时间”缓存，模板改了自动换新的；缓存有上限，超过时清空。
 /// 样例值缺失或不合法时用占位值，渲染失败（如条码内容不对）返回 null，前端显示占位图。
 /// </remarks>
 internal sealed class TemplatePreviews(ILabelRenderer renderer)
@@ -40,11 +42,11 @@ internal sealed class TemplatePreviews(ILabelRenderer renderer)
             return cached;
         }
 
-        var dpi = (int)Math.Clamp(Math.Round(TargetWidth / Math.Max(1, template.Page.Width) * LabelUnits.MmPerInch), 30, 203);
+        var dpi = template.Page.Dpi > 0 ? template.Page.Dpi : RenderLimits.DefaultDpi;
         byte[] png;
         try
         {
-            png = Render(template, dpi).Content.ToArray();
+            png = Downscale(Render(template, dpi).Content.ToArray());
         }
         catch (LabelRenderException)
         {
@@ -58,6 +60,21 @@ internal sealed class TemplatePreviews(ILabelRenderer renderer)
 
         thumbnails[key] = png;
         return png;
+    }
+
+    private static byte[] Downscale(byte[] png)
+    {
+        using var source = SKBitmap.Decode(png);
+        if (source is null || source.Width <= TargetWidth)
+        {
+            return png;
+        }
+
+        var info = new SKImageInfo((int)TargetWidth, Math.Max(1, (int)Math.Round(source.Height * TargetWidth / source.Width)));
+        using var scaled = source.Resize(info, new SKSamplingOptions(SKCubicResampler.Mitchell));
+        using var image = SKImage.FromBitmap(scaled);
+        using var data = image.Encode(SKEncodedImageFormat.Png, 100);
+        return data.ToArray();
     }
 
     /// <summary>

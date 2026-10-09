@@ -99,6 +99,14 @@ internal static class AdminResourceChecks
                 && thumbnail.Content.Headers.ContentType?.MediaType == "image/png" && image is { Width: > 340 and < 380 });
         }
 
+        var sampleThumbnail = await admin.GetAsync("/api/admin/templates/BOX_LABEL/thumbnail");
+        var sampleBytes = await sampleThumbnail.Content.ReadAsByteArrayAsync();
+        using (var image = sampleBytes.Length > 0 ? SKBitmap.Decode(sampleBytes) : null)
+        {
+            check("带条码的示例模板也有缩略图（按模板 DPI 渲染再缩小，条码模块不会不足 1 个打印点）",
+                sampleThumbnail.StatusCode == HttpStatusCode.OK && image is { Width: > 340 and < 380 });
+        }
+
         var versions = await designer.JsonAsync(HttpMethod.Get, "/api/admin/templates/CARTON_LABEL/versions");
         check("版本列表带发布说明和发布人", versions.EnumerateArray().First().GetProperty("note").GetString() == "首版"
             && versions.EnumerateArray().First().GetProperty("publishedBy").GetString()!.Contains("lifang"));
