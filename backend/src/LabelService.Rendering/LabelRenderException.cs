@@ -36,4 +36,22 @@ public sealed class LabelRenderException : Exception
     {
         get;
     }
+
+    /// <summary>
+    /// 批量时出错的条目序号（从 0 开始）；单张为 null。
+    /// </summary>
+    public int? LabelIndex
+    {
+        get; private init;
+    }
+
+    /// <summary>
+    /// 标上批量条目序号，提示文字前加“第 n 条：”。
+    /// </summary>
+    /// <param name="index">条目序号，从 0 开始。</param>
+    public LabelRenderException ForLabel(int index) =>
+        new(ErrorCode, $"第 {index + 1} 条：{Message}", ElementId)
+        {
+            LabelIndex = index
+        };
 }
