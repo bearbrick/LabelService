@@ -5,6 +5,8 @@
     <TargetFramework>net10.0</TargetFramework>
     <ServerGarbageCollection>true</ServerGarbageCollection>
     <ConcurrentGarbageCollection>true</ConcurrentGarbageCollection>
+    <!-- 发布时指定了运行时标识（-r linux-x64、-r win-x64）就预编译成本机代码，缩短启动和第一个请求的 JIT（T-017）。 -->
+    <PublishReadyToRun Condition="'$(RuntimeIdentifier)' != ''">true</PublishReadyToRun>
   </PropertyGroup>
 
   <ItemGroup>
@@ -30,6 +32,11 @@
   <ItemGroup>
     <!-- 管理后台登录：JWT（ADR 0006）。 -->
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- 作为 Windows 服务运行（ADR 0008）；不是以服务方式启动时不起作用。 -->
+    <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" />
   </ItemGroup>
 
   <ItemGroup>
