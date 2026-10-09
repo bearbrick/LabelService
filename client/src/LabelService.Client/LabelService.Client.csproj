@@ -9,7 +9,26 @@
     <PackageId>LabelService.Client</PackageId>
     <Description>标签生成服务的 .NET 客户端：生成标签文件、读取字段定义、发送到标签打印机。</Description>
     <PackageTags>label;zpl;barcode</PackageTags>
+    <Authors>LabelService</Authors>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageReleaseNotes>变更见包里的 CHANGELOG.md。</PackageReleaseNotes>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
   </PropertyGroup>
+
+  <!--
+    强名称签名（T-011）：密钥不进仓库（R7），发布时由 client/build/pack.ps1 传入 -p:LabelServiceStrongNameKey=密钥文件。
+    签名构建去掉 InternalsVisibleTo（签名的程序集要求友元也带公钥），所以检查程序只跑不签名的构建。
+  -->
+  <PropertyGroup Condition="'$(LabelServiceStrongNameKey)' != ''">
+    <SignAssembly>true</SignAssembly>
+    <AssemblyOriginatorKeyFile>$(LabelServiceStrongNameKey)</AssemblyOriginatorKeyFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="README.md;CHANGELOG.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
 
   <ItemGroup Condition="'$(TargetFramework)' != 'net8.0'">
     <PackageReference Include="System.Text.Json" />
@@ -19,7 +38,7 @@
     <Reference Include="System.Net.Http" />
   </ItemGroup>
 
-  <ItemGroup>
+  <ItemGroup Condition="'$(SignAssembly)' != 'true'">
     <InternalsVisibleTo Include="LabelService.Client.Checks" />
   </ItemGroup>
 
