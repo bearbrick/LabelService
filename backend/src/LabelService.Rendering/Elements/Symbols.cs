@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using LabelService.Rendering.Diagnostics;
 
 namespace LabelService.Rendering.Elements;
 
@@ -49,9 +50,11 @@ internal static class SymbolCache
         var key = (kind, content);
         if (Entries.TryGetValue(key, out var symbol))
         {
+            RenderCaches.Symbols.Hit();
             return symbol;
         }
 
+        RenderCaches.Symbols.Miss();
         symbol = encode(content);
         if (Entries.Count >= Capacity)
         {

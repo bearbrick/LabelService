@@ -1,5 +1,6 @@
 using LabelService.Contracts.Protocol;
 using LabelService.Contracts.Templates;
+using LabelService.Rendering.Diagnostics;
 using SkiaSharp;
 
 namespace LabelService.Rendering.Fonts;
@@ -182,8 +183,13 @@ public sealed class FontRegistry : IDisposable
     {
         var requested = string.IsNullOrWhiteSpace(fontFamily) ? TextStyle.DefaultFontFamily : fontFamily.Trim();
         var family = FindFamily(requested);
-        if (family is null)
+        if (family is not null)
         {
+            RenderCaches.Fonts.Hit();
+        }
+        else
+        {
+            RenderCaches.Fonts.Miss();
             warnings.Add(WarningCodes.FontFallback + ":" + Uri.EscapeDataString(requested));
             family = FindFamily(TextStyle.DefaultFontFamily) ?? families.Values.FirstOrDefault();
         }

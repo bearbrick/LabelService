@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using LabelService.Contracts.Templates;
+using LabelService.Rendering.Diagnostics;
 using SkiaSharp;
 using Svg.Skia;
 
@@ -177,9 +178,11 @@ public sealed class AssetLibrary : IDisposable
         var key = (id, Volatile.Read(ref version), width, height, fit, mono);
         if (scaled.TryGetValue(key, out var image))
         {
+            RenderCaches.Images.Hit();
             return image;
         }
 
+        RenderCaches.Images.Miss();
         image = ImageRaster.Render(source, width, height, fit, mono);
         if (scaled.Count >= ScaledCacheCapacity)
         {
