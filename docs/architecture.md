@@ -75,6 +75,8 @@
 | `src/LabelService.Server/Data/` | SQLite 主库 `label.db`：表对应的实体、DbContext、迁移、连接 PRAGMA（ADR 0003） |
 | `src/LabelService.Server/Templates/` | 模板存储：已发布版本的内存缓存（开放接口只读它）、草稿和发布、发布前检查；`Source=Files` 时改从 `samples/templates` 加载 |
 | `src/LabelService.Server/Diagnostics/` | 指标（System.Diagnostics.Metrics） |
+| `src/LabelService.Server/Hosting/` | 运行保障（T-017）：启动预热和就绪检查（/health/ready）、渲染并发限制和排队（RenderGate）、每日备份（VACUUM INTO） |
+| `deploy/` | Dockerfile、部署说明（Docker、Windows 服务、备份与恢复，ADR 0008） |
 | `samples/` | 示例模板、示例请求体 |
 | `tests/LabelService.Backend.Checks/` | 后端检查程序，含跨部分的契约一致性和仓库规范检查 |
 | `tests/LabelService.Benchmarks/` | BenchmarkDotNet 渲染基准 |
@@ -113,4 +115,4 @@
 - 初版用 SQLite、单实例部署，前期不考虑高可用（[ADR 0003](adr/0003-sqlite-single-instance.md)）。数据目录里有 `label.db`（模板等）、`label-log.db`（调用日志）和素材文件，不能放网络共享盘。
 - 服务进程本身不保存请求状态，以后换 SQL Server 后可以多实例。
 - 开发环境用 `appsettings.Development.json` 里的测试调用方，Key 是 `lbl_test_local_dev`，配置里只存它的 SHA-256。
-- 部署（Docker 或 Windows 服务）、预热、并发控制见 T-017；监控接入见 T-010。
+- 部署（Docker 或 Windows 服务）、预热、并发控制、备份见 `backend/deploy/README.md`（T-017、ADR 0008）；监控接入见 T-010。

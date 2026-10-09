@@ -45,7 +45,7 @@ dotnet run -c Release --project backend/tests/LabelService.Benchmarks -- --filte
 
 - 依赖方向：Contracts ← Rendering ← Server。Contracts 是契约，改动规则见根目录 AGENTS.md 的“契约变更”。
 - 渲染是热路径：不访问数据库、磁盘、网络，单张 P95 ≤ 100 ms，见 `docs/performance.md`。
-- 数据库用 SQLite，单实例部署（`docs/adr/0003-sqlite-single-instance.md`）。
+- 数据库用 SQLite，单实例部署（`docs/adr/0003-sqlite-single-instance.md`）。部署、备份与恢复见 `deploy/README.md`（ADR 0008）。
 - 文本渲染需要字体：先按 `assets/fonts/README.md` 把思源黑体（或同款的 Noto Sans SC）放进 `assets/fonts/`，否则文本检查不通过、中文显示成方框。
 - 后端检查程序会按文本读取 `client/` 和 `frontend/` 的源码，核对错误码、HTTP 头、元素类型、示例模板是否一致。改了契约，三个部分要一起改。
 
