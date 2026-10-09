@@ -74,9 +74,9 @@
 | `src/LabelService.Server/Logging/` | 调用日志：请求结束时投递到有界队列，后台服务按批写入 label-log.db，每天清理过期日志；后台查询（`RenderLogQuery`） |
 | `src/LabelService.Server/Data/` | SQLite 主库 `label.db`：表对应的实体、DbContext、迁移、连接 PRAGMA（ADR 0003） |
 | `src/LabelService.Server/Templates/` | 模板存储：已发布版本的内存缓存（开放接口只读它）、草稿和发布、发布前检查；`Source=Files` 时改从 `samples/templates` 加载 |
-| `src/LabelService.Server/Diagnostics/` | 指标（System.Diagnostics.Metrics） |
+| `src/LabelService.Server/Diagnostics/` | 指标（System.Diagnostics.Metrics）和 `/metrics` 的 Prometheus 导出（`PrometheusExporter`，ADR 0009）、缓存命中率 |
 | `src/LabelService.Server/Hosting/` | 运行保障（T-017）：启动预热和就绪检查（/health/ready）、渲染并发限制和排队（RenderGate）、每日备份（VACUUM INTO） |
-| `deploy/` | Dockerfile、部署说明（Docker、Windows 服务、备份与恢复，ADR 0008） |
+| `deploy/` | Dockerfile、部署说明（Docker、Windows 服务、备份与恢复，ADR 0008）；`monitoring/` 抓取配置、告警规则、Grafana 仪表盘（T-010） |
 | `samples/` | 示例模板、示例请求体 |
 | `tests/LabelService.Backend.Checks/` | 后端检查程序，含跨部分的契约一致性和仓库规范检查 |
 | `tests/LabelService.Benchmarks/` | BenchmarkDotNet 渲染基准 |
