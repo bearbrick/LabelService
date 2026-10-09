@@ -82,6 +82,25 @@ public class RenderBenchmarks
         return result.Content.Length;
     }
 
+    /// <summary>
+    /// 成品箱标 100×60mm 输出 PDF（矢量，字体嵌入子集）。
+    /// </summary>
+    [Benchmark]
+    public int BoxLabelPdf() => Render(LabelFormat.Pdf);
+
+    private int Render(LabelFormat format)
+    {
+        var values = FieldValidator.Validate(template.Fields, null, data).Values;
+        var result = renderer.Render(new RenderJob
+        {
+            Template = template,
+            Labels = [new LabelInstance(values)],
+            Format = format,
+            Dpi = Dpi,
+        });
+        return result.Content.Length;
+    }
+
     private static string FontDirectory()
     {
         // BenchmarkDotNet 在 bin 下的子目录里运行，往上找到 backend 目录。
