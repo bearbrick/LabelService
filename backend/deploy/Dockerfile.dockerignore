@@ -1,0 +1,6 @@
+# 构建上下文是 backend/，排除编译输出和基准结果（BuildKit 会读和 Dockerfile 同名的 .dockerignore）。
+**/bin/
+**/obj/
+**/BenchmarkDotNet.Artifacts/
+**/data/
+tests/
