@@ -5,9 +5,10 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { elementBounds } from '../editor/geometry.ts'
 import { paintRuler } from '../editor/rulers.ts'
+import { snapshotPage } from '../editor/snapshot.ts'
 import { DesignerStage } from '../editor/stage.ts'
 import { defaultTextStyle } from '../model/elements.ts'
-import { cssFontFamily } from '../model/fonts.ts'
+import { cssFontFamily, SERVER_FONT_FAMILIES } from '../model/fonts.ts'
 import type { FieldDefinition, LabelElement } from '../model/template.ts'
 import { MM_PER_PT } from '../model/units.ts'
 import { assetSource, assetVersion, uploadAsset } from '../stores/assets.ts'
@@ -326,6 +327,7 @@ onMounted(() => {
     zoomFit: () => stage?.zoomFit(),
     requestFit: () => stage?.requestFit(),
     editText: startEdit,
+    snapshot: (width, height) => (host.value ? snapshotPage(host.value, designer.template.page, width, height) : null),
   })
   stage.sync()
   stage.resize()
@@ -335,6 +337,8 @@ onMounted(() => {
   })
   resizeObserver.observe(wrap.value)
   document.fonts?.addEventListener?.('loadingdone', onFontsLoaded)
+  // 提前加载服务端字体的常规和粗体，加载完会触发 loadingdone 重画。
+  for (const family of SERVER_FONT_FAMILIES) for (const weight of [400, 700]) void document.fonts?.load(`${weight} 16px "${family}"`).catch(() => undefined)
   document.addEventListener('dragend', onGlobalDragEnd)
 })
 

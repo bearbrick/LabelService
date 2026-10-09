@@ -44,7 +44,7 @@ export class DesignerStage {
   readonly stage: Konva.Stage
   private readonly wrap: HTMLElement
   private readonly host: StageHost
-  private readonly main = new Konva.Layer()
+  private readonly main = new Konva.Layer({ name: 'elements' })
   private readonly overlay = new Konva.Layer()
   private readonly paper = new Konva.Rect({ fill: '#FFFFFF', name: 'paper' })
   private readonly transformer: Konva.Transformer

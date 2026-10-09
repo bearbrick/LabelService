@@ -330,3 +330,6 @@ export interface OpLogFilter {
 export const searchOpLogs = (filter: OpLogFilter) => api<OpLog[]>('GET', `/op-logs${query({ ...filter })}`)
 export const getDashboard = () => api<Dashboard>('GET', '/dashboard')
 export const testRender = (body: object) => apiRaw('POST', '/api-test/render', body)
+
+/** 服务端预览：未保存的模板 + 样例数据（不传 data 时用字段样例值）→ PNG。 */
+export const previewTemplate = (body: { template: LabelTemplate; data?: Record<string, unknown>; dpi?: number; mono?: boolean }) => apiRaw('POST', '/preview', body)

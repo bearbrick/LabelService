@@ -37,9 +37,25 @@ const measurer = new Konva.Text({ text: '' })
 /** Konva 的宽高支持 'auto'（按内容测量），但类型声明只写了 number。 */
 const AUTO = 'auto' as unknown as number
 
+/**
+ * 文字按 TEXT_SCALE 倍排版，节点再缩小回来。画布单位是 mm，字号只有几个“像素”，而浏览器的字体度量
+ * （Konva 用 fontBoundingBoxAscent / Descent 定基线）按整像素取整，误差能到 0.3 mm；放大后可以忽略，和服务端位置一致（T-016）。
+ */
+const TEXT_SCALE = 100
+
+/** 把以 mm 为单位的文字属性放大 TEXT_SCALE 倍（位置不变，靠节点缩放还原）。 */
+function scaled(attrs: Konva.TextConfig): Konva.TextConfig {
+  const up = (value: number | undefined) => (typeof value === 'number' ? value * TEXT_SCALE : value)
+  return { ...attrs, fontSize: up(attrs.fontSize ?? 12), letterSpacing: up(attrs.letterSpacing), padding: up(attrs.padding), width: up(attrs.width), height: up(attrs.height) }
+}
+
+function textNode(attrs: Konva.TextConfig): Konva.Text {
+  return new Konva.Text({ ...scaled(attrs), scaleX: 1 / TEXT_SCALE, scaleY: 1 / TEXT_SCALE })
+}
+
 function measure(attrs: Konva.TextConfig): { width: number; height: number } {
-  measurer.setAttrs({ width: AUTO, height: AUTO, wrap: 'none', padding: 0, ...attrs })
-  return { width: measurer.width(), height: measurer.height() }
+  measurer.setAttrs(scaled({ width: AUTO, height: AUTO, wrap: 'none', padding: 0, ...attrs }))
+  return { width: measurer.width() / TEXT_SCALE, height: measurer.height() / TEXT_SCALE }
 }
 
 /** 组的位置：以元素中心为旋转原点。 */
@@ -92,7 +108,7 @@ function drawProblem(group: Konva.Group, element: LabelElement, message: string)
   const width = Math.max(element.width, 4)
   const height = Math.max(element.height, 4)
   group.add(new Konva.Rect({ width, height, fill: 'rgba(192,58,40,0.07)', stroke: PROBLEM, strokeWidth: 0.25, dash: [1, 0.6], listening: false }))
-  group.add(new Konva.Text({
+  group.add(textNode({
     x: 0.8,
     y: 0.8,
     width: width - 1.6,
@@ -125,7 +141,7 @@ function drawPlaceholder(group: Konva.Group, element: LabelElement, label: strin
     listening: false,
   }))
   if (label && height > 6) {
-    group.add(new Konva.Text({ y: height / 2 + size * 0.38, width, text: label, align: 'center', fontSize: Math.min(2.2, height / 6), fill: '#6B747E', listening: false }))
+    group.add(textNode({ y: height / 2 + size * 0.38, width, text: label, align: 'center', fontSize: Math.min(2.2, height / 6), fill: '#6B747E', listening: false }))
   }
 }
 
@@ -164,7 +180,7 @@ function drawText(group: Konva.Group, element: TextElement, context: DrawContext
   }
 
   const clip = new Konva.Group({ clip: { x: 0, y: 0, width, height }, listening: false })
-  clip.add(new Konva.Text({
+  clip.add(textNode({
     ...base,
     width,
     height,
@@ -253,7 +269,7 @@ function drawBarcode(group: Konva.Group, element: BarcodeElement, context: DrawC
   if (showText) {
     const fontFamily = cssFontFamily(element.textStyle?.fontFamily)
     const textWidth = Math.max(barsWidth, Math.min(element.width, measure({ text: caption, fontSize: textSize, fontFamily }).width))
-    group.add(new Konva.Text({
+    group.add(textNode({
       x: barsWidth >= textWidth ? x0 : Math.max(0, x0 + (barsWidth - textWidth) / 2),
       y: element.textPosition === 'top' ? 0 : barHeight + textSize * 0.12,
       width: textWidth,

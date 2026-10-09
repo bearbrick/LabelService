@@ -10,6 +10,7 @@ import DesignerView from '../components/DesignerView.vue'
 import ModalDialog from '../components/admin/ModalDialog.vue'
 import ApiTestPanel from '../components/admin/ApiTestPanel.vue'
 import FieldsTab from '../components/workspace/FieldsTab.vue'
+import PreviewDialog from '../components/workspace/PreviewDialog.vue'
 import PublishDialog from '../components/workspace/PublishDialog.vue'
 import VersionsTab from '../components/workspace/VersionsTab.vue'
 import { paperName, sizeText, fmtTime } from '../model/format.ts'
@@ -22,6 +23,7 @@ import { can, inScope } from '../stores/session.ts'
 import { canEdit, discardDraft, loadWorkspace, moveToBusiness, workspace } from '../stores/workspace.ts'
 
 const publishOpen = ref(false)
+const previewOpen = ref(false)
 const moveOpen = ref(false)
 const moveTarget = ref(0)
 const fileInput = ref<HTMLInputElement>()
@@ -128,6 +130,7 @@ async function move(): Promise<void> {
             <span v-if="designer.readOnly" class="pill warn" title="当前账号没有编辑这个模板的权限"><AppIcon name="lock" small />只读</span>
             <button class="icon-btn" type="button" data-tip="导出模板 JSON" aria-label="导出模板 JSON" @click="download"><AppIcon name="download" /></button>
             <button v-if="!designer.readOnly" class="icon-btn" type="button" data-tip="导入模板 JSON（替换当前内容）" aria-label="导入模板 JSON" @click="fileInput?.click()"><AppIcon name="upload" /></button>
+            <button class="btn" type="button" @click="previewOpen = true"><AppIcon name="preview" small />服务端预览</button>
             <button v-if="canEdit() && detail.hasDraft && detail.latestVersion > 0" class="btn" type="button" @click="discard"><AppIcon name="undo" small />放弃改动</button>
             <button class="btn primary" type="button" :disabled="!canPublish || !changed" :title="canPublish ? (changed ? '' : '没有未发布的改动') : '当前账号没有发布权限'" @click="publishOpen = true">
               <AppIcon name="publish" small />发布<kbd>v{{ detail.latestVersion + 1 }}</kbd>
@@ -163,6 +166,7 @@ async function move(): Promise<void> {
     <div v-else class="page-scroll"><div class="page-inner hint">正在打开模板…</div></div>
     <input ref="fileInput" type="file" accept="application/json,.json" hidden @change="onFile" />
     <PublishDialog v-if="publishOpen" @close="publishOpen = false" />
+    <PreviewDialog v-if="previewOpen" @close="previewOpen = false" />
     <ModalDialog v-if="moveOpen" title="更换业务分组" width="min(420px, 100%)" @close="moveOpen = false">
       <p class="hint" style="margin-top: 0">换分组后，调用方按新分组授权，立即生效。</p>
       <div class="form-row">
