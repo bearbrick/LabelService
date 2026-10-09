@@ -44,6 +44,59 @@ internal sealed class TemplateRepository(
     }
 
     /// <summary>
+    /// 模板库用的列表：在 <see cref="ListAsync"/> 的基础上加上当前内容（有草稿取草稿，否则取最新发布版本）的画布和字段、元素个数。
+    /// </summary>
+    public async Task<IReadOnlyList<TemplateListItem>> ListWithOutlineAsync(CancellationToken cancellationToken = default)
+    {
+        await using var db = await contexts.CreateDbContextAsync(cancellationToken);
+        var rows = await db.Templates.AsNoTracking()
+            .Where(template => template.Status != TemplateStatuses.Deleted)
+            .OrderBy(template => template.Code)
+            .Select(template => new
+            {
+                Summary = new TemplateSummary(
+                    template.Id,
+                    template.Code,
+                    template.Name,
+                    template.BusinessId,
+                    template.Status,
+                    template.LatestVersion,
+                    template.Versions.Any(version => version.Status == TemplateStatuses.Draft),
+                    template.CreatedBy,
+                    template.UpdatedBy,
+                    template.UpdatedAt),
+                Content = template.Versions
+                    .Where(version => version.Status == TemplateStatuses.Draft || version.VersionNo == template.LatestVersion)
+                    .OrderByDescending(version => version.VersionNo)
+                    .Select(version => version.ContentJson)
+                    .FirstOrDefault(),
+            })
+            .ToListAsync(cancellationToken);
+        return rows.Select(row => new TemplateListItem(row.Summary, Outline(row.Content))).ToList();
+    }
+
+    /// <summary>
+    /// 只读模板 JSON 里的画布和字段、元素个数，不做完整的反序列化。
+    /// </summary>
+    private static TemplateOutline Outline(string? json)
+    {
+        if (string.IsNullOrEmpty(json))
+        {
+            return new TemplateOutline(0, 0, 0, 0, 0);
+        }
+
+        using var document = JsonDocument.Parse(json);
+        var root = document.RootElement;
+        double Number(JsonElement element, string name) =>
+            element.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.Number ? value.GetDouble() : 0;
+        int Count(string name) => root.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.Array ? value.GetArrayLength() : 0;
+        var page = root.TryGetProperty("page", out var p) ? p : default;
+        return page.ValueKind == JsonValueKind.Object
+            ? new TemplateOutline(Number(page, "width"), Number(page, "height"), (int)Number(page, "dpi"), Count("fields"), Count("elements"))
+            : new TemplateOutline(0, 0, 0, Count("fields"), Count("elements"));
+    }
+
+    /// <summary>
     /// 按编码找模板（不含已删除的），管理接口用来核对业务范围。
     /// </summary>
     public async Task<TemplateRecord?> FindAsync(string code, CancellationToken cancellationToken = default)
@@ -327,3 +380,20 @@ internal sealed record VersionSummary(int VersionNo, string Status, string? Publ
 /// <param name="Warnings">提示，不影响发布，如试渲染偏慢、字段没有样例值。</param>
 /// <param name="RenderMs">试渲染耗时，毫秒。</param>
 internal sealed record PublishResult(int Version, IReadOnlyList<string> Warnings, double RenderMs);
+
+/// <summary>
+/// 模板库列表的一项：概要加上当前内容的轮廓。
+/// </summary>
+/// <param name="Summary">概要。</param>
+/// <param name="Outline">画布和字段、元素个数。</param>
+internal sealed record TemplateListItem(TemplateSummary Summary, TemplateOutline Outline);
+
+/// <summary>
+/// 模板当前内容（草稿或最新发布版本）的轮廓。
+/// </summary>
+/// <param name="Width">画布宽度，mm。</param>
+/// <param name="Height">画布高度，mm。</param>
+/// <param name="Dpi">分辨率。</param>
+/// <param name="FieldCount">字段个数。</param>
+/// <param name="ElementCount">元素个数。</param>
+internal sealed record TemplateOutline(double Width, double Height, int Dpi, int FieldCount, int ElementCount);

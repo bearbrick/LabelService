@@ -22,6 +22,7 @@ internal static class AdminSetup
         services.TryAddSingleton(TimeProvider.System);
         services.AddSingleton<AdminTokens>();
         services.AddSingleton<OperationLog>();
+        services.AddSingleton<TemplatePreviews>();
         services.AddAuthentication().AddJwtBearer();
         services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme).Configure<AdminTokens>((options, tokens) =>
         {

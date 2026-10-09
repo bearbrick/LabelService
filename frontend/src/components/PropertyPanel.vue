@@ -4,7 +4,6 @@
  */
 import { computed } from 'vue'
 import { ELEMENT_META } from '../model/elements.ts'
-import { CANVAS_PRESETS } from '../model/presets.ts'
 import { roundMm } from '../model/units.ts'
 import {
   align,
@@ -23,6 +22,7 @@ import {
   toggleLock,
   toggleLockSelection,
 } from '../stores/designer.ts'
+import { catalog } from '../stores/catalog.ts'
 import AppIcon from './AppIcon.vue'
 import CodeProps from './props/CodeProps.vue'
 import MediaProps from './props/MediaProps.vue'
@@ -30,6 +30,7 @@ import ShapeProps from './props/ShapeProps.vue'
 import TextProps from './props/TextProps.vue'
 
 const page = computed(() => designer.template.page)
+const presets = computed(() => catalog.presets.filter((preset) => preset.enabled))
 const metric = computed(() => (selectedElement.value ? designer.metrics[selectedElement.value.id] : undefined))
 const json = computed(() => (selectedElement.value ? JSON.stringify(selectedElement.value, null, 2) : ''))
 
@@ -50,11 +51,12 @@ function onPage(): void {
 
 <template>
   <aside class="panel rightpanel" aria-label="属性">
+    <fieldset class="fs" :disabled="designer.readOnly">
     <!-- 模板属性 -->
     <div v-if="!selectedElements.length" class="props">
       <h4><AppIcon name="tag" small />模板属性</h4>
       <div class="prow"><label for="tpl-name">名称</label><input id="tpl-name" v-model="designer.template.name" class="inp" @change="commit()" /></div>
-      <div class="prow"><label for="tpl-code">编码</label><input id="tpl-code" v-model.trim="designer.template.code" class="inp mono" placeholder="如 BOX_LABEL" @change="commit()" /></div>
+      <div class="prow"><label for="tpl-code">编码</label><input id="tpl-code" :value="designer.template.code" class="inp mono" readonly title="编码创建后不能改" /></div>
       <div class="pdiv"></div>
       <h4>画布</h4>
       <div class="pgrid">
@@ -72,12 +74,13 @@ function onPage(): void {
       <div class="sect-h" style="margin-top: 14px"><span>画布预设</span></div>
       <div class="chips">
         <button
-          v-for="preset in CANVAS_PRESETS"
-          :key="preset.name"
+          v-for="preset in presets"
+          :key="preset.id"
           class="chip"
           type="button"
-          :class="{ on: preset.width === page.width && preset.height === page.height }"
-          @click="setPage(preset.width, preset.height)"
+          :class="{ on: preset.widthMm === page.width && preset.heightMm === page.height }"
+          :title="`${preset.widthMm}×${preset.heightMm} mm`"
+          @click="setPage(preset.widthMm, preset.heightMm)"
         >
           {{ preset.name }}
         </button>
@@ -182,5 +185,6 @@ function onPage(): void {
         <pre class="code">{{ json }}</pre>
       </details>
     </div>
+    </fieldset>
   </aside>
 </template>

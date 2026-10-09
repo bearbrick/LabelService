@@ -24,6 +24,7 @@ internal static class TemplateEndpoints
         api.MapPost("/templates", CreateAsync).RequireAdmin(Permissions.TemplateEdit);
         api.MapPost("/templates/check", Check).RequireAdmin(Permissions.TemplateView);
         api.MapGet("/templates/{code}", GetAsync).RequireAdmin(Permissions.TemplateView);
+        api.MapGet("/templates/{code}/thumbnail", ThumbnailAsync).RequireAdmin(Permissions.TemplateView);
         api.MapDelete("/templates/{code}", DeleteAsync).RequireAdmin(Permissions.TemplateDelete);
         api.MapPut("/templates/{code}/draft", SaveDraftAsync).RequireAdmin(Permissions.TemplateEdit);
         api.MapDelete("/templates/{code}/draft", DiscardDraftAsync).RequireAdmin(Permissions.TemplateEdit);
@@ -34,11 +35,53 @@ internal static class TemplateEndpoints
         api.MapPut("/templates/{code}/business", MoveAsync).RequireAdmin(Permissions.TemplateEdit);
     }
 
+    /// <summary>
+    /// 模板库列表：概要加上画布、DPI、字段和元素个数。
+    /// </summary>
     private static async Task<IResult> ListAsync(HttpContext http, TemplateRepository repository)
     {
         var admin = http.CurrentAdmin();
-        var templates = await repository.ListAsync();
-        return Results.Json(templates.Where(item => admin.InScope(item.BusinessId)));
+        var templates = await repository.ListWithOutlineAsync();
+        return Results.Json(templates.Where(item => admin.InScope(item.Summary.BusinessId)).Select(item => new
+        {
+            id = item.Summary.Id,
+            code = item.Summary.Code,
+            name = item.Summary.Name,
+            businessId = item.Summary.BusinessId,
+            status = item.Summary.Status,
+            latestVersion = item.Summary.LatestVersion,
+            hasDraft = item.Summary.HasDraft,
+            createdBy = item.Summary.CreatedBy,
+            updatedBy = item.Summary.UpdatedBy,
+            updatedAt = item.Summary.UpdatedAt,
+            width = item.Outline.Width,
+            height = item.Outline.Height,
+            dpi = item.Outline.Dpi,
+            fieldCount = item.Outline.FieldCount,
+            elementCount = item.Outline.ElementCount,
+        }));
+    }
+
+    /// <summary>
+    /// 缩略图（PNG），渲染失败时 204，前端显示占位图。
+    /// </summary>
+    private static async Task<IResult> ThumbnailAsync(string code, HttpContext http, TemplateRepository repository, TemplatePreviews previews)
+    {
+        var template = await FindInScopeAsync(code, http, repository);
+        if (template is null)
+        {
+            return AdminResults.NotFound($"模板 {code} 不存在");
+        }
+
+        var content = await repository.GetDraftAsync(code) ?? (template.LatestVersion > 0 ? await repository.GetVersionAsync(code, template.LatestVersion) : null);
+        var png = content is null ? null : previews.Thumbnail(code, template.UpdatedAt, content);
+        if (png is null)
+        {
+            return Results.NoContent();
+        }
+
+        http.Response.Headers.CacheControl = "private, max-age=60";
+        return Results.File(png, "image/png");
     }
 
     /// <summary>

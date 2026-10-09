@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /**
  * 字段：拖到画布生成“名称：{{key}}”文本，拖到条码上绑定内容，双击插入到选中的文本。
- * 点击字段展开编辑名称、类型、样例值等（完整的数据源定义页见 T-014）。
+ * 点击字段展开编辑名称、类型、样例值等（完整的字段表在模板工作区的“数据源”页）。
  */
 import { computed, reactive, ref } from 'vue'
 import { usedKeys } from '../model/bindings.ts'

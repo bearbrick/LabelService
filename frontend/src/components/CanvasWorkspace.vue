@@ -251,7 +251,7 @@ async function onDrop(event: DragEvent): Promise<void> {
   if (!payload && file) {
     try {
       const asset = await uploadAsset(file)
-      addElement('image', { src: `asset:${asset.id}`, name: asset.name }, point)
+      addElement('image', { src: `asset:${asset.key}`, name: asset.name }, point)
     } catch (error) {
       toast((error as Error).message, true)
     }

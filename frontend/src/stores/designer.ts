@@ -1,6 +1,7 @@
 /**
  * 设计器的状态和全部编辑操作。画布、面板、快捷键都调这里的函数，不直接改模板。
- * 每次修改后调用 commit() 记录撤销历史并自动保存草稿到浏览器本地（模板接口 T-014 完成前的临时方案）。
+ * 每次修改后调用 commit() 记录撤销历史，并安排自动保存草稿：保存函数由模板工作区注册（PUT 草稿到服务端）。
+ * 只读（没有编辑权限）时 commit() 会撤回刚才的修改。
  */
 import { computed, reactive } from 'vue'
 import { alignElements, distributeElements, moveAbove, reorder } from '../editor/arrange.ts'
@@ -9,6 +10,7 @@ import { readClipboard, writeClipboard } from '../editor/clipboard.ts'
 import type { Metric } from '../editor/draw.ts'
 import { History } from '../editor/history.ts'
 import type { DisplayMode } from '../model/bindings.ts'
+import { renameKey } from '../model/bindings.ts'
 import { cloneElements, makeElement, normalizeElement } from '../model/elements.ts'
 import type { ElementType, FieldDefinition, FieldType, LabelElement, LabelTemplate } from '../model/template.ts'
 import { roundMm } from '../model/units.ts'
@@ -31,22 +33,29 @@ export interface Toast {
   error: boolean
 }
 
-const DRAFT_KEY = 'label-designer.draft'
+/** 保存草稿的函数（由模板工作区注册），失败时抛错。 */
+export type DraftSaver = (template: LabelTemplate) => Promise<void>
+
 const history = new History(100)
 let canvas: CanvasController | null = null
 let commitTimer: ReturnType<typeof setTimeout> | undefined
 let saveTimer: ReturnType<typeof setTimeout> | undefined
+let saver: DraftSaver | null = null
+let saving: Promise<boolean> = Promise.resolve(true)
 let toastId = 0
 let pasteCount = 0
 
 export const designer = reactive({
-  template: loadDraft() ?? copyOf(sample as unknown as LabelTemplate),
+  template: copyOf(sample as unknown as LabelTemplate),
   selection: [] as string[],
   metrics: {} as Record<string, Metric>,
   canUndo: false,
   canRedo: false,
   dirty: false,
+  saving: false,
+  saveError: '',
   savedAt: '',
+  readOnly: false,
   renderVersion: 0,
   toasts: [] as Toast[],
   ui: {
@@ -97,6 +106,16 @@ function snapshot(): string {
 export function commit(): void {
   clearTimeout(commitTimer)
   commitTimer = undefined
+  if (designer.readOnly) {
+    if (history.push(snapshot())) {
+      restore(history.undo())
+      history.dropRedo()
+      syncHistoryFlags()
+      toast('只读：当前账号不能编辑这个模板', true)
+    }
+    return
+  }
+
   history.push(snapshot())
   syncHistoryFlags()
   scheduleSave()
@@ -131,29 +150,42 @@ function syncHistoryFlags(): void {
 }
 
 function scheduleSave(): void {
+  if (designer.readOnly) return
   designer.dirty = true
   clearTimeout(saveTimer)
-  saveTimer = setTimeout(saveDraft, 800)
+  saveTimer = setTimeout(() => void saveDraft(), 1000)
 }
 
-/** 立即把草稿存到浏览器本地。 */
-export function saveDraft(): void {
+/** 注册保存草稿的函数（模板工作区打开模板时注册，离开时传 null）。 */
+export function setDraftSaver(value: DraftSaver | null): void {
+  saver = value
+}
+
+/** 立即保存草稿（有未保存的修改时）。多次调用按顺序执行；返回是否已全部保存。 */
+export function saveDraft(): Promise<boolean> {
+  if (commitTimer) commit()
   clearTimeout(saveTimer)
-  try {
-    localStorage.setItem(DRAFT_KEY, snapshot())
-    designer.dirty = false
-    designer.savedAt = new Date().toLocaleTimeString('zh-CN', { hour12: false })
-  } catch {
-    toast('草稿保存失败：浏览器本地存储不可用或已满', true)
-  }
+  saving = saving.then(saveNow)
+  return saving
 }
 
-function loadDraft(): LabelTemplate | null {
+async function saveNow(): Promise<boolean> {
+  if (!designer.dirty || !saver || designer.readOnly) return !designer.dirty
+  const text = snapshot()
+  designer.saving = true
   try {
-    const json = localStorage.getItem(DRAFT_KEY)
-    return json ? copyOf(JSON.parse(json) as LabelTemplate) : null
-  } catch {
-    return null
+    await saver(JSON.parse(text) as LabelTemplate)
+    if (snapshot() === text) designer.dirty = false
+    designer.saveError = ''
+    designer.savedAt = new Date().toLocaleTimeString('zh-CN', { hour12: false })
+    return !designer.dirty
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    if (designer.saveError !== message) toast(`草稿保存失败：${message}`, true)
+    designer.saveError = message
+    return false
+  } finally {
+    designer.saving = false
   }
 }
 
@@ -167,26 +199,24 @@ function copyOf(template: LabelTemplate): LabelTemplate {
 
 /* ---------------- 模板 ---------------- */
 
-/** 打开一个模板（新建、导入、示例），清空撤销历史。 */
-export function openTemplate(template: LabelTemplate): void {
+/** 打开一个模板（从服务端读到的草稿或版本），清空撤销历史。readOnly 为真时不能修改。 */
+export function openTemplate(template: LabelTemplate, readOnly = false): void {
+  clearTimeout(commitTimer)
+  clearTimeout(saveTimer)
+  commitTimer = undefined
   designer.template = copyOf(template)
   designer.selection = []
   designer.metrics = {}
+  designer.readOnly = readOnly
+  designer.dirty = false
+  designer.saveError = ''
+  designer.savedAt = ''
   history.reset(snapshot())
   syncHistoryFlags()
-  saveDraft()
   canvas?.requestFit()
 }
 
-export function newTemplate(width: number, height: number, name = '新模板'): void {
-  openTemplate({ schemaVersion: '1.0', code: 'NEW_LABEL', name, page: { width, height, dpi: 300 }, fields: [], elements: [] })
-}
-
-export function openSample(): void {
-  openTemplate(sample as unknown as LabelTemplate)
-}
-
-/** 导入模板 JSON 文本；格式不对时抛出带中文说明的错误。 */
+/** 导入模板 JSON 文本，替换当前模板的画布、字段和元素（编码和名称不变，可以撤销）；格式不对时抛出带中文说明的错误。 */
 export function importTemplate(json: string): void {
   let parsed: Partial<LabelTemplate>
   try {
@@ -199,7 +229,13 @@ export function importTemplate(json: string): void {
     throw new Error('缺少 page 或 elements，不是模板 JSON')
   }
 
-  openTemplate({ schemaVersion: '1.0', code: '', name: '', fields: [], ...parsed } as LabelTemplate)
+  const imported = copyOf({ schemaVersion: '1.0', code: '', name: '', fields: [], ...parsed } as LabelTemplate)
+  designer.template.page = imported.page
+  designer.template.fields = imported.fields
+  designer.template.elements = imported.elements
+  designer.selection = []
+  commit()
+  canvas?.requestFit()
 }
 
 /** 导出模板 JSON（缩进 2 格）。有不能导出的问题时抛错。 */
@@ -383,6 +419,24 @@ export function addField(key: string, type: FieldType, name?: string): string | 
   if (!FIELD_KEY_PATTERN.test(trimmed)) return 'key 要以字母开头，只含字母、数字、下划线'
   if (designer.template.fields.some((field) => field.key === trimmed)) return `字段 ${trimmed} 已存在`
   designer.template.fields.push({ key: trimmed, name: name || undefined, type, required: true })
+  commit()
+  return null
+}
+
+/** 改字段 key，模板里引用它的元素一起改；新 key 不合法或重复时返回错误说明。 */
+export function renameField(field: FieldDefinition, key: string): string | null {
+  const trimmed = key.trim()
+  if (trimmed === field.key) return null
+  if (!FIELD_KEY_PATTERN.test(trimmed)) return 'key 要以字母开头，只含字母、数字、下划线'
+  if (designer.template.fields.some((item) => item !== field && item.key === trimmed)) return `字段 ${trimmed} 已存在`
+  const from = field.key
+  field.key = trimmed
+  for (const element of designer.template.elements) {
+    if (element.type === 'text') element.content = renameKey(element.content, from, trimmed)
+    else if (element.type === 'barcode' || element.type === 'qrcode') element.value = renameKey(element.value, from, trimmed)
+    else if (element.type === 'image') element.src = renameKey(element.src, from, trimmed)
+  }
+
   commit()
   return null
 }

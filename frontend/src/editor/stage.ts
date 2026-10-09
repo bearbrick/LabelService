@@ -8,7 +8,8 @@ import type { LabelElement, LabelTemplate } from '../model/template.ts'
 import { BASE_PX_PER_MM, normalizeRotation, roundMm } from '../model/units.ts'
 import { drawElement, setGeometry } from './draw.ts'
 import type { DrawContext } from './draw.ts'
-import { boxFromPoints, contains, elementBounds } from './geometry.ts'
+import { boxFromPoints, clamp, contains, elementBounds } from './geometry.ts'
+import { dragPan, drawGrid, transformRules } from './overlays.ts'
 import type { Box } from './geometry.ts'
 import { snapBox } from './snapping.ts'
 
@@ -38,7 +39,6 @@ export interface StageHost {
 
 const MIN_SCALE = BASE_PX_PER_MM * 0.25
 const MAX_SCALE = BASE_PX_PER_MM * 8
-const ALL_ANCHORS = ['top-left', 'top-center', 'top-right', 'middle-right', 'middle-left', 'bottom-left', 'bottom-center', 'bottom-right']
 
 export class DesignerStage {
   readonly stage: Konva.Stage
@@ -57,7 +57,7 @@ export class DesignerStage {
   private scaleValue = BASE_PX_PER_MM
   private needsFit = true
   private marqueeStart: { x: number; y: number; additive: boolean; base: string[] } | null = null
-  private pan: { x: number; y: number; stageX: number; stageY: number } | null = null
+  private panning = false
   private transformMode: 'box' | 'hline' | 'vline' = 'box'
   private editingId: string | null = null
   private colors = { accent: '#1555d4', guide: '#e0457b' }
@@ -151,36 +151,14 @@ export class DesignerStage {
       .map((id) => template.elements.find((element) => element.id === id))
       .filter((element): element is LabelElement => !!element && !element.hidden && element.id !== this.editingId)
     const nodes = selected.map((element) => this.nodes.get(element.id)).filter((node): node is Konva.Group => !!node)
-    const locked = selected.some((element) => element.locked)
-    let anchors = ALL_ANCHORS
-    let rotate = true
-    let keepRatio = false
-    this.transformMode = 'box'
-    if (selected.length === 1) {
-      const element = selected[0]
-      if (element.type === 'line') {
-        rotate = false
-        if (element.height === 0) {
-          anchors = ['middle-left', 'middle-right']
-          this.transformMode = 'hline'
-        } else if (element.width === 0) {
-          anchors = ['top-center', 'bottom-center']
-          this.transformMode = 'vline'
-        }
-      }
-
-      if (element.type === 'qrcode' || element.type === 'icon') {
-        anchors = ['top-left', 'top-right', 'bottom-left', 'bottom-right']
-        keepRatio = true
-      }
-    }
-
+    const rules = transformRules(selected)
+    this.transformMode = rules.mode
     this.transformer.setAttrs({
-      enabledAnchors: locked ? [] : anchors,
-      rotateEnabled: rotate && !locked,
-      resizeEnabled: !locked,
-      keepRatio,
-      borderDash: locked ? [4, 3] : undefined,
+      enabledAnchors: rules.locked ? [] : rules.anchors,
+      rotateEnabled: rules.rotate && !rules.locked,
+      resizeEnabled: !rules.locked,
+      keepRatio: rules.keepRatio,
+      borderDash: rules.locked ? [4, 3] : undefined,
     })
     this.transformer.nodes(nodes)
     if (nodes.length) this.transformer.forceUpdate()
@@ -332,29 +310,7 @@ export class DesignerStage {
 
   private drawGrid(context: Konva.Context): void {
     const settings = this.host.settings()
-    if (!settings.showGrid) return
-    const page = this.host.template().page
-    const steps = [0.5, 1, 2, 5, 10, 20, 50, 100]
-    let index = Math.max(0, steps.indexOf(settings.gridSize))
-    while (index < steps.length - 1 && steps[index] * this.scaleValue < 6) index++
-    const step = steps[index]
-    const canvas = context._context
-    canvas.save()
-    canvas.lineWidth = 1 / this.scaleValue
-    canvas.strokeStyle = 'rgba(21,85,212,0.07)'
-    canvas.beginPath()
-    for (let x = step; x < page.width - 1e-6; x += step) {
-      canvas.moveTo(x, 0)
-      canvas.lineTo(x, page.height)
-    }
-
-    for (let y = step; y < page.height - 1e-6; y += step) {
-      canvas.moveTo(0, y)
-      canvas.lineTo(page.width, y)
-    }
-
-    canvas.stroke()
-    canvas.restore()
+    if (settings.showGrid) drawGrid(context._context, this.host.template().page, settings.gridSize, this.scaleValue)
   }
 
   private bindEvents(): void {
@@ -525,25 +481,14 @@ export class DesignerStage {
 
   /** 空格 + 拖动，或按住鼠标中键拖动，平移画布。 */
   private onPanStart(event: PointerEvent): void {
-    if (!(this.host.settings().panMode || event.button === 1) || this.pan) return
+    if (!(this.host.settings().panMode || event.button === 1) || this.panning) return
     event.preventDefault()
     event.stopPropagation()
-    this.pan = { x: event.clientX, y: event.clientY, stageX: this.stage.x(), stageY: this.stage.y() }
-    const move = (moveEvent: PointerEvent) => {
-      if (!this.pan) return
-      this.stage.position({ x: this.pan.stageX + moveEvent.clientX - this.pan.x, y: this.pan.stageY + moveEvent.clientY - this.pan.y })
+    this.panning = true
+    const move = (x: number, y: number) => {
+      this.stage.position({ x, y })
       this.afterView()
     }
-    const up = () => {
-      this.pan = null
-      window.removeEventListener('pointermove', move)
-      window.removeEventListener('pointerup', up)
-    }
-    window.addEventListener('pointermove', move)
-    window.addEventListener('pointerup', up)
+    dragPan(event, this.stage.position(), move, () => (this.panning = false))
   }
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value))
 }

@@ -41,7 +41,7 @@ function setIcon(key: string): void {
       <label for="prop-src">来源</label>
       <select id="prop-src" class="sel" :value="image.src" @change="setSource(($event.target as HTMLSelectElement).value)">
         <optgroup label="素材库">
-          <option v-for="asset in assets" :key="asset.id" :value="`asset:${asset.id}`">{{ asset.name }}</option>
+          <option v-for="asset in assets" :key="asset.key" :value="`asset:${asset.key}`">{{ asset.name }}</option>
         </optgroup>
         <optgroup label="字段（image 类型）">
           <option v-for="field in imageFields" :key="field.key" :value="`{{${field.key}}}`">{{ field.name || field.key }}（{{ field.key }}）</option>

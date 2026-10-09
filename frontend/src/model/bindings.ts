@@ -20,6 +20,12 @@ export function keysIn(text: string | undefined): string[] {
   return keys
 }
 
+/** 把文本里对字段 from 的绑定改成 to，格式部分不变（改字段 key 时用）。 */
+export function renameKey(text: string, from: string, to: string): string {
+  if (!text || !text.includes('{{')) return text
+  return text.replace(BINDING, (whole, key: string) => (key === from ? whole.replace(key, to) : whole))
+}
+
 /** 元素里可以写绑定的那个属性的内容。 */
 export function bindingTextOf(element: LabelElement): string {
   switch (element.type) {
