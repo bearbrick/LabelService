@@ -42,6 +42,7 @@ app.UseExceptionHandler(errorApp => errorApp.Run(async http =>
 app.MapHealthChecks("/health");
 app.MapPublicApi();
 app.MapAdminApi();
+app.MapFontFiles();
 app.LoadFonts();
 app.LoadAssets();
 
