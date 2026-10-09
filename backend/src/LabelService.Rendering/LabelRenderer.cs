@@ -113,7 +113,7 @@ public sealed class LabelRenderer : ILabelRenderer
 
     private static void Draw(SKCanvas canvas, IElementPainter painter, ElementLayout layout, RenderContext context)
     {
-        var rotation = (float)layout.Element.Rotation;
+        var rotation = (float)layout.Rotation;
         if (rotation == 0)
         {
             painter.Draw(canvas, layout, context);
@@ -121,7 +121,7 @@ public sealed class LabelRenderer : ILabelRenderer
         }
 
         canvas.Save();
-        canvas.RotateDegrees(rotation, layout.Bounds.MidX, layout.Bounds.MidY);
+        canvas.RotateDegrees(rotation, layout.Pivot.X, layout.Pivot.Y);
         painter.Draw(canvas, layout, context);
         canvas.Restore();
     }

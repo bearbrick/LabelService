@@ -39,24 +39,34 @@ internal sealed class TextPainter : IElementPainter
     public void Draw(SKCanvas canvas, ElementLayout layout, RenderContext context)
     {
         var text = (TextElementLayout)layout;
-        if (text.Block.Lines.Count == 0)
+        canvas.Save();
+        canvas.ClipRect(layout.Bounds);
+        DrawBlock(canvas, new SKPoint(layout.Bounds.Left, layout.Bounds.Top), text.Face, text.Block, text.Color, text.Underline, context.Mono);
+        canvas.Restore();
+    }
+
+    /// <summary>
+    /// 画一段排好的文本。坐标原点是 <paramref name="origin"/>（排版时的框左上角），不裁切；条码下面的文字也用它。
+    /// </summary>
+    internal static void DrawBlock(SKCanvas canvas, SKPoint origin, FontFace face, TextBlock block, SKColor color, bool underline, bool mono)
+    {
+        if (block.Lines.Count == 0)
         {
             return;
         }
 
         var paint = threadPaint ??= new SKPaint { Style = SKPaintStyle.Fill };
-        paint.Color = text.Color;
-        paint.IsAntialias = !context.Mono;
-        var size = text.Block.FontSize;
+        paint.Color = color;
+        paint.IsAntialias = !mono;
+        var size = block.FontSize;
         var scale = size / FontFace.ReferenceSize;
-        var font = text.Face.Font(context.Mono);
+        var font = face.Font(mono);
 
         canvas.Save();
-        canvas.ClipRect(layout.Bounds);
-        canvas.Translate(layout.Bounds.Left, layout.Bounds.Top);
+        canvas.Translate(origin.X, origin.Y);
         using (var builder = new SKTextBlobBuilder())
         {
-            foreach (var line in text.Block.Lines.Where(line => line.Glyphs.Length > 0))
+            foreach (var line in block.Lines.Where(line => line.Glyphs.Length > 0))
             {
                 var points = new SKPoint[line.Glyphs.Length];
                 for (var i = 0; i < points.Length; i++)
@@ -77,12 +87,12 @@ internal sealed class TextPainter : IElementPainter
             }
         }
 
-        if (text.Underline)
+        if (underline)
         {
             var thickness = size / 15;
-            foreach (var line in text.Block.Lines.Where(line => line.Width > 0))
+            foreach (var line in block.Lines.Where(line => line.Width > 0))
             {
-                var y = line.Top + text.Block.LineBox / 2 + size / 2;
+                var y = line.Top + block.LineBox / 2 + size / 2;
                 canvas.DrawRect(SKRect.Create(line.Left, y - thickness / 2, line.Width, thickness), paint);
             }
         }
