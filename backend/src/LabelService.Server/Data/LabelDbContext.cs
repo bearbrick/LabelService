@@ -1,0 +1,153 @@
+using System.Text;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+
+namespace LabelService.Server.Data;
+
+/// <summary>
+/// 主库 label.db：画布预设、模板、版本、素材元数据。表结构见设计书第 3 节，用迁移管理（Data/Migrations）。
+/// </summary>
+/// <remarks>
+/// 只给管理操作和启动加载用。开放接口从 <see cref="Templates.DbTemplateStore"/> 的内存缓存取模板，不访问数据库（R3）。
+/// 只用 EF Core 的通用能力，不写 SQLite 特有的 SQL（ADR 0003），以后换数据库只需换 Provider、重新生成迁移。
+/// </remarks>
+internal sealed class LabelDbContext(DbContextOptions<LabelDbContext> options) : DbContext(options)
+{
+    /// <summary>画布预设。</summary>
+    public DbSet<CanvasPresetRecord> CanvasPresets => Set<CanvasPresetRecord>();
+
+    /// <summary>模板。</summary>
+    public DbSet<TemplateRecord> Templates => Set<TemplateRecord>();
+
+    /// <summary>模板版本，包括草稿。</summary>
+    public DbSet<TemplateVersionRecord> TemplateVersions => Set<TemplateVersionRecord>();
+
+    /// <summary>素材元数据。</summary>
+    public DbSet<AssetRecord> Assets => Set<AssetRecord>();
+
+    /// <inheritdoc />
+    public override int SaveChanges(bool acceptAllChangesOnSuccess)
+    {
+        GuardPublishedVersions();
+        return base.SaveChanges(acceptAllChangesOnSuccess);
+    }
+
+    /// <inheritdoc />
+    public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
+    {
+        GuardPublishedVersions();
+        return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+    {
+        // 时间一律存 UTC 的 DateTime（ADR 0003）。SQLite 读回来的 Kind 是 Unspecified，这里标回 Utc。
+        configurationBuilder.Properties<DateTime>().HaveConversion<UtcDateTimeConverter>();
+    }
+
+    /// <inheritdoc />
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<CanvasPresetRecord>(preset =>
+        {
+            preset.ToTable("canvas_preset");
+            preset.Property(item => item.Name).HasMaxLength(64);
+            preset.HasData(DefaultPresets());
+        });
+
+        modelBuilder.Entity<TemplateRecord>(template =>
+        {
+            template.ToTable("label_template");
+            template.Property(item => item.Code).HasMaxLength(64);
+            template.Property(item => item.Name).HasMaxLength(128);
+            template.Property(item => item.Category).HasMaxLength(64);
+            template.Property(item => item.Status).HasMaxLength(16);
+            template.Property(item => item.CreatedBy).HasMaxLength(64);
+            template.HasIndex(item => item.Code).IsUnique();
+            template.HasMany(item => item.Versions)
+                .WithOne(version => version.Template)
+                .HasForeignKey(version => version.TemplateId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<TemplateVersionRecord>(version =>
+        {
+            version.ToTable("label_template_version");
+            version.Property(item => item.Status).HasMaxLength(16).IsConcurrencyToken();
+            version.Property(item => item.PublishedBy).HasMaxLength(64);
+            version.HasIndex(item => new { item.TemplateId, item.VersionNo }).IsUnique();
+        });
+
+        modelBuilder.Entity<AssetRecord>(asset =>
+        {
+            asset.ToTable("asset");
+            asset.Property(item => item.Kind).HasMaxLength(16);
+            asset.Property(item => item.Name).HasMaxLength(128);
+            asset.Property(item => item.FilePath).HasMaxLength(256);
+            asset.Property(item => item.Sha256).HasMaxLength(64);
+            asset.HasIndex(item => item.Sha256);
+        });
+
+        // 列名按设计书用下划线风格：WidthMm → width_mm。
+        foreach (var property in modelBuilder.Model.GetEntityTypes().SelectMany(entity => entity.GetProperties()))
+        {
+            property.SetColumnName(SnakeCase(property.Name));
+        }
+    }
+
+    /// <summary>
+    /// 建库时写入的画布预设，和设计器的预设列表（frontend/src/model/presets.ts）一致。之后由管理员增删。
+    /// </summary>
+    private static CanvasPresetRecord[] DefaultPresets()
+    {
+        (string Name, double Width, double Height)[] presets =
+        [
+            ("A4", 210, 297), ("A5", 148, 210), ("100×150", 100, 150), ("100×100", 100, 100),
+            ("100×60", 100, 60), ("80×50", 80, 50), ("60×40", 60, 40), ("50×30", 50, 30),
+        ];
+        return presets
+            .Select((preset, index) => new CanvasPresetRecord
+            {
+                Id = index + 1,
+                Name = preset.Name,
+                WidthMm = preset.Width,
+                HeightMm = preset.Height,
+                Sort = (index + 1) * 10,
+                Enabled = true,
+            })
+            .ToArray();
+    }
+
+    private void GuardPublishedVersions()
+    {
+        foreach (var entry in ChangeTracker.Entries<TemplateVersionRecord>())
+        {
+            if ((entry.State is EntityState.Modified or EntityState.Deleted)
+                && entry.OriginalValues.GetValue<string>(nameof(TemplateVersionRecord.Status)) == TemplateStatuses.Published)
+            {
+                throw new InvalidOperationException($"模板版本 {entry.Entity.VersionNo} 已发布，不能修改或删除");
+            }
+        }
+    }
+
+    private static string SnakeCase(string name)
+    {
+        var builder = new StringBuilder(name.Length + 8);
+        for (var i = 0; i < name.Length; i++)
+        {
+            if (char.IsUpper(name[i]) && i > 0)
+            {
+                builder.Append('_');
+            }
+
+            builder.Append(char.ToLowerInvariant(name[i]));
+        }
+
+        return builder.ToString();
+    }
+
+    private sealed class UtcDateTimeConverter() : ValueConverter<DateTime, DateTime>(
+        value => value.Kind == DateTimeKind.Local ? value.ToUniversalTime() : value,
+        value => DateTime.SpecifyKind(value, DateTimeKind.Utc));
+}
