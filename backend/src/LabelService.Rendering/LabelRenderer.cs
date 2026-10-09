@@ -63,12 +63,14 @@ public sealed class LabelRenderer : ILabelRenderer
         var width = (int)Math.Round(LabelUnits.MmToDots(template.Page.Width, job.Dpi));
         var height = (int)Math.Round(LabelUnits.MmToDots(template.Page.Height, job.Dpi));
 
+        // ZPL 只能打黑白：绘制器按黑白画（文字线条不抗锯齿，图片抖动），输出时再按阈值转 1 位。
+        var mono = job.Mono || job.Format == LabelFormat.Zpl;
         using var document = OutputDocuments.Create(job.Format, width, height, job.Dpi, job.Mono, template.Page);
         var labelCount = 0;
         foreach (var label in job.Labels)
         {
             var start = Stopwatch.GetTimestamp();
-            var context = new RenderContext(job.Dpi, job.Mono, label.Values, fields, fonts, assets, warnings);
+            var context = new RenderContext(job.Dpi, mono, label.Values, fields, fonts, assets, warnings);
             var layouts = Layout(template, context);
             start = timings.Mark(TimingStages.Layout, start);
 

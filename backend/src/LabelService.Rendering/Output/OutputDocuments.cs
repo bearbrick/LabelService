@@ -15,7 +15,7 @@ internal static class OutputDocuments
     {
         LabelFormat.Png => true,
         LabelFormat.Pdf => true,
-        // T-006 ZPL
+        LabelFormat.Zpl => true,
         _ => false,
     };
 
@@ -33,6 +33,7 @@ internal static class OutputDocuments
     {
         LabelFormat.Png => new PngOutputDocument(widthDots, heightDots, dpi, mono),
         LabelFormat.Pdf => new PdfOutputDocument(widthDots, heightDots, dpi, page),
+        LabelFormat.Zpl => new ZplOutputDocument(widthDots, heightDots, dpi),
         _ => throw new NotSupportedException($"输出格式 {format} 尚未实现。"),
     };
 }

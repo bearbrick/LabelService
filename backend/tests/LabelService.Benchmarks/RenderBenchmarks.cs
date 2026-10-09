@@ -88,6 +88,12 @@ public class RenderBenchmarks
     [Benchmark]
     public int BoxLabelPdf() => Render(LabelFormat.Pdf);
 
+    /// <summary>
+    /// 成品箱标 100×60mm 输出 ZPL（黑白位图 + ASCII 压缩）。
+    /// </summary>
+    [Benchmark]
+    public int BoxLabelZpl() => Render(LabelFormat.Zpl);
+
     private int Render(LabelFormat format)
     {
         var values = FieldValidator.Validate(template.Fields, null, data).Values;

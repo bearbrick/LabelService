@@ -106,6 +106,8 @@
 - `image.src` 写 `asset:素材ID` 时取素材库（内置素材在 `backend/assets/images`，上传的素材在数据目录的 `assets/`，文件名就是 ID），写 `{{字段}}` 时取 image 字段；素材不存在、图片解码失败返回 `IMAGE_INVALID`；可选的图片字段没传时不画。
 - `fit`：contain 等比缩放后居中，cover 等比放大后居中裁掉多余部分，stretch 拉伸填满。`mono: true` 时用 Floyd–Steinberg 抖动成黑白。
 - `icon.icon` 是图标库路径（如 `gb191/fragile`），图标拉伸画满元素框，`color` 着色（默认黑色，单色着色）；图标不存在返回 `IMAGE_INVALID`。
+ZPL：整张标签栅格化成黑白位图，每张标签一个 `^XA … ^XZ`，`^PW`、`^LL` 是点数，份数用 `^PQ`，位图用 `^GFA` 加 ZPL 自带的 ASCII 压缩。`mono: true` 时 PNG 也输出纯黑白（文字、线条按亮度阈值 128，图片用抖动），和 ZPL 打出来的一致。
+
 PDF：矢量输出，一张标签每份一页；页面尺寸是模板的 mm 尺寸，按输出 DPI 对齐到打印点（误差小于半个点）；字体以 Type3 方式嵌入，文字可以选中、搜索。已知限制：少数汉字和康熙部首共用字形（如“日”），复制出来是部首字符，打印、显示不受影响。
 
 - SVG（图标、素材）加载前会清洗：禁止 DTD，去掉脚本、样式表、foreignObject、动画和 on* 事件属性，链接只保留文档内引用和 `data:image/` 内嵌图片，不会访问外部地址。
