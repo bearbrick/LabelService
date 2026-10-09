@@ -23,6 +23,7 @@ builder.Services.AddSingleton<ApiKeyAuthenticator>();
 builder.Services.AddTemplateStorage(builder.Configuration);
 builder.Services.AddSingleton<ILabelRenderer, LabelRenderer>();
 builder.Services.AddSingleton<LabelMetrics>();
+builder.Services.AddMetricsExport();
 builder.Services.AddHealthChecks();
 builder.Services.AddLabelFonts(builder.Configuration);
 builder.Services.AddLabelAssets(builder.Configuration);
@@ -45,6 +46,7 @@ app.UseExceptionHandler(errorApp => errorApp.Run(async http =>
 }));
 
 app.MapLabelHealth();
+app.MapMetrics();
 app.MapPublicApi();
 app.MapAdminApi();
 app.MapFontFiles();
