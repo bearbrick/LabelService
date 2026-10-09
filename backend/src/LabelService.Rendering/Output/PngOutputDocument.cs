@@ -8,7 +8,7 @@ namespace LabelService.Rendering.Output;
 /// </summary>
 /// <remarks>
 /// 用最低的 zlib 压缩等级、不做行过滤，以体积换速度（单张预算见 docs/performance.md）。
-/// mono 黑白化尚未实现（T-006 和 ZPL 共用同一个黑白化函数）。
+/// mono 为 true 时按 <see cref="Monochrome"/> 转成纯黑白（和 ZPL 同一个函数）。
 /// </remarks>
 internal sealed class PngOutputDocument(int widthDots, int heightDots, int dpi, bool mono)
     : OutputDocument(widthDots, heightDots, dpi)
@@ -50,6 +50,11 @@ internal sealed class PngOutputDocument(int widthDots, int heightDots, int dpi, 
         }
 
         canvas.Flush();
+        if (Mono)
+        {
+            Monochrome.Apply(bitmap);
+        }
+
         using var pixmap = bitmap.PeekPixels();
         encoded = pixmap.Encode(new SKPngEncoderOptions(SKPngEncoderFilterFlags.NoFilters, 1));
     }
