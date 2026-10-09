@@ -3,7 +3,9 @@ using System.Globalization;
 using LabelService.Contracts.Protocol;
 using LabelService.Rendering;
 using LabelService.Rendering.Diagnostics;
+using LabelService.Server.Data;
 using LabelService.Server.Diagnostics;
+using LabelService.Server.Logging;
 
 namespace LabelService.Server.Endpoints;
 
@@ -13,7 +15,7 @@ namespace LabelService.Server.Endpoints;
 /// <remarks>
 /// 每个请求必须恰好结束一次：成功走 <see cref="Succeed"/>，失败走 <see cref="Fail"/>，
 /// 异常或取消时由 <see cref="Dispose"/> 兜底，保证并发数指标不泄漏。
-/// 调用日志目前只写 ILogger；render_log 表完成后（T-009）在 <see cref="Finish"/> 里一并写入。
+/// 结束时写一条 ILogger 日志，并投递一条调用日志（render_log，后台批量写入，不阻塞请求）。
 /// </remarks>
 internal sealed class RenderCall : IDisposable
 {
@@ -21,14 +23,16 @@ internal sealed class RenderCall : IDisposable
     private readonly LabelMetrics metrics;
     private readonly ILogger logger;
     private readonly string endpoint;
+    private readonly RenderLogWriter? renderLog;
     private readonly long started = Stopwatch.GetTimestamp();
     private bool finished;
 
     /// <summary>
     /// 开始一次请求并计入并发数。
     /// </summary>
-    public RenderCall(HttpContext http, LabelMetrics metrics, ILogger logger, string endpoint)
+    public RenderCall(HttpContext http, LabelMetrics metrics, ILogger logger, string endpoint, RenderLogWriter? renderLog = null)
     {
+        this.renderLog = renderLog;
         this.http = http;
         this.metrics = metrics;
         this.logger = logger;
@@ -44,6 +48,18 @@ internal sealed class RenderCall : IDisposable
 
     /// <summary>已识别的调用方名称。</summary>
     public string Client { get; set; } = "anonymous";
+
+    /// <summary>调用方 ID（api_client.id）；配置文件里的调用方为 null。</summary>
+    public int? ClientId
+    {
+        get; set;
+    }
+
+    /// <summary>实际使用的模板版本。</summary>
+    public int? TemplateVersion
+    {
+        get; set;
+    }
 
     /// <summary>模板编码。</summary>
     public string TemplateCode { get; set; } = "";
@@ -147,5 +163,22 @@ internal sealed class RenderCall : IDisposable
             slow,
             RequestId,
             Timings.ToServerTimingHeader());
+        renderLog?.TryWrite(new RenderLogRecord
+        {
+            RequestId = RequestId.Length > 0 ? RequestId : ApiErrors.TraceId(http),
+            Endpoint = endpoint,
+            ClientId = ClientId,
+            ClientName = Client,
+            TemplateCode = TemplateCode,
+            VersionNo = TemplateVersion,
+            Format = format,
+            ItemCount = labelCount,
+            DurationMs = Math.Round(total, 1),
+            StageMsJson = RenderLogWriter.StagesJson(Timings),
+            IsSlow = slow,
+            Status = result is "ok" or "aborted" ? result : "error",
+            ErrorCode = result is "ok" or "aborted" ? null : result,
+            CreatedAt = DateTime.UtcNow,
+        });
     }
 }
