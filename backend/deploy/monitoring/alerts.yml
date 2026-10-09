@@ -1,0 +1,69 @@
+# 标签服务的 Prometheus 告警规则（设计书第 9 节的 6 条，T-010）。
+# 在 prometheus.yml 的 rule_files 里引用；通知（企业微信、钉钉）在 Alertmanager 里按 severity 路由，部署时配置。
+groups:
+  - name: label-service
+    rules:
+      - alert: LabelRenderSlow
+        expr: |
+          histogram_quantile(0.95, sum by (le) (rate(label_render_duration_ms_bucket{endpoint="render"}[5m]))) > 100
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: 单张接口变慢
+          description: 单张接口 P95 {{ $value | printf "%.0f" }} ms，超过 100 ms 已持续 5 分钟。
+
+      - alert: LabelRenderVerySlow
+        expr: |
+          histogram_quantile(0.99, sum by (le) (rate(label_render_duration_ms_bucket{endpoint="render"}[5m]))) > 300
+          or
+          (sum(increase(label_render_duration_ms_bucket{le="+Inf"}[5m])) - sum(increase(label_render_duration_ms_bucket{le="2000"}[5m]))) > 0
+        labels:
+          severity: critical
+        annotations:
+          summary: 标签服务严重变慢
+          description: 单张接口 P99 超过 300 ms，或有请求超过 2 秒。请 @ 服务负责人。
+
+      - alert: LabelServerErrors
+        expr: |
+          sum(rate(http_server_request_duration_seconds_count{http_route=~"/api/v1/.*", http_response_status_code=~"5.."}[5m]))
+            / sum(rate(http_server_request_duration_seconds_count{http_route=~"/api/v1/.*"}[5m])) > 0.01
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: 开放接口 5xx 占比过高
+          description: 5xx 占比 {{ $value | humanizePercentage }}，超过 1% 已持续 5 分钟。请 @ 服务负责人。
+
+      - alert: LabelClientErrors
+        expr: |
+          sum by (client) (rate(label_requests_total{endpoint=~"render|batch", result!~"ok|aborted|RENDER_FAILED|SERVICE_UNAVAILABLE"}[10m]))
+            / sum by (client) (rate(label_requests_total{endpoint=~"render|batch"}[10m])) > 0.2
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: 调用方 {{ $labels.client }} 的请求大量出错
+          description: 4xx 占比 {{ $value | humanizePercentage }}，超过 20% 已持续 10 分钟，多半是传的数据有问题。请通知对应业务负责人。
+
+      - alert: LabelServiceDown
+        # 抓取间隔 15 秒，连续 3 次失败约 45 秒。/metrics 抓不到就说明进程不可用；就绪检查另用 blackbox 探测 /health/ready。
+        expr: up{job="label-service"} == 0
+        for: 45s
+        labels:
+          severity: critical
+        annotations:
+          summary: 标签服务不可用
+          description: 连续 3 次抓取失败。请 @ 服务负责人。
+
+      - alert: LabelResourcePressure
+        expr: |
+          sum(rate(dotnet_process_cpu_time_seconds_total[5m])) / max(dotnet_process_cpu_count) > 0.8
+          or
+          histogram_quantile(0.95, sum by (le) (rate(label_queue_wait_ms_bucket[5m]))) > 50
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: 标签服务资源紧张
+          description: CPU 超过 80% 或排队等待 P95 超过 50 ms 已持续 10 分钟，考虑加机器配置或实例。

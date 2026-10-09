@@ -42,6 +42,7 @@
 ## 健康检查
 
 - `GET /health`：存活检查，进程能响应就是 200。
+- `GET /metrics`：Prometheus 指标，抓取配置、告警规则、Grafana 仪表盘在 `monitoring/`（见那里的 README）。只在内网开放。
 - `GET /health/ready`：就绪检查，启动预热完成前返回 503，完成后 200（响应里写了预热了几个模板、用了多久）。负载均衡、部署脚本等它变成 200 再放流量。本机测试示例箱标从进程启动到就绪约 1.5 秒。
 
 ## Docker（Linux）
@@ -90,6 +91,7 @@ location / { root /srv/label-frontend; try_files $uri /index.html; }
 location /api/   { proxy_pass http://127.0.0.1:8080; client_max_body_size 10m; }
 location /fonts/ { proxy_pass http://127.0.0.1:8080; }
 location /health { proxy_pass http://127.0.0.1:8080; }
+# /metrics 不转发：只给内网的 Prometheus 直接抓取。
 ```
 
 ## 备份与恢复
