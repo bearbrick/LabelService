@@ -1,0 +1,18 @@
+{
+  "templateCode": "A4_SHIPPING_MARK",
+  "format": "pdf",
+  "data": {
+    "consignee": "ACME TRADING",
+    "destination": "HAMBURG, GERMANY",
+    "poNo": "PO-2026-08817",
+    "itemNo": "PA-65W-EU",
+    "description": "65W USB-C 电源适配器 / 65W USB-C POWER ADAPTER, EU PLUG",
+    "qty": 40,
+    "grossWeight": 18.6,
+    "netWeight": 16.2,
+    "measurement": "60 × 40 × 35 CM",
+    "cartonNo": 12,
+    "cartonTotal": 80,
+    "gtin": "16901234567899"
+  }
+}
