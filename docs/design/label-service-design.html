@@ -1033,7 +1033,7 @@ X-Api-Key: ********
             <tr><td><code>LabelServiceClientOptions</code></td><td>BaseAddress、ApiKey、Timeout（默认 30 秒）、MaxRetries（默认 2）、RetryDelay（默认 0.5 秒）、MaxLabelsPerRequest（默认 500）、UserAgent</td><td>构造客户端时传入</td></tr>
             <tr><td><code>RenderRequest</code></td><td>TemplateCode、Version、Format、Dpi、Mono、Copies、Layout、StartSlot、Data、Set(key, value)</td><td>单张请求，Set 可以链式调用</td></tr>
             <tr><td><code>BatchRenderRequest</code></td><td>TemplateCode、Version、Format、Dpi、Output（Merge / Zip）、Layout、StartSlot、Common、Items、SetCommon()、AddItem()</td><td>批量请求，公共字段只传一次</td></tr>
-            <tr><td><code>LabelFile</code></td><td>Content、ContentType、FileName、Format、TemplateVersion、LabelCount、PageCount、Dpi、TraceId、ServerDuration、ServerTiming、Warnings、Save()、SaveAsync()、OpenRead()、GetZplText()</td><td>生成结果，属性来自响应头</td></tr>
+            <tr><td><code>LabelFile</code></td><td>Content、ContentType、FileName、Format、IsZip、TemplateVersion、LabelCount、PageCount、Dpi、TraceId、RequestId、ServerDuration、ServerTiming、Warnings、Save()、SaveAsync()、OpenRead()、GetZplText()</td><td>生成结果，属性来自响应头</td></tr>
             <tr><td><code>TemplateSchema</code></td><td>TemplateCode、Name、Version、Page、Fields、Sample</td><td>字段定义，演示程序用它生成录入表格</td></tr>
             <tr><td><code>LabelServiceException</code></td><td>StatusCode、ErrorCode、Message、TraceId、Errors、IsTransient</td><td>服务端错误和网络错误都转成它</td></tr>
             <tr><td><code>LabelErrorCodes</code></td><td>FieldRequired、TemplateNotFound 等常量</td><td>和第 8 节的错误码一一对应</td></tr>
