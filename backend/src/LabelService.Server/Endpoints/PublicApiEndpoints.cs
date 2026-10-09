@@ -7,6 +7,7 @@ using LabelService.Rendering.Validation;
 using LabelService.Server.Auth;
 using LabelService.Server.Diagnostics;
 using LabelService.Server.Hosting;
+using LabelService.Server.Layouts;
 using LabelService.Server.Logging;
 using LabelService.Server.Templates;
 
@@ -38,6 +39,7 @@ internal static class PublicApiEndpoints
         HttpContext http,
         ApiKeyAuthenticator authenticator,
         ITemplateStore store,
+        LayoutStore layouts,
         ILabelRenderer renderer,
         RenderGate gate,
         LabelMetrics metrics,
@@ -87,9 +89,15 @@ internal static class PublicApiEndpoints
             return call.Fail(ErrorCodes.CopiesInvalid, $"copies 应在 {RenderLimits.MinCopies}–{RenderLimits.MaxCopies}");
         }
 
-        if (format == LabelFormat.Png && copies != 1)
+        if (SheetParameters.Check(call, body.Layout, body.StartSlot, format) is { } sheetError)
         {
-            return call.Fail(ErrorCodes.CopiesInvalid, "PNG 单张只能输出 1 份；多份请用批量接口并选 zip");
+            return sheetError;
+        }
+
+        // 拼版时份数就是铺几个格子，PNG 也可以多份。
+        if (format == LabelFormat.Png && copies != 1 && string.IsNullOrEmpty(body.Layout))
+        {
+            return call.Fail(ErrorCodes.CopiesInvalid, "PNG 单张只能输出 1 份；多份请用批量接口并选 zip，或者用拼版版式");
         }
 
         if (!renderer.Supports(format))
@@ -110,6 +118,12 @@ internal static class PublicApiEndpoints
             return call.Fail(ErrorCodes.TemplateForbidden, $"调用方 {client.Name} 无权使用模板 {body.TemplateCode}");
         }
 
+        var (layout, layoutError) = SheetParameters.Resolve(call, layouts, body.Layout, body.StartSlot, published.Template);
+        if (layoutError is not null)
+        {
+            return layoutError;
+        }
+
         stage = call.Timings.Mark(TimingStages.Template, stage);
         var validation = FieldValidator.Validate(published.Template.Fields, null, body.Data);
         call.Timings.Mark(TimingStages.Validate, stage);
@@ -127,6 +141,8 @@ internal static class PublicApiEndpoints
             Format = format,
             Dpi = call.Dpi,
             Mono = body.Mono ?? false,
+            Layout = layout,
+            StartSlot = body.StartSlot ?? 1,
             Timings = call.Timings,
         };
 
