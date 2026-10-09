@@ -9,7 +9,7 @@ namespace LabelService.Rendering.Elements;
 /// 图标：从素材库取 SVG 图标（如 <c>gb191/fragile</c>），拉伸画满元素框，按 <c>color</c> 着色（默认黑色）。
 /// </summary>
 /// <remarks>
-/// 着色用颜色滤镜把图标里所有不透明的部分换成指定颜色，适合单色图标。图标不存在时抛 IMAGE_INVALID。
+/// 着色用颜色滤镜把图标里所有不透明的部分换成指定颜色，适合单色图标；黑色（默认）按图标原样画。图标不存在时抛 IMAGE_INVALID。
 /// 和设计器一样按框的宽高分别缩放（框不是正方形时图标会被拉伸）。
 /// </remarks>
 internal sealed class IconPainter : IElementPainter
@@ -45,7 +45,8 @@ internal sealed class IconPainter : IElementPainter
         }
 
         var paint = threadPaint ??= new SKPaint();
-        paint.ColorFilter = Filters.GetOrAdd(icon.Color, color => SKColorFilter.CreateBlendMode(color, SKBlendMode.SrcIn));
+        // 内置图标本来就是黑色：黑色不加滤镜，PDF 里保持矢量（带颜色滤镜的画面 PDF 只能栅格化）。
+        paint.ColorFilter = icon.Color == SKColors.Black ? null : Filters.GetOrAdd(icon.Color, color => SKColorFilter.CreateBlendMode(color, SKBlendMode.SrcIn));
         paint.IsAntialias = !context.Mono;
         var matrix = SKMatrix.CreateTranslation(-cull.Left, -cull.Top)
             .PostConcat(SKMatrix.CreateScale(layout.Bounds.Width / cull.Width, layout.Bounds.Height / cull.Height))

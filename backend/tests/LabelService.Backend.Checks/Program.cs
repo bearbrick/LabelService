@@ -19,6 +19,7 @@ internal static class Program
         BarcodeChecks.Run(backendRoot, Check);
         QrCodeChecks.Run(backendRoot, Check);
         AssetChecks.Run(backendRoot, Check);
+        PdfChecks.Run(backendRoot, Check);
         await ServerChecks.RunAsync(backendRoot, Check);
         await StorageChecks.RunAsync(backendRoot, Check);
         ArchitectureChecks.Run(backendRoot, repositoryRoot, Check);

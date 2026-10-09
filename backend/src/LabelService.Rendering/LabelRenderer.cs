@@ -63,7 +63,7 @@ public sealed class LabelRenderer : ILabelRenderer
         var width = (int)Math.Round(LabelUnits.MmToDots(template.Page.Width, job.Dpi));
         var height = (int)Math.Round(LabelUnits.MmToDots(template.Page.Height, job.Dpi));
 
-        using var document = OutputDocuments.Create(job.Format, width, height, job.Dpi, job.Mono);
+        using var document = OutputDocuments.Create(job.Format, width, height, job.Dpi, job.Mono, template.Page);
         var labelCount = 0;
         foreach (var label in job.Labels)
         {
