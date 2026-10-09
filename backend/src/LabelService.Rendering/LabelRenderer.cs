@@ -2,6 +2,7 @@ using System.Diagnostics;
 using LabelService.Contracts;
 using LabelService.Contracts.Protocol;
 using LabelService.Contracts.Templates;
+using LabelService.Rendering.Assets;
 using LabelService.Rendering.Elements;
 using LabelService.Rendering.Fonts;
 using LabelService.Rendering.Output;
@@ -19,9 +20,10 @@ namespace LabelService.Rendering;
 public sealed class LabelRenderer : ILabelRenderer
 {
     private readonly FontRegistry fonts;
+    private readonly AssetLibrary assets;
 
     /// <summary>
-    /// 不带字体的渲染引擎：文本用 Skia 默认字体并给 FONT_FALLBACK 警告。只给不涉及文本的检查和基准用。
+    /// 不带字体和素材的渲染引擎：文本用 Skia 默认字体并给 FONT_FALLBACK 警告，图标、图片素材都找不到。只给不涉及文本和素材的检查用。
     /// </summary>
     public LabelRenderer()
         : this(FontRegistry.Empty)
@@ -29,12 +31,22 @@ public sealed class LabelRenderer : ILabelRenderer
     }
 
     /// <summary>
-    /// 使用指定字体的渲染引擎。字体注册表在启动时加载，渲染期间只读。
+    /// 使用指定字体、不带素材的渲染引擎。
     /// </summary>
     public LabelRenderer(FontRegistry fonts)
+        : this(fonts, AssetLibrary.Empty)
+    {
+    }
+
+    /// <summary>
+    /// 使用指定字体和素材的渲染引擎。字体和素材都在启动时加载，渲染期间只读。
+    /// </summary>
+    public LabelRenderer(FontRegistry fonts, AssetLibrary assets)
     {
         ArgumentNullException.ThrowIfNull(fonts);
+        ArgumentNullException.ThrowIfNull(assets);
         this.fonts = fonts;
+        this.assets = assets;
     }
 
     /// <inheritdoc />
@@ -56,7 +68,7 @@ public sealed class LabelRenderer : ILabelRenderer
         foreach (var label in job.Labels)
         {
             var start = Stopwatch.GetTimestamp();
-            var context = new RenderContext(job.Dpi, job.Mono, label.Values, fields, fonts, warnings);
+            var context = new RenderContext(job.Dpi, job.Mono, label.Values, fields, fonts, assets, warnings);
             var layouts = Layout(template, context);
             start = timings.Mark(TimingStages.Layout, start);
 
