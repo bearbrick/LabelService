@@ -70,7 +70,7 @@
 | --- | --- | --- |
 | `text` | `content`；`style`（见下） | 已实现 |
 | `barcode` | `symbology`（默认 code128）、`value`、`align`（默认 left）、`showText`（默认 true）、`textPosition`（bottom / top）、`textStyle`、`minModuleDots`（默认 2）、`quietZone` | 已实现 |
-| `qrcode` | `symbology`（qr / datamatrix / pdf417，默认 qr）、`value`、`ecLevel`（L / M / Q / H，默认 M，仅 QR）、`quietZone` | T-003 |
+| `qrcode` | `symbology`（qr / datamatrix / pdf417，默认 qr）、`value`、`ecLevel`（L / M / Q / H，默认 M，仅 QR）、`quietZone` | 已实现 |
 | `image` | `src`（`asset:素材ID` 或 `{{字段}}`）、`fit`（contain / cover / stretch，默认 contain）、`mono` | T-004 |
 | `icon` | `icon`（图标库路径，如 `gb191/fragile`）、`color` | T-004 |
 | `line` | `stroke`；height 为 0 是横线，width 为 0 是竖线，都不为 0 画左上到右下的斜线；线宽以线为中心 | 已实现 |
@@ -94,6 +94,12 @@
 - GS1-128 的 `value` 写成 `(应用标识符)数据` 的形式，如 `(01)06901234567892(10)ABC`；开头自动加 FNC1，变长数据后面自动加分隔符，人眼可读文字保留括号。
 - 人眼可读文字：字号默认 8pt，占“字号 × 1.2”的高度，和条之间隔 0.12 个字号，在条码下方（`textPosition: top` 时在上方）居中；EAN、UPC 显示补上校验位后的完整号码。
 - `rotation` 只能是 0、90、180、270，发布模板时拦截其他角度；渲染时按最近的直角处理。
+
+二维码：
+
+- 模块大小 = floor(min(框宽, 框高) 减去两侧 `quietZone` 后的打印点数 ÷ 模块数)，在框里居中；小于 2 点返回 `BARCODE_TOO_DENSE`，内容超出容量返回 `BARCODE_INVALID`。
+- 内容含中文等非 ASCII 字符时按 UTF-8 编码并带 ECI 标识；纯 ASCII 不加 ECI。`ecLevel` 只对 QR 生效。
+- DataMatrix 固定为正方形；PDF417 每行高 3 个模块。
 
 `stroke`：`width`（mm，默认 0.3）、`dash`（实段、空段长度 mm，如 `[1, 0.5]`；不设为实线）、`color`。
 

@@ -67,4 +67,6 @@ dotnet run -c Release --project backend/tests/LabelService.Benchmarks -- --filte
 
 | 2026-10-09 | BenchmarkDotNet（`--job short`），`BoxLabelPng`，加上一维码（T-002） | 203dpi 5.55 ms、300dpi 11.91 ms；每次分配 56–74 KB | 同一台机器上改动前 5.56 ms、11.94 ms，基本不变；基准里箱号不变，编码走缓存，不走缓存时编码一次是微秒级 |
 
+| 2026-10-09 | BenchmarkDotNet（`--job short`），`BoxLabelPng`，加上二维码（T-003） | 203dpi 6.14 ms、300dpi 12.49 ms；每次分配 59–78 KB | 改动前 5.55 ms、11.91 ms（+5%～+10%），多出的主要是 PNG 编码 |
+
 实现新元素或格式后在这里追加一行，写明机器和条件。

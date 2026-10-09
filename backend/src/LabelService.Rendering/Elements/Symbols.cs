@@ -62,3 +62,31 @@ internal static class SymbolCache
         return symbol;
     }
 }
+
+/// <summary>
+/// 条码的几何：让模块边落在整点上。
+/// </summary>
+internal static class SymbolGeometry
+{
+    /// <summary>
+    /// 旋转中心：转直角时取到半个点上，转 90° 或 270° 时再让横纵坐标的小数部分相同，这样整点的模块边转过去仍是整点；
+    /// 其他角度用框的中心。
+    /// </summary>
+    public static SkiaSharp.SKPoint Pivot(SkiaSharp.SKRect bounds, double rotation)
+    {
+        var normalized = ((rotation % 360) + 360) % 360;
+        if (normalized % 90 != 0)
+        {
+            return new SkiaSharp.SKPoint(bounds.MidX, bounds.MidY);
+        }
+
+        var x = MathF.Round(bounds.MidX * 2) / 2;
+        var y = MathF.Round(bounds.MidY * 2) / 2;
+        if (normalized is 90 or 270 && (x - MathF.Floor(x)) != (y - MathF.Floor(y)))
+        {
+            y += 0.5f;
+        }
+
+        return new SkiaSharp.SKPoint(x, y);
+    }
+}

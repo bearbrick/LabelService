@@ -11,7 +11,8 @@ internal static class ElementPainters
         new RectPainter(),
         new TextPainter(),
         new BarcodePainter(),
-        // T-003 QrCodePainter、T-004 ImagePainter / IconPainter
+        new QrCodePainter(),
+        // T-004 ImagePainter / IconPainter
     }.ToDictionary(painter => painter.ElementType, StringComparer.Ordinal);
 
     /// <summary>
