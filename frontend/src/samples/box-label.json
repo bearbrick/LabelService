@@ -31,7 +31,7 @@
     { "id": "e8", "type": "barcode", "x": 4, "y": 30, "width": 64, "height": 16,
       "symbology": "code128", "value": "{{boxNo}}", "align": "left",
       "showText": true, "textPosition": "bottom", "textStyle": { "fontSize": 8 },
-      "minModuleDots": 2 },
+      "minModuleDots": 2, "quietZone": 5 },
     { "id": "e9", "type": "qrcode", "x": 76, "y": 30, "width": 20, "height": 20,
       "symbology": "qr", "value": "{{partNo}}|{{batchNo}}|{{boxNo}}", "ecLevel": "M" },
     { "id": "e10", "type": "icon", "x": 76, "y": 52, "width": 6, "height": 6,

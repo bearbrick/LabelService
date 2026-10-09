@@ -45,4 +45,14 @@ internal class ElementLayout(LabelElement element, SKRect bounds)
     /// 元素未旋转时的框（打印点）。
     /// </summary>
     public SKRect Bounds { get; } = bounds;
+
+    /// <summary>
+    /// 绘制时的旋转角度（顺时针，度）。默认是元素的 rotation；条码会对齐到最近的直角。
+    /// </summary>
+    public virtual double Rotation => Element.Rotation;
+
+    /// <summary>
+    /// 旋转中心（打印点）。默认是框的中心；条码会微调到半个点上，保证转直角后条边仍落在整点。
+    /// </summary>
+    public virtual SKPoint Pivot => new(Bounds.MidX, Bounds.MidY);
 }
