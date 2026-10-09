@@ -28,6 +28,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- 管理后台登录：JWT（ADR 0006）。 -->
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- 字体：构建时从 backend/assets/fonts 复制到输出目录的 fonts/，服务启动时加载（T-001）。 -->
     <Content Include="..\..\assets\fonts\*.otf;..\..\assets\fonts\*.ttf;..\..\assets\fonts\*.ttc;..\..\assets\fonts\*.otc;..\..\assets\fonts\*.txt" LinkBase="fonts" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
