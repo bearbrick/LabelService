@@ -171,9 +171,10 @@ export interface OpLog {
 
 export interface Dashboard {
   templates: { total: number; published: number; changed: number; neverPublished: number }
-  today?: { total: number; errors: number; slow: number; labels: number; averageMs: number }
+  today?: { total: number; errors: number; slow: number; labels: number; averageMs: number; p95Ms: number | null }
   days?: { date: string; total: number; errors: number }[]
   topTemplates?: { code: string; calls: number; labels: number }[]
+  slowTemplates?: { code: string; calls: number; averageMs: number; maxMs: number }[]
   recentOps?: OpLog[]
 }
 

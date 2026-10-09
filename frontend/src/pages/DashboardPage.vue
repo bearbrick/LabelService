@@ -46,7 +46,7 @@ const kpis = computed(() => {
     list.push(
       { label: '今日调用', value: today.total, unit: '次', note: `生成 ${today.labels.toLocaleString()} 张` },
       { label: '成功率', value: rate, unit: today.total ? '%' : '', note: `失败 ${today.errors} 次` },
-      { label: '平均耗时', value: Number(today.averageMs.toFixed(1)), unit: 'ms', note: `慢调用 ${today.slow} 次（超过 100 ms）` },
+      { label: '单张 P95', value: today.p95Ms === null ? '—' : Number(today.p95Ms.toFixed(1)), unit: today.p95Ms === null ? '' : 'ms', note: `目标 ≤ 100 ms · 慢调用 ${today.slow} 次 · 平均 ${today.averageMs.toFixed(1)} ms` },
     )
   }
 
@@ -58,6 +58,11 @@ const top = computed(() => {
   const list = data.value?.topTemplates ?? []
   const max = Math.max(1, ...list.map((r) => r.labels))
   return list.map((r) => ({ ...r, name: catalog.templates.find((t) => t.code === r.code)?.name ?? r.code, pct: (r.labels / max) * 100 }))
+})
+const slow = computed(() => {
+  const list = data.value?.slowTemplates ?? []
+  const max = Math.max(100, ...list.map((r) => r.averageMs))
+  return list.map((r) => ({ ...r, name: catalog.templates.find((t) => t.code === r.code)?.name ?? r.code, pct: (r.averageMs / max) * 100 }))
 })
 const todos = computed(() => {
   const items: { tag: string; cls: string; text: string; action: string; run: () => void }[] = []
@@ -141,6 +146,16 @@ const todos = computed(() => {
                 </div>
               </div>
               <div v-else class="hint">近 7 天没有调用</div>
+            </div>
+            <div v-if="data.slowTemplates?.length" class="box">
+              <h3>近 7 天最慢的模板（单张，平均）</h3>
+              <div class="bar-list">
+                <div v-for="r in slow" :key="r.code" class="bar-row">
+                  <span>{{ r.name }} <span class="code-chip">{{ r.code }}</span></span>
+                  <span class="num muted">{{ r.averageMs.toFixed(1) }} ms · 最慢 {{ r.maxMs.toFixed(0) }} ms</span>
+                  <div class="track"><div class="fill" :class="{ over: r.averageMs > 100 }" :style="{ width: r.pct + '%' }"></div></div>
+                </div>
+              </div>
             </div>
             <div class="box">
               <h3>需要处理</h3>

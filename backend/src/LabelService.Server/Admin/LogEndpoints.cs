@@ -101,7 +101,7 @@ internal static class LogEndpoints
     }
 
     /// <summary>
-    /// 概览：模板数量（按业务范围）；有 log.view 时再给今天的调用、近 14 天每天的调用量和失败数、近 7 天调用最多的模板、最近的操作。
+    /// 概览：模板数量（按业务范围）；有 log.view 时再给今天的调用（含单张 P95）、近 14 天每天的调用量和失败数、近 7 天调用最多和最慢的模板、最近的操作。
     /// </summary>
     private static async Task<IResult> DashboardAsync(
         HttpContext http,
@@ -151,6 +151,13 @@ internal static class LogEndpoints
         }
 
         var today = Calls(Utc(localToday), Utc(localToday.AddDays(1)));
+
+        // 今日单张接口成功调用的 P95（最近秩法）：和设计书的 100 ms 目标对照。
+        var single = today.Where(log => log.Status == "ok" && log.Endpoint == "render");
+        var singleCount = await single.CountAsync();
+        var p95 = singleCount == 0
+            ? null
+            : await single.OrderBy(log => log.DurationMs).Select(log => (double?)log.DurationMs).Skip((int)Math.Ceiling(singleCount * 0.95) - 1).FirstOrDefaultAsync();
         var todayStats = new
         {
             total = await today.CountAsync(),
@@ -158,7 +165,17 @@ internal static class LogEndpoints
             slow = await today.CountAsync(log => log.IsSlow),
             labels = await today.SumAsync(log => (long?)log.ItemCount) ?? 0,
             averageMs = await today.Where(log => log.Status == "ok").AverageAsync(log => (double?)log.DurationMs) ?? 0,
+            p95Ms = p95,
         };
+
+        // 近 7 天单张接口最慢的模板：按平均耗时。
+        var slowTemplates = await Calls(Utc(localToday.AddDays(-6)), Utc(localToday.AddDays(1)))
+            .Where(log => log.Status == "ok" && log.Endpoint == "render")
+            .GroupBy(log => log.TemplateCode)
+            .Select(group => new { code = group.Key, calls = group.Count(), averageMs = group.Average(log => log.DurationMs), maxMs = group.Max(log => log.DurationMs) })
+            .OrderByDescending(item => item.averageMs)
+            .Take(5)
+            .ToListAsync();
         var topTemplates = await Calls(Utc(localToday.AddDays(-6)), Utc(localToday.AddDays(1)))
             .GroupBy(log => log.TemplateCode)
             .Select(group => new { code = group.Key, calls = group.Count(), labels = group.Sum(log => log.ItemCount) })
@@ -172,6 +189,7 @@ internal static class LogEndpoints
             today = todayStats,
             days,
             topTemplates,
+            slowTemplates,
             recentOps
         });
     }

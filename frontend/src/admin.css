@@ -593,3 +593,4 @@ td.warn { color: var(--warn); }
 .preview-pair { position: relative; max-width: 100%; }
 .preview-pair img { display: block; width: 100%; }
 .preview-pair .preview-overlay { position: absolute; inset: 0; opacity: .5; mix-blend-mode: multiply; box-shadow: none; }
+.bar-row .fill.over { background: var(--chart-fail); }

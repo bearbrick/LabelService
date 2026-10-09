@@ -314,6 +314,10 @@ internal static class AdminResourceChecks
         check("概览：模板数量、今天的调用、近 14 天每天的调用量、调用最多的模板",
             dashboard.GetProperty("templates").GetProperty("total").GetInt32() >= 2 && dashboard.GetProperty("days").GetArrayLength() == 14
             && dashboard.GetProperty("today").GetProperty("total").GetInt32() > 0 && dashboard.GetProperty("topTemplates").GetArrayLength() > 0);
+        var slowest = dashboard.GetProperty("slowTemplates");
+        check("概览带今日单张 P95 和近 7 天最慢的模板（设计书第 9 节：工作台显示今日 P95、慢调用数、最慢的模板）",
+            dashboard.GetProperty("today").GetProperty("p95Ms").GetDouble() > 0 && dashboard.GetProperty("today").TryGetProperty("slow", out _)
+            && slowest.GetArrayLength() > 0 && slowest[0].GetProperty("averageMs").GetDouble() >= slowest[slowest.GetArrayLength() - 1].GetProperty("averageMs").GetDouble());
 
         var test = await designer.PostAsync("/api/admin/api-test/render", new
         {
