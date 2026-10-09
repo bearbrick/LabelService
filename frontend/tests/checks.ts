@@ -1,0 +1,127 @@
+/**
+ * 前端检查程序：用 Node 直接运行（类型擦除），检查不依赖浏览器的模块。任何一项失败抛异常，退出码非 0。
+ * 运行：npm run check
+ */
+import sampleJson from '../src/samples/box-label.json' with { type: 'json' }
+import { alignElements, distributeElements, moveAbove, reorder } from '../src/editor/arrange.ts'
+import { encode, moduleDots } from '../src/editor/barcode.ts'
+import { readClipboard, writeClipboard } from '../src/editor/clipboard.ts'
+import { contains, elementBounds, intersects } from '../src/editor/geometry.ts'
+import { History } from '../src/editor/history.ts'
+import { snapBox } from '../src/editor/snapping.ts'
+import { formatDate, formatNumber, keysIn, resolveText } from '../src/model/bindings.ts'
+import { cloneElements, makeElement, normalizeElement } from '../src/model/elements.ts'
+import type { FieldDefinition, LabelElement, LabelTemplate, RectElement } from '../src/model/template.ts'
+import { normalizeRotation, roundMm } from '../src/model/units.ts'
+import { checkTemplate } from '../src/model/validate.ts'
+
+let passed = 0
+function check(name: string, value: boolean): void {
+  if (!value) throw new Error(`FAIL: ${name}`)
+  console.log(`PASS: ${name}`)
+  passed++
+}
+
+const sample = sampleJson as unknown as LabelTemplate
+const fields: FieldDefinition[] = [
+  { key: 'batchNo', type: 'string', sample: '20261008-A' },
+  { key: 'qty', type: 'number', format: '0', sample: 50 },
+  { key: 'price', type: 'number', sample: 12.5 },
+  { key: 'prodDate', type: 'date', format: 'yyyy-MM-dd', sample: '2026-10-08' },
+  { key: 'when', type: 'date', sample: '2026-10-08T14:30:00' },
+  { key: 'noSample', type: 'string' },
+]
+
+// ---------- 绑定 ----------
+check('keysIn 去重并保持顺序', keysIn('{{a}}-{{ b:0 }}-{{a}}').join(',') === 'a,b')
+check('样例值替换', resolveText('批次：{{batchNo}}', fields, 'sample') === '批次：20261008-A')
+check('占位符模式原样显示', resolveText('批次：{{batchNo}}', fields, 'placeholder') === '批次：{{batchNo}}')
+check('字段格式生效', resolveText('{{qty}} PCS', fields, 'sample') === '50 PCS')
+check('绑定格式优先', resolveText('{{price:0.00}}', fields, 'sample') === '12.50')
+check('日期绑定格式', resolveText('{{prodDate:yyyy/MM/dd}}', fields, 'sample') === '2026/10/08')
+check('日期时间默认格式', resolveText('{{when}}', fields, 'sample') === '2026-10-08 14:30:00')
+check('没有样例值时保留占位符', resolveText('[{{noSample}}]', fields, 'sample') === '[{{noSample}}]')
+check('数字格式：千分位', formatNumber(1234567.891, '#,##0.00') === '1,234,567.89')
+check('数字格式：可选小数', formatNumber(1.5, '0.###') === '1.5' && formatNumber(2, '0.##') === '2')
+check('数字格式：N2、D6', formatNumber(1234.5, 'N2') === '1,234.50' && formatNumber(42, 'D6') === '000042')
+check('日期格式：带时区按钟面时间', formatDate('2026-10-08T23:30:00+08:00', 'yyyy-MM-dd HH:mm') === '2026-10-08 23:30')
+
+// ---------- 元素 ----------
+const created = makeElement('rect', [], [])
+check('新建矩形有 0.3mm 边框', created.type === 'rect' && created.stroke?.width === 0.3)
+const loaded = normalizeElement({ id: 'r', type: 'rect', x: 0, y: 0, width: 10, height: 10, fill: '#000000' }) as RectElement
+check('打开的矩形没设 stroke 时保持无边框', loaded.stroke?.width === 0)
+const line = normalizeElement({ id: 'l', type: 'line', x: 0, y: 0, width: 10, height: 0 })
+check('线不设 stroke 时按默认线宽', line.type === 'line' && line.stroke?.width === 0.3)
+const barcode = makeElement('barcode', fields, [])
+check('新建一维码绑定第一个非图片字段', barcode.type === 'barcode' && barcode.value === '{{batchNo}}')
+const text = makeElement('text', [], [])
+check('新建文本补全样式默认值', text.type === 'text' && text.style?.fontFamily === 'SourceHanSansSC' && text.style.fontSize === 10)
+const copies = cloneElements([{ ...text, locked: true }], 2, [text])
+check('复制元素：新 ID、偏移 2mm、解除锁定', copies[0].id !== text.id && copies[0].x === roundMm(text.x + 2) && copies[0].locked === false)
+
+// ---------- 撤销 ----------
+const history = new History(3)
+history.reset('a')
+check('相同快照不入栈', history.push('a') === false)
+history.push('b')
+history.push('c')
+history.push('d')
+check('超过上限丢掉最早的', history.undo() === 'c' && history.undo() === 'b' && history.undo() === null)
+check('撤销后可以重做', history.redo() === 'c' && history.canRedo)
+history.push('x')
+check('撤销后再修改，丢掉后面的重做', !history.canRedo)
+
+// ---------- 几何与吸附 ----------
+const rotated = elementBounds({ x: 10, y: 30, width: 20, height: 0, rotation: 90 })
+check('横线旋转 90° 后外框变成竖条', Math.abs(rotated.x - 20) < 1e-9 && Math.abs(rotated.height - 20) < 1e-9)
+check('宽为 0 的线也算相交', intersects({ x: 5, y: 0, width: 0, height: 10 }, { x: 0, y: 0, width: 10, height: 10 }))
+check('框选只算完全包住的元素', contains({ x: 0, y: 0, width: 10, height: 10 }, { x: 5, y: 0, width: 0, height: 10 }) && !contains({ x: 2, y: 2, width: 5, height: 5 }, { x: 0, y: 0, width: 10, height: 10 }))
+const page = { width: 100, height: 60 }
+const toCenter = snapBox({ x: 39.2, y: 10, width: 20, height: 5 }, [], page, { threshold: 1, grid: null })
+check('吸附到画布中线', Math.abs(toCenter.dx - 0.8) < 1e-9 && toCenter.guideX === 50)
+const toOther = snapBox({ x: 30.4, y: 20.3, width: 10, height: 5 }, [{ x: 30, y: 0, width: 5, height: 5 }], page, { threshold: 1, grid: 1 })
+check('吸附到其他元素左边，纵向退回网格', Math.abs(toOther.dx + 0.4) < 1e-9 && Math.abs(toOther.dy + 0.3) < 1e-9 && toOther.guideY === null)
+
+// ---------- 对齐、分布、层级 ----------
+const boxes = (): LabelElement[] => [
+  { id: 'a', type: 'rect', x: 0, y: 0, width: 10, height: 10 },
+  { id: 'b', type: 'rect', x: 15, y: 5, width: 10, height: 10, locked: true },
+  { id: 'c', type: 'rect', x: 50, y: 20, width: 10, height: 10 },
+]
+const left = boxes()
+alignElements(left, 'left', page)
+check('左对齐：锁定的不动', left[0].x === 0 && left[1].x === 15 && left[2].x === 0)
+const single = boxes().slice(0, 1)
+alignElements(single, 'hcenter', page)
+check('只选一个时对齐到画布', single[0].x === 45)
+const spread = boxes().map((element) => ({ ...element, locked: false }))
+distributeElements(spread, 'h')
+check('水平等距', spread[1].x === 25)
+const ids = new Set(['a'])
+check('置顶、置底', reorder(boxes(), ids, 'front').map((e) => e.id).join('') === 'bca' && reorder(boxes(), new Set(['c']), 'back')[0].id === 'c')
+check('上移、下移一层', reorder(boxes(), ids, 'up').map((e) => e.id).join('') === 'bac' && reorder(boxes(), new Set(['c']), 'down').map((e) => e.id).join('') === 'acb')
+check('图层拖动：放到目标上一层', moveAbove(boxes(), 'a', 'c').map((e) => e.id).join('') === 'bca')
+
+// ---------- 剪贴板、角度 ----------
+writeClipboard([text])
+check('剪贴板往返', readClipboard()?.[0].id === text.id)
+check('角度归一', normalizeRotation(-90) === 270 && normalizeRotation(359.96) === 0)
+
+// ---------- 条码 ----------
+const code128 = encode('code128', 'C2610080001')
+check('Code128 编码', code128.ok && code128.code.kind === 'linear' && code128.code.modules > 50)
+const badEan = encode('ean13', 'ABC')
+check('EAN-13 内容不对时给出中文提示', !badEan.ok && /数字/.test(badEan.message))
+const qr = encode('qr', '3100-0123|20261008-A|C2610080001', 'M')
+check('QR 编码', qr.ok && qr.code.kind === 'matrix' && qr.code.columns === qr.code.rows)
+check('模块宽度按打印点向下取整', moduleDots(64, 145, 300) === 5 && moduleDots(64, 145, 203) === 3)
+
+// ---------- 示例模板 ----------
+const report = checkTemplate(sample)
+check('示例模板没有问题', report.errors.length === 0 && report.undefinedKeys.length === 0)
+const broken: LabelTemplate = { ...sample, fields: [...sample.fields, { key: '1bad', type: 'string' }, { key: 'qty', type: 'number' }] }
+const brokenReport = checkTemplate(broken)
+check('检查出不合法和重复的字段 key', brokenReport.errors.some((e) => e.includes('1bad')) && brokenReport.errors.some((e) => e.includes('qty') && e.includes('重复')))
+
+console.log(`前端检查全部通过：${passed} 项`)
