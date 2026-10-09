@@ -107,6 +107,18 @@ internal sealed partial class MainForm
         Shot("4-batch-too-large");
         batchCount.Value = 5;
 
+        // 慢调用：单张服务端超过 100 ms 的标出来。A4 唛头图大，模拟服务画一张就超过 100 ms
+        templateCode.Text = "A4_SHIPPING_MARK";
+        png.Checked = true;
+        await RenderSingleAsync();
+        Application.DoEvents();
+        var serverMs = result?.ServerDuration?.TotalMilliseconds ?? 0;
+        var marked = logList.Items.Count > 0 && logList.Items[0].SubItems[9].Text.StartsWith("慢调用", StringComparison.Ordinal);
+        Check($"慢调用：A4 单张服务端 {serverMs:0} ms，超过 100 ms 的才标为慢调用", result is { LabelCount: 1 } && marked == serverMs > 100 && (server is not null || marked));
+        templateCode.Text = "BOX_LABEL";
+        zpl.Checked = true;
+        await ReadSchemaAsync();
+
         tabs.SelectedTab = logTab;
         Shot("5-log");
 
