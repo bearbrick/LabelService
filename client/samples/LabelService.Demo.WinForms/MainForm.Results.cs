@@ -222,8 +222,10 @@ internal sealed partial class MainForm
     /// </summary>
     private static string ServerCodeFor(Exception exception) =>
         exception.Message.Contains("上限") ? LabelErrorCodes.BatchTooLarge
-        : (exception as ArgumentException)?.ParamName?.EndsWith("opies", StringComparison.Ordinal) == true ? LabelErrorCodes.CopiesInvalid
+        : exception.Message.Contains("份") || (exception as ArgumentException)?.ParamName?.EndsWith("opies", StringComparison.Ordinal) == true ? LabelErrorCodes.CopiesInvalid
         : exception.Message.Contains("Zip") ? LabelErrorCodes.OutputInvalid
+        : exception.Message.Contains("拼版") ? LabelErrorCodes.FormatInvalid
+        : exception.Message.Contains("StartSlot") ? LabelErrorCodes.StartSlotInvalid
         : "—（参数不完整，服务端不会收到这个请求）";
 
     /// <summary>
