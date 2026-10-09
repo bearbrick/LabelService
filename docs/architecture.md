@@ -22,7 +22,7 @@
 
 | 部分 | 解决方案 / 入口 | 编译配置 | 检查 |
 | --- | --- | --- | --- |
-| `frontend/` | `package.json` | `tsconfig.json`、`vite.config.ts` | `npm run build`（vue-tsc 类型检查） |
+| `frontend/` | `package.json` | `tsconfig.json`、`vite.config.ts` | `npm run check`（检查程序）、`npm run build`（vue-tsc 类型检查） |
 | `backend/` | `LabelService.Backend.slnx` | `backend/Directory.Build.props`、`Directory.Packages.props` | `backend/tests/LabelService.Backend.Checks` |
 | `client/` | `LabelService.Client.slnx` | `client/Directory.Build.props`、`Directory.Packages.props` | `client/tests/LabelService.Client.Checks` |
 
@@ -82,8 +82,11 @@
 
 | 路径 | 职责 |
 | --- | --- |
-| `src/model/` | 模板 JSON 的 TypeScript 镜像、单位换算 |
-| `src/components/` | 画布等组件 |
+| `src/model/` | 模板 JSON 的 TypeScript 镜像、单位换算、元素默认值、绑定预览、模板检查（纯逻辑） |
+| `src/editor/` | 画布引擎：Konva 舞台、元素绘制、吸附、对齐、撤销、条码编码 |
+| `src/stores/` | 设计器状态和全部编辑操作，草稿自动保存 |
+| `src/components/` | 工具栏、左侧面板、画布、属性面板、状态栏 |
+| `tests/checks.ts` | 检查程序，Node 直接运行 |
 | `src/samples/` | 示例模板副本（管理后台完成前演示用） |
 
 ## 扩展点
