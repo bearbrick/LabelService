@@ -64,3 +64,11 @@ CLAUDE.local.md
 # 系统文件
 Thumbs.db
 .DS_Store
+
+# ---------------------------------------------------------------
+# 字体文件：几十 MB，存放方式（Git LFS 或下载脚本）待定，见 backend/assets/fonts/README.md
+# ---------------------------------------------------------------
+backend/assets/fonts/*.otf
+backend/assets/fonts/*.ttf
+backend/assets/fonts/*.ttc
+backend/assets/fonts/*.otc
