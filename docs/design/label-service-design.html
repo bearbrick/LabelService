@@ -1,0 +1,1265 @@
+<title>标签生成服务设计书</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+SC:wght@400;500;700&display=swap">
+<style>
+/* Layout: single reading column (max 760px) with a sticky chapter index on wide screens; diagrams and tables scroll inside their own frames on phones. */
+:root {
+  --paper: #F5F7F9;
+  --surface: #FFFFFF;
+  --group: #ECF0F3;
+  --ink: #14181D;
+  --ink-2: #48505B;
+  --ink-3: #7B838E;
+  --rule: #DEE3E8;
+  --rule-strong: #B8C0C9;
+  --accent: #0E6F73;
+  --accent-tint: #E2F0F0;
+  --code-bg: #EEF2F5;
+  --warn-tint: #FFF4D9;
+  --warn-ink: #6E4B00;
+  --label-bg: #FFFFFF;
+  --label-ink: #111111;
+  --label-var: #0E6F73;
+  --font-body: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  --font-display: "Barlow Condensed", "Noto Sans SC", "Arial Narrow", sans-serif;
+  --font-mono: "JetBrains Mono", "Cascadia Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #101317; --surface: #171B20; --group: #1D2228; --ink: #E6E9ED; --ink-2: #AEB5BE; --ink-3: #7E8691;
+    --rule: #2A3037; --rule-strong: #3E4650; --accent: #57B9BB; --accent-tint: #15302F; --code-bg: #1B2026;
+    --warn-tint: #2D2512; --warn-ink: #EFC766; --label-bg: #F2F2EE; --label-ink: #111111; --label-var: #0E6F73;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #101317; --surface: #171B20; --group: #1D2228; --ink: #E6E9ED; --ink-2: #AEB5BE; --ink-3: #7E8691;
+  --rule: #2A3037; --rule-strong: #3E4650; --accent: #57B9BB; --accent-tint: #15302F; --code-bg: #1B2026;
+  --warn-tint: #2D2512; --warn-ink: #EFC766; --label-bg: #F2F2EE; --label-ink: #111111; --label-var: #0E6F73;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--paper); color: var(--ink); font: 15px/1.75 var(--font-body); }
+.wrap { max-width: 1120px; margin: 0 auto; padding-inline: 20px; padding-block: 48px 96px; }
+.eyebrow { font-family: var(--font-display); font-weight: 600; font-size: 15px; letter-spacing: 0.08em; color: var(--accent); }
+h1 { font-size: clamp(32px, 6vw, 44px); line-height: 1.2; margin: 8px 0 16px; font-weight: 700; text-wrap: balance; }
+.lede { font-size: 17px; color: var(--ink-2); max-width: 40em; margin: 0; }
+.meta { display: flex; flex-wrap: wrap; gap: 8px 28px; margin: 20px 0 0; font-size: 13px; color: var(--ink-3); }
+.meta div { display: flex; gap: 8px; }
+.meta dt { font-weight: 500; }
+.meta dd { margin: 0; color: var(--ink-2); }
+.steps { list-style: none; padding: 0; margin: 36px 0 0; display: grid; gap: 12px; grid-template-columns: 1fr; }
+@media (min-width: 760px) { .steps { grid-template-columns: repeat(3, 1fr); } }
+.steps li { background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 16px 18px; min-width: 0; }
+.steps .no { font-family: var(--font-display); font-size: 28px; font-weight: 600; color: var(--accent); line-height: 1; }
+.steps b { display: block; font-size: 16px; margin: 8px 0 4px; }
+.steps p { margin: 0; font-size: 14px; color: var(--ink-2); line-height: 1.65; }
+.layout { display: grid; grid-template-columns: minmax(0, 1fr); margin-top: 40px; }
+.toc { display: none; }
+.toc-mobile { margin: 0 0 8px; border: 1px solid var(--rule); border-radius: 10px; background: var(--surface); padding: 10px 16px; font-size: 14px; }
+.toc-mobile summary { cursor: pointer; font-weight: 500; }
+.toc-mobile ol, .toc ol { list-style: none; padding: 0; margin: 8px 0 0; }
+.toc-mobile li, .toc li { margin: 2px 0; }
+.toc a, .toc-mobile a { color: var(--ink-2); text-decoration: none; display: flex; gap: 10px; padding: 3px 0; }
+.toc a:hover, .toc-mobile a:hover { color: var(--accent); }
+.toc a span, .toc-mobile a span { font-family: var(--font-display); font-weight: 600; color: var(--ink-3); min-width: 1.4em; }
+@media (min-width: 1100px) {
+  .layout { grid-template-columns: 190px minmax(0, 760px); gap: 64px; }
+  .toc { display: block; position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; font-size: 14px; }
+  .toc-title { font-family: var(--font-display); font-weight: 600; letter-spacing: 0.08em; color: var(--ink-3); font-size: 13px; }
+  .toc-mobile { display: none; }
+}
+main { min-width: 0; max-width: 760px; }
+section { padding-block: 40px 8px; border-top: 1px solid var(--rule); margin-top: 32px; scroll-margin-top: 16px; }
+section:first-of-type { border-top: 0; margin-top: 0; }
+h2 { display: flex; align-items: baseline; gap: 14px; font-size: 24px; line-height: 1.3; margin: 0 0 14px; font-weight: 700; text-wrap: balance; }
+h2 .n { font-family: var(--font-display); font-weight: 600; font-size: 30px; color: var(--accent); min-width: 1.2em; }
+h3 { font-size: 16px; margin: 28px 0 10px; font-weight: 700; }
+p { margin: 0 0 12px; }
+.lead { font-size: 16px; color: var(--ink); }
+ul, ol { margin: 0 0 12px; padding-left: 1.4em; }
+li { margin: 4px 0; }
+code { font-family: var(--font-mono); font-size: 0.86em; background: var(--code-bg); padding: 1px 5px; border-radius: 4px; }
+pre { background: var(--code-bg); border: 1px solid var(--rule); border-radius: 8px; padding: 14px 16px; overflow-x: auto; font: 13px/1.65 var(--font-mono); margin: 0 0 16px; }
+pre code { background: none; padding: 0; font-size: inherit; }
+.tw { overflow-x: auto; margin: 0 0 16px; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; line-height: 1.6; }
+th { text-align: left; font-weight: 500; color: var(--ink-3); font-size: 13px; border-bottom: 1.5px solid var(--rule-strong); padding: 8px 12px 8px 0; white-space: nowrap; }
+td { border-bottom: 1px solid var(--rule); padding: 9px 12px 9px 0; vertical-align: top; }
+td:first-child { white-space: nowrap; }
+.split { display: grid; gap: 16px; grid-template-columns: 1fr; margin-top: 8px; }
+@media (min-width: 640px) { .split { grid-template-columns: 1fr 1fr; } }
+.pane { background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 16px 18px; min-width: 0; }
+.pane.muted { background: transparent; border-style: dashed; }
+.pane h3 { margin: 0 0 8px; }
+.pane ul { margin: 0; }
+.pane li { font-size: 14px; }
+.callout { background: var(--warn-tint); color: var(--ink); border-radius: 8px; padding: 12px 16px; font-size: 14px; margin: 0 0 16px; }
+.callout b { color: var(--warn-ink); margin-right: 6px; }
+figure { margin: 8px 0 20px; }
+.fig { overflow-x: auto; background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 8px; }
+.fig svg { display: block; width: 100%; min-width: 600px; height: auto; font-family: var(--font-body); }
+figcaption { font-size: 13px; color: var(--ink-3); margin-top: 8px; }
+.d-title { font-size: 15px; font-weight: 700; fill: var(--ink); }
+.d-note { font-size: 11.5px; fill: var(--ink-3); }
+.d-name { font-size: 13px; font-weight: 600; fill: var(--ink); }
+.d-sub { font-size: 11.5px; fill: var(--ink-2); }
+.d-box { fill: var(--surface); stroke: var(--rule-strong); stroke-width: 1.25; }
+.d-dash { fill: none; stroke: var(--rule-strong); stroke-width: 1.25; stroke-dasharray: 4 4; }
+.d-accent { fill: var(--accent-tint); stroke: var(--accent); stroke-width: 2; }
+.d-group { fill: var(--group); stroke: var(--rule-strong); stroke-width: 1.25; }
+.d-edges path, .d-edges line { fill: none; stroke: var(--ink-3); stroke-width: 1.25; }
+.d-head { fill: var(--ink-3); }
+.d-rule { stroke: var(--rule-strong); stroke-width: 1; }
+.d-paper { fill: var(--label-bg); stroke: var(--rule-strong); stroke-width: 1; }
+.d-lab-ink { fill: var(--label-ink); }
+.d-lab-faint { fill: var(--label-ink); opacity: 0.28; }
+.d-sel { fill: none; stroke: var(--accent); stroke-width: 1.25; stroke-dasharray: 4 3; }
+.d-handle { fill: var(--accent); }
+.kv { display: grid; grid-template-columns: 1fr; gap: 0; margin: 0 0 16px; font-size: 14px; }
+.kv > div { display: grid; grid-template-columns: 1fr; gap: 2px; padding: 9px 0; border-bottom: 1px solid var(--rule); }
+@media (min-width: 560px) { .kv > div { grid-template-columns: 7.5em minmax(0, 1fr); gap: 16px; } }
+.kv dt { font-weight: 500; }
+.kv dd { margin: 0; color: var(--ink-2); }
+.preview { display: grid; gap: 16px; grid-template-columns: 1fr; align-items: start; }
+@media (min-width: 700px) { .preview { grid-template-columns: minmax(0, 1fr) 200px; } }
+.label-frame { overflow-x: auto; background: var(--group); border-radius: 10px; padding: 16px; }
+.label-frame svg { display: block; width: 100%; min-width: 420px; height: auto; font-family: var(--font-body); }
+.legend { font-size: 13px; color: var(--ink-2); display: grid; gap: 8px; }
+.legend .sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 8px; vertical-align: 0; }
+.btn { font: 500 13px var(--font-body); color: var(--accent); background: var(--surface); border: 1px solid var(--accent); border-radius: 6px; padding: 6px 12px; cursor: pointer; justify-self: start; }
+.btn:hover { background: var(--accent-tint); }
+.btn:focus-visible, a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.qs { list-style: none; padding: 0; }
+.qs li { display: flex; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--rule); margin: 0; }
+.qs .tag { flex: none; font-size: 12px; color: var(--warn-ink); background: var(--warn-tint); border-radius: 4px; padding: 1px 8px; height: fit-content; margin-top: 3px; }
+.qs .tag.done { color: var(--accent); background: var(--accent-tint); }
+.num { font-variant-numeric: tabular-nums; }
+footer { margin-top: 48px; font-size: 13px; color: var(--ink-3); }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">设计说明书 · V0.6</div>
+    <h1>标签生成服务</h1>
+    <p class="lede">一个独立部署的 Web 服务。业务人员在网页上拖拽设计标签模板，业务系统用“模板编码 + 数据 JSON”调用接口，拿回 PDF、PNG 或 ZPL 文件。</p>
+    <dl class="meta">
+      <div><dt>日期</dt><dd class="num">2026-10-08</dd></div>
+      <div><dt>状态</dt><dd>待评审</dd></div>
+      <div><dt>初版重点</dt><dd>绘制一定要方便</dd></div>
+      <div><dt>性能目标</dt><dd>单张 P95 ≤ 100 ms</dd></div>
+    </dl>
+    <ol class="steps">
+      <li><div class="no">01</div><b>设计模板</b><p>选画布（A4、100×60mm 等预设，或自定义尺寸），拖入文本、图标、图片、一维码、二维码，保存。</p></li>
+      <li><div class="no">02</div><b>定义字段</b><p>为模板声明字段的 key 和类型，系统自动生成调用方要传的 JSON 样例。</p></li>
+      <li><div class="no">03</div><b>调用生成</b><p>业务系统提交模板编码和数据，接口直接返回标签文件流，支持批量。</p></li>
+    </ol>
+  </header>
+
+  <div class="layout">
+    <nav class="toc" aria-label="章节">
+      <div class="toc-title">目录</div>
+      <ol>
+        <li><a href="#scope"><span>1</span>初版范围</a></li>
+        <li><a href="#arch"><span>2</span>总体架构</a></li>
+        <li><a href="#model"><span>3</span>数据模型</a></li>
+        <li><a href="#designer"><span>4</span>标签设计器</a></li>
+        <li><a href="#schema"><span>5</span>模板 JSON 规范</a></li>
+        <li><a href="#fields"><span>6</span>数据源定义</a></li>
+        <li><a href="#render"><span>7</span>渲染引擎</a></li>
+        <li><a href="#api"><span>8</span>开放接口</a></li>
+        <li><a href="#nfr"><span>9</span>生成性能与监控</a></li>
+        <li><a href="#sdk"><span>10</span>客户端 SDK</a></li>
+        <li><a href="#demo"><span>11</span>调用演示程序</a></li>
+        <li><a href="#plan"><span>12</span>计划与待确认</a></li>
+      </ol>
+    </nav>
+
+    <main>
+      <details class="toc-mobile">
+        <summary>目录</summary>
+        <ol>
+          <li><a href="#scope"><span>1</span>初版范围</a></li>
+          <li><a href="#arch"><span>2</span>总体架构</a></li>
+          <li><a href="#model"><span>3</span>数据模型</a></li>
+          <li><a href="#designer"><span>4</span>标签设计器</a></li>
+          <li><a href="#schema"><span>5</span>模板 JSON 规范</a></li>
+          <li><a href="#fields"><span>6</span>数据源定义</a></li>
+          <li><a href="#render"><span>7</span>渲染引擎</a></li>
+          <li><a href="#api"><span>8</span>开放接口</a></li>
+          <li><a href="#nfr"><span>9</span>生成性能与监控</a></li>
+          <li><a href="#sdk"><span>10</span>客户端 SDK</a></li>
+        <li><a href="#demo"><span>11</span>调用演示程序</a></li>
+        <li><a href="#plan"><span>12</span>计划与待确认</a></li>
+        </ol>
+      </details>
+
+      <!-- 1 -->
+      <section id="scope">
+        <h2><span class="n">1</span>初版范围</h2>
+        <p class="lead">初版要把“设计 → 定义字段 → 调用生成”整条链路跑通，并且让绘制足够顺手。送打印机、发序列号这类和现场强相关的事，先交给调用方。</p>
+        <div class="split">
+          <div class="pane">
+            <h3>初版做</h3>
+            <ul>
+              <li>网页设计器：7 种元素（文本、一维码、二维码、图片、图标、线、矩形），拖拽、缩放、旋转、吸附对齐、撤销重做</li>
+              <li>画布预设维护（A4、100×60mm 等）</li>
+              <li>字段定义（key + 类型），自动生成 JSON 样例</li>
+              <li>模板版本：草稿和发布分开，接口只用已发布的版本</li>
+              <li>开放接口：单张、批量（合并成一个文件或打包 ZIP），输出 PDF、PNG、ZPL（位图模式）</li>
+              <li>API Key 鉴权、调用日志</li>
+              <li>生成性能：单张服务端处理 P95 ≤ 100 ms，分阶段计时，有监控仪表盘和告警（第 9 节）</li>
+            </ul>
+          </div>
+          <div class="pane muted">
+            <h3>初版不做（后续再议）</h3>
+            <ul>
+              <li>送打印机：服务只返回文件，打印由调用方负责</li>
+              <li>发号：序列号、流水号由调用方生成后传入，服务不保存计数，避免重号</li>
+              <li>A4 拼版（一页排多张不干胶标签）</li>
+              <li>表格元素、按条件显示元素</li>
+              <li>ZPL 原生指令、TSPL 输出</li>
+              <li>异步批量任务、多租户</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2 -->
+      <section id="arch">
+        <h2><span class="n">2</span>总体架构</h2>
+        <p class="lead">服务由网页设计器、管理 API、渲染引擎、开放 API 四部分组成。后端是一个无状态进程，初版单实例部署、数据存 SQLite；以后需要时换成 SQL Server，就可以多实例横向扩展。</p>
+        <figure>
+          <div class="fig">
+            <svg viewBox="0 0 760 496" role="img" aria-labelledby="arch-t">
+              <title id="arch-t">标签服务架构：业务系统传模板编码和数据，拿回可直接打印的标签文件</title>
+              <defs><marker id="arr-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="d-head"/></marker></defs>
+              <text x="24" y="32" class="d-title">业务系统传模板编码和数据，拿回可直接打印的标签文件</text>
+              <text x="24" y="52" class="d-note">虚线部分由调用方负责，不在初版范围</text>
+              <rect x="264" y="72" width="232" height="296" rx="8" class="d-group"/>
+              <text x="280" y="96" class="d-name">标签服务 · ASP.NET Core</text>
+              <g class="d-edges">
+                <path d="M176 140H280" marker-end="url(#arr-a)"/>
+                <path d="M176 316H280" marker-end="url(#arr-a)"/>
+                <path d="M280 332H176" marker-end="url(#arr-a)"/>
+                <path d="M380 168V204" marker-end="url(#arr-a)"/>
+                <path d="M380 296V260" marker-end="url(#arr-a)"/>
+                <path d="M480 140H576" marker-end="url(#arr-a)"/>
+                <path d="M480 232H576" marker-end="url(#arr-a)"/>
+                <path d="M100 352V416" stroke-dasharray="4 4" marker-end="url(#arr-a)"/>
+              </g>
+              <rect x="24" y="112" width="152" height="56" rx="8" class="d-box"/>
+              <text x="100" y="136" text-anchor="middle" class="d-name">网页设计器</text>
+              <text x="100" y="153" text-anchor="middle" class="d-sub">Vue 3 + Konva</text>
+              <rect x="24" y="296" width="152" height="56" rx="8" class="d-box"/>
+              <text x="100" y="320" text-anchor="middle" class="d-name">业务系统</text>
+              <text x="100" y="337" text-anchor="middle" class="d-sub">MES / WMS / ERP</text>
+              <rect x="24" y="416" width="152" height="56" rx="8" class="d-dash"/>
+              <text x="100" y="440" text-anchor="middle" class="d-name">标签打印机</text>
+              <text x="100" y="457" text-anchor="middle" class="d-sub">不在本服务范围</text>
+              <rect x="280" y="112" width="200" height="56" rx="8" class="d-box"/>
+              <text x="380" y="136" text-anchor="middle" class="d-name">管理 API</text>
+              <text x="380" y="153" text-anchor="middle" class="d-sub">模板、画布、字段、素材</text>
+              <rect x="280" y="204" width="200" height="56" rx="8" class="d-box"/>
+              <text x="380" y="228" text-anchor="middle" class="d-name">渲染引擎</text>
+              <text x="380" y="245" text-anchor="middle" class="d-sub">SkiaSharp + ZXing.Net</text>
+              <rect x="280" y="296" width="200" height="56" rx="8" class="d-accent"/>
+              <text x="380" y="320" text-anchor="middle" class="d-name">开放 API</text>
+              <text x="380" y="337" text-anchor="middle" class="d-sub">单张 / 批量生成</text>
+              <rect x="576" y="112" width="160" height="56" rx="8" class="d-box"/>
+              <text x="656" y="136" text-anchor="middle" class="d-name">数据库</text>
+              <text x="656" y="153" text-anchor="middle" class="d-sub">模板、版本、调用日志</text>
+              <rect x="576" y="204" width="160" height="56" rx="8" class="d-box"/>
+              <text x="656" y="228" text-anchor="middle" class="d-name">文件存储</text>
+              <text x="656" y="245" text-anchor="middle" class="d-sub">字体、图片、图标</text>
+              <text x="220" y="132" text-anchor="middle" class="d-sub">保存、预览</text>
+              <text x="220" y="308" text-anchor="middle" class="d-sub">编码 + JSON</text>
+              <text x="220" y="348" text-anchor="middle" class="d-sub">文件流</text>
+              <text x="388" y="190" class="d-sub">预览</text>
+              <text x="388" y="282" class="d-sub">生成</text>
+              <text x="536" y="132" text-anchor="middle" class="d-sub">模板、版本</text>
+              <text x="536" y="224" text-anchor="middle" class="d-sub">字体、图片</text>
+              <text x="108" y="388" class="d-sub">PDF / ZPL</text>
+            </svg>
+          </div>
+          <figcaption>设计器只和管理 API 打交道；业务系统只和开放 API 打交道，两边共用同一个渲染引擎。</figcaption>
+        </figure>
+
+        <h3>技术选型</h3>
+        <div class="tw"><table>
+          <thead><tr><th>层</th><th>选型</th><th>理由</th></tr></thead>
+          <tbody>
+            <tr><td>后端</td><td>ASP.NET Core，.NET 10 LTS</td><td>.NET 8 在 2026 年 11 月停止支持，新项目直接用 10</td></tr>
+            <tr><td>绘图</td><td>SkiaSharp（MIT）</td><td>一套绘图代码同时输出 PNG 和矢量 PDF，Windows、Linux 通用</td></tr>
+            <tr><td>条码</td><td>ZXing.Net（Apache-2.0）</td><td>覆盖 Code128、Code39、EAN-13/8、UPC-A、ITF-14、GS1-128、QR、DataMatrix、PDF417</td></tr>
+            <tr><td>SVG 图标</td><td>Svg.Skia（MIT）</td><td>服务端把 SVG 图标画进 Skia</td></tr>
+            <tr><td>数据访问</td><td>EF Core + SQLite</td><td>初版单实例，不用另装数据库；需要多实例或高可用时换 SQL Server，换 Provider 并重新生成迁移即可</td></tr>
+            <tr><td>前端</td><td>Vue 3 + TypeScript（Vite 构建），画布用 Konva + vue-konva（MIT）</td><td>Konva 是普通 npm 包，Vite 直接打包；模板 JSON 就是画布状态，数据驱动渲染，自带拖拽和缩放旋转控件</td></tr>
+            <tr><td>前端条码</td><td>bwip-js（MIT）</td><td>设计时在浏览器里直接画条码，不用每次请求服务端</td></tr>
+            <tr><td>字体</td><td>思源黑体、思源宋体（SIL OFL）</td><td>可免费商用，可以随服务一起打包</td></tr>
+            <tr><td>部署</td><td>Docker（Linux）或 Windows 服务</td><td>字体随服务打包，不依赖系统字体</td></tr>
+            <tr><td>监控</td><td>OpenTelemetry 指标和链路，Prometheus + Grafana（可换成公司现有监控）</td><td>.NET 自带相关 API，按阶段统计生成耗时，见第 9 节</td></tr>
+          </tbody>
+        </table></div>
+        <p class="callout"><b>注意</b>不要把微软雅黑、宋体打包进服务。它们是 Windows 系统字体，授权不允许随意分发。</p>
+      </section>
+
+      <!-- 3 -->
+      <section id="model">
+        <h2><span class="n">3</span>数据模型</h2>
+        <p class="lead">一个模板有多个版本。每个版本是一份完整的模板 JSON（画布尺寸、字段定义、元素），发布后不再修改。</p>
+        <div class="tw"><table>
+          <thead><tr><th>概念</th><th>说明</th></tr></thead>
+          <tbody>
+            <tr><td>画布预设</td><td>常用纸张尺寸，如 A4（210×297）、100×100、100×60、80×50、60×40、50×30mm，管理员可以增删。选中预设后把宽高写进模板，之后改预设不影响已有模板</td></tr>
+            <tr><td>模板</td><td>一种标签，如“成品箱标”。模板编码 <code>templateCode</code> 全局唯一，就是接口里的 key</td></tr>
+            <tr><td>模板版本</td><td>编辑产生草稿，发布生成新版本号。接口默认用最新发布版本，也可以指定版本。同一模板同一时间最多一个草稿</td></tr>
+            <tr><td>元素</td><td>画布上的一个对象：文本、一维码、二维码、图片、图标、线、矩形</td></tr>
+            <tr><td>字段</td><td>模板需要的数据，key + 类型，元素通过 <code>{{key}}</code> 引用</td></tr>
+            <tr><td>素材</td><td>上传的图片、图标、字体文件</td></tr>
+          </tbody>
+        </table></div>
+
+        <h3>数据库表</h3>
+        <div class="tw"><table>
+          <thead><tr><th>表</th><th>主要字段</th><th>说明</th></tr></thead>
+          <tbody>
+            <tr><td><code>canvas_preset</code></td><td>id, name, width_mm, height_mm, sort, enabled</td><td>画布预设</td></tr>
+            <tr><td><code>label_template</code></td><td>id, code, name, category, status, latest_version, created_by, updated_at</td><td>code 唯一索引</td></tr>
+            <tr><td><code>label_template_version</code></td><td>id, template_id, version_no, content_json, status, published_by, published_at</td><td>status：draft / published；content_json 存整份模板 JSON</td></tr>
+            <tr><td><code>asset</code></td><td>id, kind, name, file_path, sha256, size, created_at</td><td>kind：image / icon / font。文件放文件存储，表里只存元数据</td></tr>
+            <tr><td><code>api_client</code></td><td>id, name, api_key_hash, allowed_templates, enabled, created_at</td><td>每个调用系统一个 Key</td></tr>
+            <tr><td><code>render_log</code></td><td>id, request_id, client_id, template_code, version_no, format, item_count, duration_ms, stage_ms_json, is_slow, status, error_code, created_at</td><td>不存业务数据全文</td></tr>
+          </tbody>
+        </table></div>
+        <p>初版用 SQLite：<code>render_log</code> 放在单独的 <code>label-log.db</code>，其余表放在 <code>label.db</code>，日志批量写入不会和后台保存模板抢写锁。调用日志默认保留 180 天，每天用 <code>VACUUM INTO</code> 备份一次。数据目录不能放网络共享盘。</p>
+      </section>
+
+      <!-- 4 -->
+      <section id="designer">
+        <h2><span class="n">4</span>标签设计器</h2>
+        <p class="lead">目标是像做 PPT 一样画标签：从左边拖进来，在画布上摆好，在右边改属性。常用操作都有快捷键。</p>
+        <figure>
+          <div class="fig">
+            <svg viewBox="0 0 760 492" role="img" aria-labelledby="ui-t">
+              <title id="ui-t">设计器布局：画布居中，左边拿元素和字段，右边改属性</title>
+              <text x="24" y="32" class="d-title">画布居中，左边拿元素和字段，右边改属性</text>
+              <rect x="24" y="48" width="712" height="40" rx="8" class="d-box"/>
+              <text x="40" y="73" class="d-sub">保存 · 发布 · 撤销 · 重做 · 对齐 · 分布 · 层级 · 缩放 · 吸附 · 服务端预览</text>
+              <rect x="24" y="104" width="160" height="320" rx="8" class="d-box"/>
+              <text x="40" y="128" class="d-name">元素库</text>
+              <text x="40" y="150" class="d-sub">文本、一维码、二维码</text>
+              <text x="40" y="168" class="d-sub">图片、图标、线、矩形</text>
+              <line x1="40" y1="184" x2="168" y2="184" class="d-rule"/>
+              <text x="40" y="208" class="d-name">数据字段</text>
+              <text x="40" y="230" class="d-sub">partNo  料号</text>
+              <text x="40" y="248" class="d-sub">batchNo  批次</text>
+              <text x="40" y="266" class="d-sub">boxNo  箱号</text>
+              <text x="40" y="286" class="d-note">拖到画布即生成绑定</text>
+              <line x1="40" y1="302" x2="168" y2="302" class="d-rule"/>
+              <text x="40" y="326" class="d-name">图层</text>
+              <text x="40" y="348" class="d-sub">锁定、隐藏、排序</text>
+              <rect x="200" y="104" width="360" height="320" rx="8" class="d-group"/>
+              <line x1="200" y1="116" x2="560" y2="116" class="d-rule"/>
+              <line x1="212" y1="104" x2="212" y2="424" class="d-rule"/>
+              <g class="d-edges">
+                <path d="M224 110V116M236 113V116M248 113V116M260 108V116M272 113V116M284 113V116M296 113V116M308 113V116M320 108V116M332 113V116M344 113V116M356 113V116M368 113V116M380 108V116M392 113V116M404 113V116M416 113V116M428 113V116M440 108V116M452 113V116M464 113V116M476 113V116M488 113V116M500 108V116M512 113V116M524 113V116M536 113V116M548 113V116"/>
+                <path d="M206 136H212M209 148H212M209 160H212M209 172H212M206 184H212M209 196H212M209 208H212M209 220H212M209 232H212M206 244H212M209 256H212M209 268H212M209 280H212M209 292H212M206 304H212M209 316H212M209 328H212M209 340H212M209 352H212M206 364H212M209 376H212M209 388H212M209 400H212M209 412H212"/>
+              </g>
+              <text x="380" y="160" text-anchor="middle" class="d-note">100 × 60 mm</text>
+              <rect x="260" y="168" width="240" height="144" rx="3" class="d-paper"/>
+              <rect x="272" y="180" width="110" height="8" rx="1" class="d-lab-faint"/>
+              <rect x="272" y="198" width="96" height="6" rx="1" class="d-lab-faint"/>
+              <rect x="380" y="198" width="84" height="6" rx="1" class="d-lab-faint"/>
+              <rect x="272" y="212" width="96" height="6" rx="1" class="d-lab-faint"/>
+              <rect x="380" y="212" width="84" height="6" rx="1" class="d-lab-faint"/>
+              <rect x="272" y="226" width="96" height="6" rx="1" class="d-lab-faint"/>
+              <rect x="380" y="226" width="84" height="6" rx="1" class="d-lab-faint"/>
+              <rect x="272" y="240" width="216" height="1" class="d-lab-faint"/>
+              <g class="d-lab-ink">
+                <rect x="274" y="254" width="4" height="26"/><rect x="280" y="254" width="6" height="26"/><rect x="288" y="254" width="2" height="26"/><rect x="294" y="254" width="4" height="26"/>
+                <rect x="300" y="254" width="2" height="26"/><rect x="308" y="254" width="4" height="26"/><rect x="314" y="254" width="2" height="26"/><rect x="318" y="254" width="6" height="26"/>
+                <rect x="328" y="254" width="2" height="26"/><rect x="334" y="254" width="2" height="26"/><rect x="338" y="254" width="4" height="26"/><rect x="348" y="254" width="2" height="26"/>
+                <rect x="352" y="254" width="4" height="26"/><rect x="358" y="254" width="6" height="26"/><rect x="366" y="254" width="4" height="26"/><rect x="372" y="254" width="2" height="26"/>
+                <rect x="436" y="248" width="48" height="48" fill="none" stroke="var(--label-ink)" stroke-width="1"/>
+                <rect x="436" y="248" width="14" height="14"/><rect x="470" y="248" width="14" height="14"/><rect x="436" y="282" width="14" height="14"/>
+                <rect x="456" y="254" width="6" height="6"/><rect x="462" y="268" width="6" height="6"/><rect x="454" y="276" width="6" height="6"/><rect x="470" y="276" width="6" height="6"/><rect x="458" y="286" width="6" height="6"/><rect x="474" y="288" width="6" height="6"/>
+              </g>
+              <text x="324" y="294" text-anchor="middle" font-size="10.5" class="d-lab-ink">C2610080001</text>
+              <rect x="268" y="248" width="116" height="52" class="d-sel"/>
+              <rect x="265" y="245" width="6" height="6" class="d-handle"/><rect x="381" y="245" width="6" height="6" class="d-handle"/>
+              <rect x="265" y="297" width="6" height="6" class="d-handle"/><rect x="381" y="297" width="6" height="6" class="d-handle"/>
+              <text x="380" y="404" text-anchor="middle" class="d-note">mm 标尺 · 网格吸附 · 对齐参考线 · Ctrl+滚轮缩放</text>
+              <rect x="576" y="104" width="160" height="320" rx="8" class="d-box"/>
+              <text x="592" y="128" class="d-name">属性</text>
+              <text x="592" y="150" class="d-sub">X 4.0   Y 30.0 mm</text>
+              <text x="592" y="168" class="d-sub">宽 64.0   高 16.0 mm</text>
+              <text x="592" y="186" class="d-sub">旋转 0°   锁定</text>
+              <line x1="592" y1="202" x2="720" y2="202" class="d-rule"/>
+              <text x="592" y="226" class="d-name">一维码</text>
+              <text x="592" y="248" class="d-sub">码制 Code128</text>
+              <text x="592" y="266" class="d-sub">内容 ← 字段 boxNo</text>
+              <text x="592" y="284" class="d-sub">显示文字  底部</text>
+              <line x1="592" y1="302" x2="720" y2="302" class="d-rule"/>
+              <text x="592" y="326" class="d-note">未选中时显示模板属性</text>
+              <text x="592" y="344" class="d-note">尺寸、DPI、画布预设</text>
+              <rect x="24" y="440" width="712" height="28" rx="6" class="d-box"/>
+              <text x="40" y="458" class="d-note">光标 32.5, 18.0 mm · 缩放 200% · 10 个元素 · 草稿已自动保存</text>
+            </svg>
+          </div>
+          <figcaption>选中的一维码显示虚线选择框和控制点，右侧属性面板跟着切换成条码属性。</figcaption>
+        </figure>
+
+        <h3>元素类型</h3>
+        <div class="tw"><table>
+          <thead><tr><th>元素</th><th>用户能调的</th><th>说明</th></tr></thead>
+          <tbody>
+            <tr><td>文本</td><td>内容、字体、字号、粗斜体、对齐、换行或自动缩小</td><td>固定文字和字段可以混写，如 <code>批次：{{batchNo}}</code></td></tr>
+            <tr><td>一维码</td><td>码制、内容、是否显示文字、文字位置</td><td>Code128、Code39、EAN-13、EAN-8、UPC-A、ITF-14、GS1-128</td></tr>
+            <tr><td>二维码</td><td>码制、内容、纠错级别</td><td>QR、DataMatrix、PDF417；内容可以拼接多个字段</td></tr>
+            <tr><td>图片</td><td>来源（素材库或字段）、填充方式、黑白化</td><td>字段来源只收 base64</td></tr>
+            <tr><td>图标</td><td>从图标库选择、颜色</td><td>内置 GB/T 191 包装储运图示标志（易碎、向上、怕雨等），可上传 SVG</td></tr>
+            <tr><td>线</td><td>方向、粗细、虚线</td><td>横线、竖线</td></tr>
+            <tr><td>矩形</td><td>边框粗细、圆角、填充</td><td>画外框和分区</td></tr>
+          </tbody>
+        </table></div>
+
+        <h3>交互清单（初版全部要做）</h3>
+        <dl class="kv">
+          <div><dt>添加</dt><dd>左侧点击或拖入画布。把字段直接拖进画布，自动生成“字段名：{{key}}”文本；拖到一维码或二维码上即绑定内容</dd></div>
+          <div><dt>选择</dt><dd>单击、Shift 多选、框选、Ctrl+A；在图层列表里也能选</dd></div>
+          <div><dt>移动与缩放</dt><dd>拖拽移动，8 个控制点缩放，Shift 等比；方向键移动 0.1mm，Shift+方向键移动 1mm</dd></div>
+          <div><dt>旋转</dt><dd>文本、图片、图标可任意角度；条码只允许 0°、90°、180°、270°，避免扫不出</dd></div>
+          <div><dt>吸附</dt><dd>网格吸附（0.5、1、2mm 可选）；拖动时显示对齐参考线，可对齐其他元素的边缘和中线、画布中线</dd></div>
+          <div><dt>对齐与分布</dt><dd>左对齐、水平居中、右对齐、顶对齐、垂直居中、底对齐；水平、垂直等间距</dd></div>
+          <div><dt>编辑文本</dt><dd>双击直接改；输入 <code>{{</code> 弹出字段补全</dd></div>
+          <div><dt>复制</dt><dd>Ctrl+C / Ctrl+V，可以跨模板粘贴；Ctrl+D 原地复制并偏移 2mm</dd></div>
+          <div><dt>撤销重做</dt><dd>Ctrl+Z / Ctrl+Y，至少 50 步</dd></div>
+          <div><dt>层级与锁定</dt><dd>置顶、置底、上移、下移；锁定防止误拖；隐藏</dd></div>
+          <div><dt>视图</dt><dd>Ctrl+滚轮缩放（25%–800%），空格+拖拽平移，“适应窗口”一键复原；mm 标尺跟随光标</dd></div>
+          <div><dt>预览</dt><dd>在“显示占位符”和“显示样例值”之间切换；“服务端预览”调用渲染引擎出真实 PNG</dd></div>
+          <div><dt>保存</dt><dd>每 30 秒自动保存草稿，离开页面时提示未保存内容；“另存为”可复制出新模板</dd></div>
+        </dl>
+
+        <h3>保证所见即所得</h3>
+        <p>设计器和服务端是两套渲染，必须约束差异：</p>
+        <ul>
+          <li>字体：两边用同一份字体文件，服务端提供字体下载给设计器加载</li>
+          <li>文本：换行和自动缩小的规则写进规范（第 5 节），两边按同一算法实现</li>
+          <li>条码：设计器用 bwip-js 预览，服务端用 ZXing.Net 生成，以服务端预览为准</li>
+          <li>验收：同一模板，设计器和服务端 PNG 的元素位置偏差不超过 0.2mm</li>
+        </ul>
+      </section>
+
+      <!-- 5 -->
+      <section id="schema">
+        <h2><span class="n">5</span>模板 JSON 规范</h2>
+        <p class="lead">模板 JSON 是设计器、数据库和渲染引擎之间唯一的契约。长度一律用毫米，字号用磅（pt），颜色用 #RRGGBB。</p>
+        <ul>
+          <li>坐标原点在标签左上角，x 向右、y 向下；长度保留 1 位小数（0.1mm）</li>
+          <li><code>rotation</code> 单位是度，顺时针，绕元素中心旋转</li>
+          <li>元素在 <code>elements</code> 数组里的顺序就是叠放顺序，后面的在上层</li>
+          <li>数据绑定写 <code>{{key}}</code>；带格式写 <code>{{prodDate:yyyy-MM-dd}}</code>、<code>{{qty:0.00}}</code>（.NET 格式字符串），绑定里的格式优先于字段的默认格式</li>
+          <li>省略的样式取默认值：字体思源黑体、颜色 #000000、左对齐、垂直居中、不换行、行高 1.2</li>
+          <li><code>schemaVersion</code> 标记规范版本，以后升级规范时渲染引擎按版本兼容旧模板</li>
+        </ul>
+
+        <h3>示例：成品箱标（100×60mm）</h3>
+        <div class="preview">
+          <div class="label-frame">
+            <svg id="labelPreview" viewBox="-9 -9 114 76" role="img" aria-labelledby="lp-t">
+              <title id="lp-t">按下方 JSON 坐标绘制的成品箱标，单位毫米</title>
+              <g id="rulerTop"></g>
+              <g id="rulerLeft"></g>
+              <rect x="0" y="0" width="100" height="60" rx="0.8" fill="var(--label-bg)" stroke="var(--rule-strong)" stroke-width="0.25"/>
+              <g fill="var(--label-ink)">
+                <text x="4" y="7.2" font-size="3.53">XX 科技有限公司</text>
+                <text x="96" y="7.4" font-size="3.88" font-weight="700" text-anchor="end">成品箱标</text>
+                <text x="4" y="15.6" font-size="3.18">品名：<tspan fill="var(--label-var)" data-ph="{{partName}}" data-val="电源适配器">电源适配器</tspan></text>
+                <text x="50" y="15.6" font-size="3.18">数量：<tspan fill="var(--label-var)" data-ph="{{qty}}" data-val="50">50</tspan> PCS</text>
+                <text x="4" y="21.6" font-size="3.18">批次：<tspan fill="var(--label-var)" data-ph="{{batchNo}}" data-val="20261008-A">20261008-A</tspan></text>
+                <text x="50" y="21.6" font-size="3.18">日期：<tspan fill="var(--label-var)" data-ph="{{prodDate}}" data-val="2026-10-08">2026-10-08</tspan></text>
+                <rect x="4" y="24.85" width="92" height="0.3"/>
+                <g id="lpBars"></g>
+                <text id="lpBarText" x="36" y="45.3" font-size="2.82" text-anchor="middle" fill="var(--label-var)" font-family="var(--font-mono)" data-ph="{{boxNo}}" data-val="C2610080001">C2610080001</text>
+                <g id="lpQr"></g>
+                <path d="M77.3 52.5H80.7C80.7 54.5 79.9 55.3 79 55.3C78.1 55.3 77.3 54.5 77.3 52.5Z"/>
+                <path d="M79 55.3V57.4M77.8 57.6H80.2" stroke="var(--label-ink)" stroke-width="0.4" fill="none"/>
+              </g>
+            </svg>
+          </div>
+          <div class="legend">
+            <div><span class="sw" style="background: var(--label-ink)"></span>模板里的固定内容</div>
+            <div><span class="sw" style="background: var(--label-var)"></span>生成时从数据里取值</div>
+            <div>二维码内容是 <code>partNo|batchNo|boxNo</code> 三个字段拼接；右下角是 GB/T 191“易碎物品”图标。</div>
+            <button type="button" class="btn" id="bindToggle" aria-pressed="false">显示占位符</button>
+          </div>
+        </div>
+
+<pre><code>{
+  "schemaVersion": "1.0",
+  "code": "BOX_LABEL",
+  "name": "成品箱标",
+  "page": { "width": 100, "height": 60, "dpi": 300 },
+  "fields": [
+    { "key": "partName", "name": "品名",     "type": "string", "required": true,  "sample": "电源适配器" },
+    { "key": "partNo",   "name": "料号",     "type": "string", "required": true,  "sample": "3100-0123" },
+    { "key": "qty",      "name": "数量",     "type": "number", "required": true,  "format": "0", "sample": 50 },
+    { "key": "batchNo",  "name": "批次",     "type": "string", "required": true,  "sample": "20261008-A" },
+    { "key": "prodDate", "name": "生产日期", "type": "date",   "required": false, "format": "yyyy-MM-dd", "sample": "2026-10-08" },
+    { "key": "boxNo",    "name": "箱号",     "type": "string", "required": true,  "sample": "C2610080001" }
+  ],
+  "elements": [
+    { "id": "e1", "type": "text", "x": 4, "y": 3, "width": 60, "height": 6,
+      "content": "XX 科技有限公司",
+      "style": { "fontFamily": "SourceHanSansSC", "fontSize": 10, "fit": "shrink", "minFontSize": 6 } },
+    { "id": "e2", "type": "text", "x": 66, "y": 3, "width": 30, "height": 6,
+      "content": "成品箱标", "style": { "fontSize": 11, "bold": true, "align": "right" } },
+    { "id": "e3", "type": "text", "x": 4, "y": 12, "width": 46, "height": 5,
+      "content": "品名：{{partName}}", "style": { "fontSize": 9, "fit": "shrink" } },
+    { "id": "e4", "type": "text", "x": 50, "y": 12, "width": 46, "height": 5,
+      "content": "数量：{{qty}} PCS", "style": { "fontSize": 9 } },
+    { "id": "e5", "type": "text", "x": 4, "y": 18, "width": 46, "height": 5,
+      "content": "批次：{{batchNo}}", "style": { "fontSize": 9 } },
+    { "id": "e6", "type": "text", "x": 50, "y": 18, "width": 46, "height": 5,
+      "content": "日期：{{prodDate:yyyy-MM-dd}}", "style": { "fontSize": 9 } },
+    { "id": "e7", "type": "line", "x": 4, "y": 25, "width": 92, "height": 0,
+      "stroke": { "width": 0.3 } },
+    { "id": "e8", "type": "barcode", "x": 4, "y": 30, "width": 64, "height": 16,
+      "symbology": "code128", "value": "{{boxNo}}", "align": "left",
+      "showText": true, "textPosition": "bottom", "textStyle": { "fontSize": 8 },
+      "minModuleDots": 2 },
+    { "id": "e9", "type": "qrcode", "x": 76, "y": 30, "width": 20, "height": 20,
+      "symbology": "qr", "value": "{{partNo}}|{{batchNo}}|{{boxNo}}", "ecLevel": "M" },
+    { "id": "e10", "type": "icon", "x": 76, "y": 52, "width": 6, "height": 6,
+      "icon": "gb191/fragile", "color": "#000000" }
+  ]
+}</code></pre>
+
+        <h3>元素属性</h3>
+        <p>所有元素都有：<code>id</code>、<code>type</code>、<code>name</code>、<code>x</code>、<code>y</code>、<code>width</code>、<code>height</code>、<code>rotation</code>、<code>locked</code>、<code>hidden</code>。各类型的专有属性：</p>
+        <div class="tw"><table>
+          <thead><tr><th>type</th><th>专有属性</th></tr></thead>
+          <tbody>
+            <tr><td><code>text</code></td><td>content；style：fontFamily、fontSize、bold、italic、underline、color、align（left / center / right）、vAlign（top / middle / bottom）、fit（none / wrap / shrink）、minFontSize、lineHeight、letterSpacing</td></tr>
+            <tr><td><code>barcode</code></td><td>symbology（code128 / code39 / ean13 / ean8 / upca / itf14 / gs1-128）、value、align、showText、textPosition（bottom / top）、textStyle、minModuleDots、quietZone</td></tr>
+            <tr><td><code>qrcode</code></td><td>symbology（qr / datamatrix / pdf417）、value、ecLevel（L / M / Q / H，仅 QR）、quietZone</td></tr>
+            <tr><td><code>image</code></td><td>src（<code>asset:素材ID</code> 或 <code>{{字段}}</code>）、fit（contain / cover / stretch）、mono（转黑白）</td></tr>
+            <tr><td><code>icon</code></td><td>icon（图标库路径）、color</td></tr>
+            <tr><td><code>line</code></td><td>stroke：width、dash；height 为 0 是横线，width 为 0 是竖线</td></tr>
+            <tr><td><code>rect</code></td><td>stroke：width、dash；fill、radius</td></tr>
+          </tbody>
+        </table></div>
+
+        <h3>文本排版规则</h3>
+        <ul>
+          <li><code>fit: "none"</code>：单行，超出框的部分裁掉</li>
+          <li><code>fit: "wrap"</code>：在框宽内自动换行（中文按字、英文按单词），超出框高的部分裁掉</li>
+          <li><code>fit: "shrink"</code>：单行，放不下时自动缩小字号，最小到 <code>minFontSize</code>，还放不下就裁掉</li>
+          <li>行高 = 字号 × <code>lineHeight</code></li>
+        </ul>
+
+        <h3>一维码尺寸规则</h3>
+        <p>条码宽度等于“模块数 × 模块宽度”。模块宽度必须是打印机点的整数倍，否则会出现看着正常、扫不出来的情况。</p>
+        <ul>
+          <li>渲染时，模块宽度 = floor(框宽点数 ÷ 模块数) 个点，条码在框内按 <code>align</code> 放置</li>
+          <li>203dpi 下 1 点 = 0.125mm。模块宽度小于 <code>minModuleDots</code>（默认 2 点）时拒绝生成，返回 <code>BARCODE_TOO_DENSE</code></li>
+          <li>内容不符合码制（如 EAN-13 不是 12 或 13 位数字）时返回 <code>BARCODE_INVALID</code></li>
+        </ul>
+      </section>
+
+      <!-- 6 -->
+      <section id="fields">
+        <h2><span class="n">6</span>数据源定义</h2>
+        <p class="lead">每个字段只需定义 key 和类型，其余属性都可选。保存后系统自动生成调用方要传的 JSON 样例。</p>
+        <div class="tw"><table>
+          <thead><tr><th>属性</th><th>必填</th><th>说明</th></tr></thead>
+          <tbody>
+            <tr><td><code>key</code></td><td>是</td><td>字母开头，只含字母、数字、下划线；模板内唯一，区分大小写</td></tr>
+            <tr><td><code>type</code></td><td>是</td><td>string / number / date / image</td></tr>
+            <tr><td><code>name</code></td><td>否</td><td>中文显示名，在设计器的字段列表里显示</td></tr>
+            <tr><td><code>required</code></td><td>否</td><td>默认 true，调用时不传就报错</td></tr>
+            <tr><td><code>default</code></td><td>否</td><td>调用时不传则用默认值</td></tr>
+            <tr><td><code>format</code></td><td>否</td><td>number、date 的默认显示格式</td></tr>
+            <tr><td><code>sample</code></td><td>否</td><td>设计器预览和 JSON 样例用</td></tr>
+          </tbody>
+        </table></div>
+
+        <h3>类型与校验</h3>
+        <div class="tw"><table>
+          <thead><tr><th>类型</th><th>调用方传什么</th><th>校验</th></tr></thead>
+          <tbody>
+            <tr><td><code>string</code></td><td>字符串</td><td>可设最大长度</td></tr>
+            <tr><td><code>number</code></td><td>数字，或能转成数字的字符串</td><td>能解析成 decimal</td></tr>
+            <tr><td><code>date</code></td><td>ISO 8601 字符串，如 <code>2026-10-08</code>、<code>2026-10-08T14:30:00</code></td><td>能解析成日期</td></tr>
+            <tr><td><code>image</code></td><td>base64，可带 <code>data:image/png;base64,</code> 前缀</td><td>PNG 或 JPG，单张不超过 1MB</td></tr>
+          </tbody>
+        </table></div>
+
+        <h3>定义方式</h3>
+        <ul>
+          <li>选中模板后进入“数据源定义”页，以表格形式批量编辑字段；设计器左侧的字段面板也能增删</li>
+          <li>保存时扫描所有 <code>{{key}}</code>：没定义的提示一键添加（默认 string），定义了但没有元素引用的给出提示</li>
+          <li>字段随模板版本一起发布。已发布版本的字段不会变，调用方不会突然报错</li>
+          <li>调用时多传的 key 直接忽略，不报错</li>
+        </ul>
+
+        <h3>自动生成的 JSON 样例</h3>
+        <p>调用方直接复制这份样例对接：</p>
+<pre><code>{
+  "templateCode": "BOX_LABEL",
+  "format": "pdf",
+  "data": {
+    "partName": "电源适配器",
+    "partNo": "3100-0123",
+    "qty": 50,
+    "batchNo": "20261008-A",
+    "prodDate": "2026-10-08",
+    "boxNo": "C2610080001"
+  }
+}</code></pre>
+      </section>
+
+      <!-- 7 -->
+      <section id="render">
+        <h2><span class="n">7</span>渲染引擎</h2>
+        <p class="lead">渲染引擎把“模板版本 + 数据”变成文件。PDF 走矢量，PNG 和 ZPL 走位图，三种格式共用同一套排版和绘图代码。</p>
+        <h3>处理流程</h3>
+        <ol>
+          <li>取模板：按 templateCode（和可选的版本号）取已发布版本，内存缓存</li>
+          <li>校验数据：必填、类型、格式。批量时先校验全部条目，任何一条不通过就整批返回错误，错误里带条目序号和字段</li>
+          <li>替换绑定：把 <code>{{key:format}}</code> 换成实际值</li>
+          <li>排版：计算文本换行和缩放、条码矩阵（ZXing.Net 编码），模块宽度对齐打印点</li>
+          <li>绘制：SkiaSharp 画到 PDF 文档或位图上</li>
+          <li>输出：写入响应流；批量时按要求合并或打包</li>
+        </ol>
+        <p>每一步单独计时，写进调用日志、响应头和监控指标。单张的总预算是 100 ms，各步骤怎么分配见第 9 节。</p>
+
+        <h3>单位换算</h3>
+        <ul>
+          <li>点数 = 毫米 ÷ 25.4 × DPI。203dpi 下 1mm ≈ 8 点，300dpi 下 1mm ≈ 11.8 点</li>
+          <li>字号：1pt = 1/72 英寸 ≈ 0.353mm</li>
+          <li>DPI 取值顺序：请求参数，其次模板设置，都没有则用 300</li>
+        </ul>
+
+        <h3>输出格式</h3>
+        <div class="tw"><table>
+          <thead><tr><th>格式</th><th>实现</th><th>适用场景</th><th>批量</th></tr></thead>
+          <tbody>
+            <tr><td>PDF</td><td>SkiaSharp 矢量输出，嵌入字体子集；条码按 DPI 对齐</td><td>激光打印机、走打印驱动的标签机、存档</td><td>合并成多页 PDF，一张标签一页</td></tr>
+            <tr><td>PNG</td><td>按 DPI 栅格化；<code>mono=true</code> 时转黑白（文字用阈值，图片用抖动）</td><td>预览、嵌入其他系统</td><td>打包 ZIP</td></tr>
+            <tr><td>ZPL</td><td>整张标签栅格化成黑白位图，用 <code>^GFA</code> 指令输出</td><td>斑马等支持 ZPL 的标签机直接打印</td><td>多个 <code>^XA…^XZ</code> 拼成一个文件</td></tr>
+          </tbody>
+        </table></div>
+        <p>ZPL 用位图模式，是因为中文字体和图片不需要打印机支持，效果和 PNG 一致；代价是文件比原生指令大，传输稍慢。原生 ZPL 指令（<code>^FD</code>、<code>^BC</code>）放到二期。</p>
+
+        <h3>字体</h3>
+        <ul>
+          <li>服务启动时加载 <code>fonts/</code> 目录下的字体文件，按 fontFamily 名称匹配</li>
+          <li>模板引用了不存在的字体时，降级到思源黑体，并在响应头 <code>X-Label-Warnings</code> 里提示</li>
+          <li>同一份字体文件通过 <code>/fonts/{name}</code> 提供给设计器加载</li>
+        </ul>
+      </section>
+
+      <!-- 8 -->
+      <section id="api">
+        <h2><span class="n">8</span>开放接口</h2>
+        <p class="lead">业务系统只需要一个 API Key 和两个接口：单张生成、批量生成。成功时直接返回文件流，失败时返回 JSON 错误。</p>
+
+        <h3>鉴权</h3>
+        <ul>
+          <li>请求头 <code>X-Api-Key</code>。Key 在管理后台按调用系统发放，数据库只存哈希</li>
+          <li>可选请求头 <code>X-Request-Id</code>：调用方生成的请求号，服务端原样写进调用日志，双方对账用；SDK 会自动带上</li>
+          <li>每个响应都带 <code>Server-Timing</code> 头，列出服务端各阶段耗时（毫秒），调用方可以据此区分网络耗时和服务端耗时</li>
+          <li>可以限制每个 Key 能用哪些模板；全程 HTTPS</li>
+          <li>设计器和管理 API 用登录态：初版内置账号 + JWT，后续对接公司统一登录</li>
+        </ul>
+
+        <h3>接口列表</h3>
+        <div class="tw"><table>
+          <thead><tr><th>方法</th><th>路径</th><th>说明</th></tr></thead>
+          <tbody>
+            <tr><td>POST</td><td><code>/api/v1/render</code></td><td>单张生成，返回文件流</td></tr>
+            <tr><td>POST</td><td><code>/api/v1/render/batch</code></td><td>批量生成，返回合并后的文件或 ZIP</td></tr>
+            <tr><td>GET</td><td><code>/api/v1/templates/{code}/schema</code></td><td>返回字段定义和 JSON 样例，给调用方对接用</td></tr>
+            <tr><td>POST</td><td><code>/api/v1/preview</code></td><td>设计器用：未保存的模板 JSON + 样例数据，返回 PNG（需要登录）</td></tr>
+          </tbody>
+        </table></div>
+        <p>模板、版本、画布预设、素材、API Key 的增删改查属于管理 API，按 REST 设计，只给设计器用，不对外公开。</p>
+
+        <h3>单张生成</h3>
+<pre><code>POST /api/v1/render
+X-Api-Key: ********
+Content-Type: application/json
+
+{
+  "templateCode": "BOX_LABEL",
+  "format": "pdf",
+  "dpi": 203,
+  "copies": 1,
+  "data": {
+    "partName": "电源适配器", "partNo": "3100-0123", "qty": 50,
+    "batchNo": "20261008-A", "prodDate": "2026-10-08", "boxNo": "C2610080001"
+  }
+}</code></pre>
+<pre><code>HTTP/1.1 200 OK
+Content-Type: application/pdf
+Content-Disposition: attachment; filename="BOX_LABEL_20261008.pdf"
+X-Template-Version: 3
+X-Label-Count: 1
+X-Label-Dpi: 203
+X-Trace-Id: 00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01
+Server-Timing: auth;dur=0.3, tpl;dur=0.1, validate;dur=0.6, layout;dur=4.2, draw;dur=18.5, encode;dur=21.7, total;dur=46.1
+
+&lt;文件二进制&gt;</code></pre>
+        <div class="tw"><table>
+          <thead><tr><th>参数</th><th>必填</th><th>说明</th></tr></thead>
+          <tbody>
+            <tr><td><code>templateCode</code></td><td>是</td><td>模板编码</td></tr>
+            <tr><td><code>version</code></td><td>否</td><td>不传则用最新发布版本</td></tr>
+            <tr><td><code>format</code></td><td>是</td><td>pdf / png / zpl</td></tr>
+            <tr><td><code>dpi</code></td><td>否</td><td>203 / 300 / 600，不传则用模板设置</td></tr>
+            <tr><td><code>mono</code></td><td>否</td><td>仅 png 有效，true 时输出黑白图</td></tr>
+            <tr><td><code>copies</code></td><td>否</td><td>份数，默认 1，最大 100</td></tr>
+            <tr><td><code>data</code></td><td>是</td><td>字段数据</td></tr>
+          </tbody>
+        </table></div>
+
+        <h3>读取字段定义</h3>
+<pre><code>GET /api/v1/templates/BOX_LABEL/schema
+X-Api-Key: ********
+
+{
+  "templateCode": "BOX_LABEL",
+  "name": "成品箱标",
+  "version": 3,
+  "page": { "width": 100, "height": 60, "dpi": 300 },
+  "fields": [
+    { "key": "partName", "name": "品名", "type": "string", "required": true },
+    { "key": "qty", "name": "数量", "type": "number", "required": true, "format": "0" },
+    { "key": "prodDate", "name": "生产日期", "type": "date", "required": false, "format": "yyyy-MM-dd" }
+  ],
+  "sample": { "partName": "电源适配器", "qty": 50, "prodDate": "2026-10-08" }
+}</code></pre>
+        <p>返回最新发布版本的字段定义和调用样例。客户端 SDK 和演示程序用它生成录入表格（第 10、11 节）。</p>
+
+        <h3>批量生成</h3>
+<pre><code>{
+  "templateCode": "BOX_LABEL",
+  "format": "pdf",
+  "output": "merge",
+  "common": {
+    "partName": "电源适配器", "partNo": "3100-0123", "qty": 50,
+    "batchNo": "20261008-A", "prodDate": "2026-10-08"
+  },
+  "items": [
+    { "data": { "boxNo": "C2610080001" } },
+    { "data": { "boxNo": "C2610080002" }, "copies": 2 }
+  ]
+}</code></pre>
+        <ul>
+          <li><code>common</code>：所有条目共用的字段，条目里的同名字段会覆盖它。同一批箱标通常只有箱号不同，这样能少传很多数据</li>
+          <li><code>output</code>：<code>merge</code> 合并成一个文件（PDF 多页、ZPL 拼接）；<code>zip</code> 每张一个文件打包。PNG 只能用 <code>zip</code></li>
+          <li>上限：单次总张数（含份数）默认 500，可配置；超出返回 <code>BATCH_TOO_LARGE</code>，异步任务放到二期</li>
+          <li>输出顺序和 <code>items</code> 顺序一致</li>
+        </ul>
+
+        <h3>错误返回</h3>
+<pre><code>{
+  "code": "FIELD_REQUIRED",
+  "message": "第 2 条缺少必填字段 boxNo",
+  "errors": [ { "index": 1, "field": "boxNo", "code": "FIELD_REQUIRED" } ],
+  "traceId": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
+}</code></pre>
+        <div class="tw"><table>
+          <thead><tr><th>HTTP</th><th>code</th><th>含义</th></tr></thead>
+          <tbody>
+            <tr><td>401</td><td><code>UNAUTHORIZED</code></td><td>Key 缺失或无效</td></tr>
+            <tr><td>403</td><td><code>TEMPLATE_FORBIDDEN</code></td><td>这个 Key 无权使用该模板</td></tr>
+            <tr><td>404</td><td><code>TEMPLATE_NOT_FOUND</code></td><td>模板或版本不存在，或者还没有发布过</td></tr>
+            <tr><td>400</td><td><code>INVALID_JSON</code>、<code>FORMAT_INVALID</code>、<code>DPI_INVALID</code>、<code>OUTPUT_INVALID</code>、<code>COPIES_INVALID</code></td><td>请求体不是合法 JSON，或格式、DPI、输出方式、份数的取值不对（PNG 单张只能 1 份）</td></tr>
+            <tr><td>400</td><td><code>FIELD_REQUIRED</code></td><td>缺少必填字段</td></tr>
+            <tr><td>400</td><td><code>FIELD_TYPE_INVALID</code></td><td>字段值的类型或格式不对</td></tr>
+            <tr><td>400</td><td><code>BARCODE_INVALID</code></td><td>内容不符合码制</td></tr>
+            <tr><td>400</td><td><code>BARCODE_TOO_DENSE</code></td><td>内容太长，框内放不下能扫的条码</td></tr>
+            <tr><td>400</td><td><code>IMAGE_INVALID</code></td><td>图片解码失败或超过 1MB</td></tr>
+            <tr><td>413</td><td><code>BATCH_TOO_LARGE</code></td><td>超过单次张数上限</td></tr>
+            <tr><td>500</td><td><code>RENDER_FAILED</code></td><td>渲染内部错误，凭 traceId 查日志</td></tr>
+          </tbody>
+        </table></div>
+      </section>
+
+      <!-- 9 -->
+      <section id="nfr">
+        <h2><span class="n">9</span>生成性能与监控</h2>
+        <p class="lead">生成速度是这个服务的核心指标：单张标签从服务端收到请求到返回最后一个字节，P95 不超过 100 ms。每个请求分阶段计时，指标进监控，变慢时自动告警。</p>
+
+        <h3>性能指标</h3>
+        <div class="tw"><table>
+          <thead><tr><th>场景</th><th>目标</th><th>说明</th></tr></thead>
+          <tbody class="num">
+            <tr><td><b>单张标签</b>（≤ 100×150 mm，≤ 300 dpi，PNG / ZPL / PDF）</td><td><b>P95 ≤ 100 ms</b>，P99 ≤ 200 ms</td><td>服务端处理时间：收到完整请求到写完最后一个字节。核心指标，必须达标</td></tr>
+            <tr><td>单张标签，局域网内调用方实测</td><td>P95 ≤ 150 ms</td><td>包含网络往返。SDK 同时给出总耗时和服务端耗时，方便区分</td></tr>
+            <tr><td>单张 A4 / A5 唛头（300 dpi）</td><td>P95 ≤ 250 ms</td><td>幅面大约是箱标的 5–10 倍，单独定预算</td></tr>
+            <tr><td>批量 100 张，合并成 PDF 或 ZPL</td><td>≤ 3 s</td><td></td></tr>
+            <tr><td>批量 500 张，合并成 PDF</td><td>≤ 10 s</td><td>上限 500 张，再多请拆批</td></tr>
+            <tr><td>吞吐</td><td>4 核 8 GB 单实例 ≥ 60 次/秒</td><td>单张箱标 PNG；初版单实例，以后换 SQL Server 后可以加实例</td></tr>
+            <tr><td>冷启动</td><td>启动后 30 秒内完成预热</td><td>预热完成前就绪检查不通过，不接流量</td></tr>
+            <tr><td>设计器</td><td>100 个元素时拖拽 ≥ 50 帧/秒</td><td>Chrome、Edge 最新两个大版本，屏宽 ≥ 1366</td></tr>
+          </tbody>
+        </table></div>
+
+        <h3>单张 100 ms 怎么分配</h3>
+        <figure>
+          <div class="fig">
+            <svg viewBox="0 0 760 196" role="img" aria-labelledby="budget-t">
+              <title id="budget-t">单张 100 ms 的时间预算，绘制和输出编码占大头</title>
+              <text x="40" y="28" class="d-title">绘制和输出编码占 65 ms，是优化重点</text>
+              <text x="40" y="47" class="d-note">100×60 mm 箱标，300 dpi；单张超过 100 ms 记为慢调用</text>
+              <rect x="40" y="64" width="34" height="42" class="d-box"/>
+              <rect x="74" y="64" width="68" height="42" class="d-box"/>
+              <text x="108" y="82" text-anchor="middle" class="d-sub">排版·条码</text>
+              <text x="108" y="99" text-anchor="middle" class="d-name">10</text>
+              <rect x="142" y="64" width="204" height="42" class="d-accent"/>
+              <text x="244" y="82" text-anchor="middle" class="d-sub">绘制（SkiaSharp）</text>
+              <text x="244" y="99" text-anchor="middle" class="d-name">30 ms</text>
+              <rect x="346" y="64" width="238" height="42" class="d-accent"/>
+              <text x="465" y="82" text-anchor="middle" class="d-sub">输出编码（PNG / PDF / ZPL）</text>
+              <text x="465" y="99" text-anchor="middle" class="d-name">35 ms</text>
+              <rect x="584" y="64" width="34" height="42" class="d-box"/>
+              <rect x="618" y="64" width="102" height="42" class="d-dash"/>
+              <text x="669" y="82" text-anchor="middle" class="d-sub">余量</text>
+              <text x="669" y="99" text-anchor="middle" class="d-name">15 ms</text>
+              <line x1="57" y1="106" x2="57" y2="118" class="d-rule"/>
+              <text x="40" y="132" class="d-sub">接收、鉴权、取模板、校验 5 ms</text>
+              <line x1="601" y1="106" x2="601" y2="118" class="d-rule"/>
+              <text x="601" y="132" text-anchor="middle" class="d-sub">写回响应 5 ms</text>
+              <line x1="40" y1="150" x2="720" y2="150" class="d-rule"/>
+              <line x1="40" y1="146" x2="40" y2="154" class="d-rule"/>
+              <line x1="210" y1="146" x2="210" y2="154" class="d-rule"/>
+              <line x1="380" y1="146" x2="380" y2="154" class="d-rule"/>
+              <line x1="550" y1="146" x2="550" y2="154" class="d-rule"/>
+              <line x1="720" y1="146" x2="720" y2="154" class="d-rule"/>
+              <text x="40" y="170" text-anchor="middle" class="d-note">0</text>
+              <text x="210" y="170" text-anchor="middle" class="d-note">25</text>
+              <text x="380" y="170" text-anchor="middle" class="d-note">50</text>
+              <text x="550" y="170" text-anchor="middle" class="d-note">75</text>
+              <text x="720" y="170" text-anchor="end" class="d-note">100 ms</text>
+            </svg>
+          </div>
+          <figcaption>按比例画的预算。每个阶段在代码里单独计时（阶段名见下面的 Server-Timing），压测时逐项对照。</figcaption>
+        </figure>
+
+        <h3>怎么做到</h3>
+        <ol>
+          <li>热路径不碰数据库：模板按“编码 + 版本”预编译成排版对象，缓存在内存；发布新版本时预热。API Key 校验查内存里的哈希表。</li>
+          <li>启动预热：加载全部字体、图标和素材，并用样例值把每个已发布模板各渲染一次，第一次调用不慢。</li>
+          <li>对象复用：字体、画笔、字形测量结果都缓存；缓冲区用 ArrayPool，避免频繁分配大对象。</li>
+          <li>条码编码缓存：同一内容的条码矩阵直接复用，批量里公共字段的条码只编码一次。</li>
+          <li>输出编码选快的参数：PNG 用低压缩等级，以体积换速度；ZPL 位图按行查表打包；PDF 的字体子集按模板版本缓存。</li>
+          <li>流式返回：生成完直接写响应流，不落盘、不二次复制。</li>
+          <li>图片字段：base64 不超过 1 MB，解码后按目标尺寸缩放并缓存。</li>
+          <li>并发控制：渲染并发数等于 CPU 核数，多出的请求排队；排队超过 2 秒返回 503，避免所有请求一起变慢。</li>
+          <li>运行时：开启 .NET Server GC 和 ReadyToRun 预编译，减少冷启动和 GC 停顿。</li>
+        </ol>
+
+        <h3>监控</h3>
+        <p>服务用 .NET 自带的指标和链路 API（OpenTelemetry 标准）采集，导出到 Prometheus，用 Grafana 看仪表盘，也可以接公司现有的监控平台。管理后台的“工作台”同步显示今日 P95、慢调用数和最慢的模板。</p>
+        <div class="tw"><table>
+          <thead><tr><th>指标</th><th>维度</th><th>用途</th></tr></thead>
+          <tbody>
+            <tr><td><code>label_render_duration_ms</code>（直方图）</td><td>接口、模板、格式、DPI、结果</td><td>P50 / P95 / P99，判断是否达标</td></tr>
+            <tr><td><code>label_render_stage_ms</code>（直方图）</td><td>阶段、格式</td><td>定位慢在哪一步</td></tr>
+            <tr><td><code>label_requests_total</code></td><td>接口、调用方、结果码</td><td>调用量和错误率</td></tr>
+            <tr><td><code>labels_generated_total</code></td><td>模板、格式</td><td>生成张数</td></tr>
+            <tr><td><code>label_inflight_requests</code> / <code>label_queue_wait_ms</code></td><td>—</td><td>并发和排队情况</td></tr>
+            <tr><td><code>label_cache_hit_ratio</code></td><td>缓存类型：模板、字体、图片、条码</td><td>缓存失效会直接拖慢生成</td></tr>
+            <tr><td>进程指标</td><td>CPU、内存、GC 停顿、线程池队列</td><td>排查资源瓶颈</td></tr>
+          </tbody>
+        </table></div>
+        <p>每个响应都带 <code>Server-Timing</code> 头，列出各阶段耗时；调用日志也记录总耗时、各阶段耗时和模板版本。单张超过 100 ms 的请求在调用日志里标记为慢调用，可以单独筛选。服务另外提供 <code>/health</code>（存活和就绪检查）和 <code>/metrics</code>（Prometheus 抓取）。</p>
+
+        <h3>告警</h3>
+        <div class="tw"><table>
+          <thead><tr><th>规则</th><th>条件</th><th>通知</th></tr></thead>
+          <tbody>
+            <tr><td>单张变慢</td><td>单张接口 P95 &gt; 100 ms，持续 5 分钟</td><td>企业微信或钉钉群</td></tr>
+            <tr><td>严重变慢</td><td>P99 &gt; 300 ms，或任一请求 &gt; 2 s</td><td>群通知，并 @ 服务负责人</td></tr>
+            <tr><td>错误率</td><td>5xx 占比 &gt; 1%，持续 5 分钟</td><td>群通知，并 @ 服务负责人</td></tr>
+            <tr><td>调用方异常</td><td>某个调用方的 4xx 占比 &gt; 20%，持续 10 分钟</td><td>通知对应业务负责人，多半是传的数据有问题</td></tr>
+            <tr><td>服务不可用</td><td>健康检查连续 3 次失败</td><td>群通知，并 @ 服务负责人</td></tr>
+            <tr><td>资源紧张</td><td>CPU &gt; 80% 持续 10 分钟，或排队等待 P95 &gt; 50 ms</td><td>群通知，考虑加实例</td></tr>
+          </tbody>
+        </table></div>
+
+        <h3>压测与防退化</h3>
+        <ul>
+          <li>基准测试：用 BenchmarkDotNet 对每个示例模板的渲染流水线做基准。CI 每次提交都跑，单张中位数比基线慢 20% 以上就不允许合并。</li>
+          <li>压测：用 k6 或 NBomber 在目标机器（4 核 8 GB）上压单张接口，50 并发时 P95 ≤ 100 ms、错误率为 0。结果写进每次发布的记录。</li>
+          <li>发布前检查：模板发布时用样例值实际渲染一次并计时，超过 50 ms 就提示设计者，常见原因是大图片、600 dpi 和 A4 满版。只提示，不阻止发布。</li>
+        </ul>
+
+        <h3>其他非功能需求</h3>
+        <ul>
+          <li>部署：初版单实例（Docker 或 Windows 服务），前期不考虑高可用；服务本身无状态，以后换 SQL Server 后可以多实例，届时模板缓存最长 60 秒过期。批量生成 PNG 或 ZIP 时并行渲染，PDF 按页顺序写入。</li>
+          <li>安全：API Key 只存哈希；请求体上限 20 MB；图片字段只收 base64，不支持传 URL，防止服务器被利用去访问内网地址；上传素材校验类型和大小，SVG 上传时清除脚本；管理操作需要登录，模板发布记录操作人。</li>
+          <li>日志与审计：每次生成写一条调用日志（调用方、模板、版本、格式、张数、总耗时、各阶段耗时、结果）；不存业务数据全文，需要补打时由调用方重新调用；模板每次发布都保留版本，可以查看和回滚。</li>
+        </ul>
+      </section>
+
+      <!-- 10 -->
+      <section id="sdk">
+        <h2><span class="n">10</span>客户端 SDK</h2>
+        <p class="lead">给业务系统和第三方的 .NET 封装 <code>LabelService.Client.dll</code>：几行代码调用生成接口，自带超时、重试和错误码映射，还有把 ZPL 直接送到标签打印机的辅助类。用 NuGet 包和 zip 两种方式发布。</p>
+
+        <h3>目标框架与依赖</h3>
+        <div class="tw"><table>
+          <thead><tr><th>目标框架</th><th>适用的调用方</th><th>额外依赖</th></tr></thead>
+          <tbody>
+            <tr><td><code>net462</code></td><td>.NET Framework 4.6.2–4.8.1 的 WinForms、WPF、ASP.NET 系统，工厂现场最常见</td><td>System.Text.Json 8.x、System.Net.Http</td></tr>
+            <tr><td><code>netstandard2.0</code></td><td>Mono 等其他 .NET 实现</td><td>System.Text.Json 8.x</td></tr>
+            <tr><td><code>net8.0</code></td><td>.NET 8、9、10</td><td>无</td></tr>
+          </tbody>
+        </table></div>
+        <p>不依赖 Newtonsoft.Json，也不依赖任何日志框架，避免和调用方已有的版本冲突；日志通过事件交给调用方自己记。</p>
+
+        <h3>公开 API</h3>
+        <div class="tw"><table>
+          <thead><tr><th>类型</th><th>主要成员</th><th>说明</th></tr></thead>
+          <tbody>
+            <tr><td><code>LabelServiceClient</code></td><td>RenderAsync / Render、RenderBatchAsync / RenderBatch、GetSchemaAsync / GetSchema、CallCompleted 事件</td><td>入口类，实现 ILabelServiceClient，调用方写单元测试时可以替换</td></tr>
+            <tr><td><code>LabelServiceClientOptions</code></td><td>BaseAddress、ApiKey、Timeout（默认 30 秒）、MaxRetries（默认 2）、RetryDelay（默认 0.5 秒）、MaxLabelsPerRequest（默认 500）、UserAgent</td><td>构造客户端时传入</td></tr>
+            <tr><td><code>RenderRequest</code></td><td>TemplateCode、Version、Format、Dpi、Mono、Copies、Data、Set(key, value)</td><td>单张请求，Set 可以链式调用</td></tr>
+            <tr><td><code>BatchRenderRequest</code></td><td>TemplateCode、Version、Format、Dpi、Output（Merge / Zip）、Common、Items、SetCommon()、AddItem()</td><td>批量请求，公共字段只传一次</td></tr>
+            <tr><td><code>LabelFile</code></td><td>Content、ContentType、FileName、Format、TemplateVersion、LabelCount、Dpi、TraceId、ServerDuration、ServerTiming、Warnings、Save()、SaveAsync()、OpenRead()、GetZplText()</td><td>生成结果，属性来自响应头</td></tr>
+            <tr><td><code>TemplateSchema</code></td><td>TemplateCode、Name、Version、Page、Fields、Sample</td><td>字段定义，演示程序用它生成录入表格</td></tr>
+            <tr><td><code>LabelServiceException</code></td><td>StatusCode、ErrorCode、Message、TraceId、Errors、IsTransient</td><td>服务端错误和网络错误都转成它</td></tr>
+            <tr><td><code>LabelErrorCodes</code></td><td>FieldRequired、TemplateNotFound 等常量</td><td>和第 8 节的错误码一一对应</td></tr>
+            <tr><td><code>Printing.NetworkPrinter</code></td><td>SendAsync(host, port, bytes)</td><td>通过 TCP 9100 把 ZPL 直接发给网络标签打印机</td></tr>
+            <tr><td><code>Printing.WindowsRawPrinter</code></td><td>Send(printerName, bytes)</td><td>以 RAW 方式写入 Windows 打印队列，用于 USB 连接的标签打印机</td></tr>
+          </tbody>
+        </table></div>
+
+        <h3>用法</h3>
+<pre><code>// 应用内共用一个实例
+var client = new LabelServiceClient(new LabelServiceClientOptions
+{
+    BaseAddress = new Uri("https://label.example.com/"),
+    ApiKey = ConfigurationManager.AppSettings["LabelApiKey"],
+});
+
+// 单张：生成 PDF 并保存
+var request = new RenderRequest("BOX_LABEL", LabelFormat.Pdf)
+    .Set("partName", "电源适配器")
+    .Set("qty", 50)
+    .Set("prodDate", DateTime.Today)
+    .Set("boxNo", "C2610080001");
+LabelFile file = await client.RenderAsync(request);
+file.Save(Path.Combine(@"D:\Labels", file.FileName));</code></pre>
+<pre><code>// 批量：一个 ZPL 文件直接发给斑马打印机
+var batch = new BatchRenderRequest("BOX_LABEL", LabelFormat.Zpl)
+    .SetCommon("partName", "电源适配器")
+    .SetCommon("batchNo", "20261008-A");
+foreach (var boxNo in boxNumbers)
+    batch.AddItem().Set("boxNo", boxNo);
+
+LabelFile zpl = await client.RenderBatchAsync(batch);
+await NetworkPrinter.SendAsync("192.168.1.50", 9100, zpl.Content);</code></pre>
+<pre><code>// 错误处理
+try
+{
+    LabelFile file = await client.RenderBatchAsync(batch);
+}
+catch (LabelServiceException ex) when (ex.ErrorCode == LabelErrorCodes.FieldRequired)
+{
+    foreach (var e in ex.Errors)            // 第几条、哪个字段
+        log.Warn($"第 {e.Index + 1} 条缺少 {e.Field}");
+}
+catch (LabelServiceException ex) when (ex.IsTransient)
+{
+    // 网络或服务暂时不可用，SDK 已经重试过；稍后再试，或者转人工补打
+}</code></pre>
+
+        <h3>行为约定</h3>
+        <ul>
+          <li>线程安全：一个 <code>LabelServiceClient</code> 可以多线程共享，建议应用内单例。内部复用 HttpClient，避免连接和端口耗尽。</li>
+          <li>同步方法：<code>Render</code> 等同步方法内部用 Task.Run 等待，在 WinForms 界面线程里调用不会死锁，但会卡住界面；界面代码建议用 async 版本。</li>
+          <li>超时与重试：单次请求默认 30 秒超时。网络错误、超时和 502、503、504 自动重试 2 次，间隔 0.5 秒、1 秒；其余 4xx 和 500 不重试。</li>
+          <li>本地预校验：模板编码为空、份数不在 1–100、批量总张数超过 500、PNG 批量没用 Zip 时，直接抛 ArgumentException，不发请求。</li>
+          <li>值转换：DateTime 转 ISO 8601（只有日期时转成 yyyy-MM-dd），byte[] 转 base64（图片字段），枚举转字符串，值为 null 的字段不发送。</li>
+          <li>请求头：自动带 X-Api-Key、User-Agent（LabelService.Client/版本号）和 X-Request-Id（每次调用一个 GUID）。服务端把 X-Request-Id 写进调用日志，双方对账用。</li>
+          <li>日志：每次调用结束触发 <code>CallCompleted</code> 事件，给出操作、模板、状态码、错误码、总耗时、服务端耗时（来自 Server-Timing）、尝试次数、requestId 和 traceId。</li>
+          <li>性能：SDK 自身的序列化和解析开销控制在 1 ms 以内；复用 HTTP 长连接，不在每次调用时重新握手。所以要求应用内只建一个客户端实例。</li>
+        </ul>
+
+        <h3>错误映射</h3>
+        <div class="tw"><table>
+          <thead><tr><th>情况</th><th>ErrorCode</th><th>自动重试</th><th>调用方怎么处理</th></tr></thead>
+          <tbody>
+            <tr><td>连不上、DNS 失败</td><td><code>NETWORK_ERROR</code></td><td>是</td><td>检查服务地址和网络</td></tr>
+            <tr><td>超过 Timeout</td><td><code>TIMEOUT</code></td><td>是</td><td>批量太大时拆批，或调大 Timeout</td></tr>
+            <tr><td>502、503、504</td><td><code>SERVICE_UNAVAILABLE</code></td><td>是</td><td>稍后再试</td></tr>
+            <tr><td>无法识别的响应（如代理返回的 HTML 错误页）</td><td><code>UNEXPECTED_RESPONSE</code></td><td>否</td><td>核对服务地址，检查中间的代理或网关</td></tr>
+            <tr><td>401</td><td><code>UNAUTHORIZED</code></td><td>否</td><td>Key 填错、被停用或已重置，找管理员</td></tr>
+            <tr><td>403</td><td><code>TEMPLATE_FORBIDDEN</code></td><td>否</td><td>在“调用方与密钥”里放开对应业务</td></tr>
+            <tr><td>404</td><td><code>TEMPLATE_NOT_FOUND</code></td><td>否</td><td>核对模板编码，确认模板已发布</td></tr>
+            <tr><td>400</td><td><code>FIELD_REQUIRED</code> 等</td><td>否</td><td>按 ex.Errors 修正数据</td></tr>
+            <tr><td>413</td><td><code>BATCH_TOO_LARGE</code></td><td>否</td><td>拆成多批</td></tr>
+            <tr><td>500</td><td><code>RENDER_FAILED</code></td><td>否</td><td>带 traceId 联系标签服务管理员</td></tr>
+          </tbody>
+        </table></div>
+
+        <h3>发布给第三方</h3>
+        <div class="tw"><table>
+          <thead><tr><th>项目</th><th>做法</th></tr></thead>
+          <tbody>
+            <tr><td>发布形式</td><td>公司私有 NuGet 源上的 <code>LabelService.Client</code> 包；不用 NuGet 的厂商发 zip，里面有 DLL、XML 注释、README 和演示程序源码</td></tr>
+            <tr><td>版本</td><td>语义化版本。1.x 只做向后兼容的改动；接口升到 /api/v2 时 SDK 升 2.0，v1 接口至少保留 12 个月</td></tr>
+            <tr><td>签名</td><td>程序集做强名称签名，DLL 和演示程序做 Authenticode 代码签名，三方可以验证来源</td></tr>
+            <tr><td>文档</td><td>XML 注释（在 IntelliSense 里能看到）、README（快速开始、错误码、常见问题）、变更记录</td></tr>
+            <tr><td>密钥</td><td>每家三方一个调用方和一把 API Key，只放开它需要的业务；Key 放配置文件或环境变量，不写进代码</td></tr>
+            <tr><td>测试环境</td><td>给三方一个测试环境地址和 <code>lbl_test_</code> 开头的测试 Key，测试环境的模板和生产隔离</td></tr>
+            <tr><td>支持</td><td>反馈问题时带上 traceId 或 X-Request-Id，服务端按它查调用日志</td></tr>
+          </tbody>
+        </table></div>
+        <h3>交付清单</h3>
+        <ul>
+          <li><code>LabelService.Client.{版本}.nupkg</code></li>
+          <li><code>LabelService.Client-{版本}.zip</code>：三个目标框架的 DLL、XML 注释、README</li>
+          <li>演示程序 LabelServiceDemo：.NET Framework 4.8 和 .NET 10 两个版本的可执行文件，以及源码</li>
+          <li>对外接口文档（第 8 节的对外版本）、测试环境地址和测试 Key</li>
+        </ul>
+        <p class="callout"><b>暂不做</b>Java、Python SDK（有需要时按同一套接口另做）；PDF 本地渲染打印（PDF 交给系统默认程序打印）；异步批量任务轮询（跟服务端二期一起做）。</p>
+      </section>
+
+      <!-- 11 -->
+      <section id="demo">
+        <h2><span class="n">11</span>调用演示程序</h2>
+        <p class="lead">演示程序 <code>LabelServiceDemo.exe</code> 用 WinForms 写，把 SDK 的用法全部做成界面。三方开发拿到后先跑通，再到“调用代码”页签复制代码。交互原型：<a href="https://claude.ai/artifact/EepYKVuibH7mbNpzrLN22n">LabelServiceDemo 原型</a>。</p>
+        <figure>
+          <div class="fig">
+            <svg viewBox="0 0 760 384" role="img" aria-labelledby="demo-t">
+              <title id="demo-t">演示程序界面：左边填参数，右边看结果</title>
+              <text x="24" y="32" class="d-title">左边填参数，右边看结果</text>
+              <rect x="24" y="48" width="712" height="312" rx="8" class="d-box"/>
+              <rect x="24" y="48" width="712" height="26" rx="8" class="d-group"/>
+              <text x="38" y="66" class="d-note">标签服务 SDK 调用演示 - LabelServiceDemo</text>
+              <rect x="40" y="86" width="250" height="64" rx="4" class="d-box"/>
+              <text x="52" y="106" class="d-name">连接设置</text>
+              <text x="52" y="124" class="d-sub">地址、API Key、超时、重试</text>
+              <text x="52" y="141" class="d-sub">内置模拟服务、模拟 503 抖动</text>
+              <rect x="40" y="160" width="250" height="100" rx="4" class="d-box"/>
+              <text x="52" y="180" class="d-name">模板与数据</text>
+              <text x="52" y="198" class="d-sub">模板编码 + 读取字段</text>
+              <line x1="52" y1="210" x2="278" y2="210" class="d-rule"/>
+              <line x1="52" y1="222" x2="278" y2="222" class="d-rule"/>
+              <line x1="52" y1="234" x2="278" y2="234" class="d-rule"/>
+              <line x1="52" y1="246" x2="278" y2="246" class="d-rule"/>
+              <line x1="130" y1="210" x2="130" y2="246" class="d-rule"/>
+              <rect x="40" y="270" width="250" height="64" rx="4" class="d-box"/>
+              <text x="52" y="290" class="d-name">生成选项</text>
+              <text x="52" y="308" class="d-sub">PNG / PDF / ZPL · DPI · 份数</text>
+              <text x="52" y="325" class="d-sub">批量条数、递增字段</text>
+              <rect x="210" y="278" width="70" height="22" rx="3" class="d-accent"/>
+              <text x="245" y="293" text-anchor="middle" class="d-sub">生成单张</text>
+              <rect x="306" y="86" width="56" height="22" rx="3" class="d-box"/>
+              <text x="334" y="101" text-anchor="middle" class="d-sub">预览</text>
+              <text x="398" y="101" text-anchor="middle" class="d-note">调用代码</text>
+              <text x="466" y="101" text-anchor="middle" class="d-note">调用日志</text>
+              <text x="534" y="101" text-anchor="middle" class="d-note">响应信息</text>
+              <rect x="306" y="108" width="414" height="226" rx="2" class="d-box"/>
+              <text x="318" y="128" class="d-note">200 OK · BOX_LABEL_20261008.png · v3 · 1 张 · 300 dpi</text>
+              <rect x="413" y="146" width="200" height="120" rx="2" class="d-paper"/>
+              <rect x="425" y="158" width="90" height="7" rx="1" class="d-lab-faint"/>
+              <rect x="425" y="174" width="70" height="5" rx="1" class="d-lab-faint"/>
+              <rect x="525" y="174" width="70" height="5" rx="1" class="d-lab-faint"/>
+              <rect x="425" y="186" width="70" height="5" rx="1" class="d-lab-faint"/>
+              <rect x="525" y="186" width="70" height="5" rx="1" class="d-lab-faint"/>
+              <g class="d-lab-ink">
+                <rect x="425" y="210" width="3" height="30"/><rect x="430" y="210" width="5" height="30"/><rect x="437" y="210" width="2" height="30"/><rect x="442" y="210" width="3" height="30"/><rect x="448" y="210" width="2" height="30"/><rect x="453" y="210" width="5" height="30"/><rect x="461" y="210" width="2" height="30"/><rect x="465" y="210" width="3" height="30"/><rect x="471" y="210" width="2" height="30"/><rect x="476" y="210" width="5" height="30"/><rect x="484" y="210" width="3" height="30"/><rect x="490" y="210" width="2" height="30"/><rect x="495" y="210" width="3" height="30"/><rect x="501" y="210" width="2" height="30"/>
+                <rect x="565" y="206" width="36" height="36" fill="none" stroke="#111111" stroke-width="1"/><rect x="565" y="206" width="11" height="11"/><rect x="590" y="206" width="11" height="11"/><rect x="565" y="231" width="11" height="11"/>
+              </g>
+              <text x="513" y="290" text-anchor="middle" class="d-note">PNG 直接预览；ZPL 显示指令和黑白效果；PDF 用默认程序打开</text>
+              <text x="513" y="312" text-anchor="middle" class="d-note">保存文件 · 用默认程序打开 · 发送到打印机</text>
+              <rect x="24" y="340" width="712" height="20" class="d-group"/>
+              <text x="38" y="354" class="d-note">RenderAsync 完成，344 ms · 内置模拟服务 · SDK 1.0.0-preview.1 · .NET Framework 4.8</text>
+            </svg>
+          </div>
+          <figcaption>界面结构。完整交互见上面的原型链接：按钮都能点，标签图片是真实渲染。</figcaption>
+        </figure>
+
+        <h3>功能</h3>
+        <div class="tw"><table>
+          <thead><tr><th>区域</th><th>功能</th><th>对应的 SDK</th></tr></thead>
+          <tbody>
+            <tr><td>连接设置</td><td>服务地址、API Key、超时、重试次数、测试连接；可以切换到内置模拟服务</td><td>LabelServiceClientOptions、GetSchemaAsync</td></tr>
+            <tr><td>模板与数据</td><td>输入模板编码读取字段，在表格里填值，必填项为空时标红</td><td>GetSchemaAsync、TemplateSchema</td></tr>
+            <tr><td>生成选项</td><td>格式、DPI、份数；批量条数和逐条递增的字段</td><td>RenderRequest、BatchRenderRequest</td></tr>
+            <tr><td>预览</td><td>PNG 直接显示，批量显示缩略图，ZPL 显示指令和黑白效果，PDF 用默认程序打开</td><td>LabelFile</td></tr>
+            <tr><td>发送到打印机</td><td>网络打印机（TCP 9100）或 Windows 打印机；PNG 按 DPI 原尺寸打印</td><td>NetworkPrinter、WindowsRawPrinter、PrintDocument</td></tr>
+            <tr><td>调用代码</td><td>按当前设置生成可以直接复制的 C# 代码，有单张和批量两种写法</td><td>—</td></tr>
+            <tr><td>调用日志</td><td>每次调用的总耗时、服务端耗时、重试次数、requestId 和 traceId；单张超过 100 ms 标为慢调用</td><td>CallCompleted 事件</td></tr>
+            <tr><td>响应信息</td><td>成功时显示 LabelFile 的属性和响应头，失败时显示 LabelServiceException 的全部字段</td><td>LabelFile、LabelServiceException</td></tr>
+            <tr><td>内置模拟服务</td><td>不连服务器也能演示；可以模拟 503 抖动，看 SDK 自动重试</td><td>自定义 HttpMessageHandler</td></tr>
+          </tbody>
+        </table></div>
+
+        <h3>工程结构</h3>
+<pre><code>LabelService/client/                    调用端，和 frontend/、backend/ 并列，单独管理
+├─ LabelService.Client.slnx
+├─ src/LabelService.Client/            SDK：net462、netstandard2.0、net8.0，不引用服务端程序集
+├─ samples/LabelService.Demo.WinForms/ 演示程序：net48、net10.0-windows
+│  └─ Mock/MockLabelServiceHandler.cs  内置模拟服务（HttpMessageHandler）
+└─ tests/LabelService.Client.Checks/   控制台检查程序：对模拟响应跑全部用例，有真实服务时再跑端到端</code></pre>
+
+        <h3>验收标准</h3>
+        <ul>
+          <li>在只装了 .NET Framework 4.8 的 Windows 10 上，双击演示程序能打开；勾选模拟服务后能生成单张和批量标签。</li>
+          <li>连上测试环境后，三种格式都能生成；ZPL 通过 9100 端口在斑马打印机上打出来，条码能扫。</li>
+          <li>缺必填字段、Key 无效、模板未发布、批量超量时，界面显示的错误码和第 8 节一致。</li>
+          <li>勾选“模拟网络抖动”时，调用日志里能看到重试 1 次后成功。</li>
+          <li>“调用代码”页签里的代码，复制到新建的 .NET Framework 4.8 和 .NET 10 项目里都能编译通过。</li>
+        </ul>
+      </section>
+
+      <!-- 12 -->
+      <section id="plan">
+        <h2><span class="n">12</span>计划与待确认</h2>
+        <p class="lead">按每周 10–15 小时的业余投入估算，初版大约 11 周。第 3 周先拿出设计器原型，给老板看绘制效果。客户端 SDK 和演示程序跟着接口一起做，试点时交给第一家对接方。</p>
+        <figure>
+          <div class="fig">
+            <svg viewBox="0 0 760 268" role="img" aria-labelledby="plan-t">
+              <title id="plan-t">开发计划：约 11 周出初版，第 3 周先看绘制效果</title>
+              <text x="24" y="32" class="d-title">约 11 周出初版，第 3 周先看绘制效果</text>
+              <text x="24" y="52" class="d-note">按每周 10–15 小时业余投入估算，开始日期待定</text>
+              <rect x="24" y="72" width="166" height="112" rx="8" class="d-accent"/>
+              <text x="40" y="98" class="d-name">M1 设计器原型</text>
+              <text x="40" y="116" class="d-note">第 1–3 周</text>
+              <text x="40" y="140" class="d-sub">拖拽绘制 7 种元素</text>
+              <text x="40" y="158" class="d-sub">吸附、对齐、撤销重做</text>
+              <text x="40" y="176" class="d-sub">模板 JSON 定稿</text>
+              <rect x="206" y="72" width="166" height="112" rx="8" class="d-box"/>
+              <text x="222" y="98" class="d-name">M2 渲染与接口</text>
+              <text x="222" y="116" class="d-note">第 4–6 周</text>
+              <text x="222" y="140" class="d-sub">PDF、PNG、ZPL 输出</text>
+              <text x="222" y="158" class="d-sub">单张、批量生成接口</text>
+              <text x="222" y="176" class="d-sub">SDK 预览版、演示程序</text>
+              <rect x="388" y="72" width="166" height="112" rx="8" class="d-box"/>
+              <text x="404" y="98" class="d-name">M3 字段与发布</text>
+              <text x="404" y="116" class="d-note">第 7–9 周</text>
+              <text x="404" y="140" class="d-sub">字段定义、JSON 样例</text>
+              <text x="404" y="158" class="d-sub">服务端预览</text>
+              <text x="404" y="176" class="d-sub">版本发布、回滚</text>
+              <rect x="570" y="72" width="166" height="112" rx="8" class="d-box"/>
+              <text x="586" y="98" class="d-name">M4 试点</text>
+              <text x="586" y="116" class="d-note">第 10–11 周</text>
+              <text x="586" y="140" class="d-sub">选一个项目试用</text>
+              <text x="586" y="158" class="d-sub">SDK 1.0 交给三方</text>
+              <text x="586" y="176" class="d-sub">压测、性能优化</text>
+              <line x1="24" y1="212" x2="736" y2="212" class="d-rule"/>
+              <path d="M198 204L206 212L198 220L190 212Z" class="d-head"/>
+              <path d="M380 204L388 212L380 220L372 212Z" class="d-head"/>
+              <path d="M728 204L736 212L728 220L720 212Z" class="d-head"/>
+              <text x="198" y="240" text-anchor="middle" class="d-sub">评审绘制体验</text>
+              <text x="380" y="240" text-anchor="middle" class="d-sub">调通 MES，单张 P95 ≤ 100 ms</text>
+              <text x="736" y="240" text-anchor="end" class="d-sub">试点上线</text>
+            </svg>
+          </div>
+          <figcaption>菱形是阶段评审点：设计器先过老板这一关，再投入后端；接口要先和一个真实业务系统调通。</figcaption>
+        </figure>
+
+        <h3>待确认问题</h3>
+        <ul class="qs">
+          <li><span class="tag">待定</span><span>前端框架：公司现有项目用 Vue 还是 React？本设计按 Vue 3 写，Konva 两种框架都支持。</span></li>
+          <li><span class="tag done">已定</span><span>数据库：初版用 SQLite，单实例部署，前期不考虑高可用（2026-10-09）。需要多实例时换 SQL Server。</span></li>
+          <li><span class="tag">待定</span><span>每天大约多少次调用？调用日志保留多久（默认 180 天）？</span></li>
+          <li><span class="tag">待定</span><span>部署环境：Linux Docker 还是 Windows 服务器？</span></li>
+          <li><span class="tag">待定</span><span>现场主要用什么品牌的标签打印机、多少 DPI？这决定 ZPL 是否够用，要不要加 TSPL。</span></li>
+          <li><span class="tag">待定</span><span>打印边界：服务只返回文件、由调用方送打印机，这个分工是否认可？</span></li>
+          <li><span class="tag">待定</span><span>A4 拼版（一页排多张不干胶标签）要不要进初版？</span></li>
+          <li><span class="tag">待定</span><span>试点选哪个项目、哪种标签？</span></li>
+          <li><span class="tag">待定</span><span>监控接入公司现有平台，还是随服务部署一套 Prometheus + Grafana？告警发到哪个群？</span></li>
+          <li><span class="tag">待定</span><span>生产服务器配置：本设计的吞吐目标按 4 核 8 GB 单实例估算，需要确认实际机器。</span></li>
+          <li><span class="tag">待定</span><span>对接的三方是否都用 .NET？如果有 Java 或 Python 系统，需要另做 SDK，还是先只给接口文档？</span></li>
+          <li><span class="tag">待定</span><span>私有 NuGet 源用哪个（Azure Artifacts、ProGet 还是自建）？代码签名证书由谁申请？</span></li>
+          <li><span class="tag">待定</span><span>SDK 给三方时的授权条款：只允许对接本公司服务使用，还是可以再分发？</span></li>
+        </ul>
+      </section>
+
+      <footer>标签生成服务设计书 · V0.6 · 2026-10-09 · 代码仓库分成前端、后端、调用端三个部分（V0.5 数据库定为 SQLite、初版单实例部署；V0.4 补充请求参数类错误码）</footer>
+    </main>
+  </div>
+</div>
+
+<script>
+(function () {
+  var NS = 'http://www.w3.org/2000/svg';
+  function el(name, attrs) {
+    var n = document.createElementNS(NS, name);
+    for (var k in attrs) n.setAttribute(k, attrs[k]);
+    return n;
+  }
+  var seed = 11;
+  function rnd() { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; }
+
+  // mm rulers around the label
+  var top = document.getElementById('rulerTop');
+  var left = document.getElementById('rulerLeft');
+  if (top && left) {
+    for (var x = 0; x <= 100; x++) {
+      var major = x % 10 === 0, mid = x % 5 === 0;
+      top.appendChild(el('line', { x1: x, x2: x, y1: major ? -3.2 : (mid ? -2.2 : -1.4), y2: -0.6, stroke: 'var(--ink-3)', 'stroke-width': major ? 0.18 : 0.1 }));
+      if (major) { var t = el('text', { x: x, y: -4.4, 'font-size': 2.2, 'text-anchor': 'middle', fill: 'var(--ink-3)' }); t.textContent = x; top.appendChild(t); }
+    }
+    for (var y = 0; y <= 60; y++) {
+      var majorY = y % 10 === 0, midY = y % 5 === 0;
+      left.appendChild(el('line', { y1: y, y2: y, x1: majorY ? -3.2 : (midY ? -2.2 : -1.4), x2: -0.6, stroke: 'var(--ink-3)', 'stroke-width': majorY ? 0.18 : 0.1 }));
+      if (majorY && y > 0) { var ty = el('text', { x: -4.2, y: y + 0.8, 'font-size': 2.2, 'text-anchor': 'end', fill: 'var(--ink-3)' }); ty.textContent = y; left.appendChild(ty); }
+    }
+  }
+
+  // decorative Code128-style bars, 0.5 mm module, inside the 64 x 16 mm barcode box
+  var bars = document.getElementById('lpBars');
+  if (bars) {
+    var bx = 4, unit = 0.5, i = 0, guard = [2, 1, 1, 2, 3, 2];
+    while (bx < 4 + 58) {
+      var w = (i < guard.length ? guard[i] : 1 + Math.floor(rnd() * 3)) * unit;
+      if (i % 2 === 0) bars.appendChild(el('rect', { x: bx.toFixed(2), y: 30, width: w, height: 12 }));
+      bx += w; i++;
+    }
+    if (i % 2 === 1) bx += unit;
+    var bt = document.getElementById('lpBarText');
+    if (bt) bt.setAttribute('x', ((4 + bx) / 2).toFixed(2));
+  }
+
+  // decorative 25 x 25 QR-style matrix, 0.8 mm modules, at (76, 30)
+  var qr = document.getElementById('lpQr');
+  if (qr) {
+    var n = 25, m = 0.8, ox = 76, oy = 30, F = [[0, 0], [0, 18], [18, 0]];
+    for (var r = 0; r < n; r++) for (var c = 0; c < n; c++) {
+      var v = -1;
+      for (var k = 0; k < 3; k++) {
+        var a = r - F[k][0], b = c - F[k][1];
+        if (a >= 0 && a < 7 && b >= 0 && b < 7) v = (a === 0 || a === 6 || b === 0 || b === 6 || (a > 1 && a < 5 && b > 1 && b < 5)) ? 1 : 0;
+      }
+      if (v < 0) v = ((r < 8 && c < 8) || (r < 8 && c > 16) || (r > 16 && c < 8)) ? 0 : (rnd() > 0.5 ? 1 : 0);
+      if (v) qr.appendChild(el('rect', { x: (ox + c * m).toFixed(2), y: (oy + r * m).toFixed(2), width: m + 0.01, height: m + 0.01 }));
+    }
+  }
+
+  // placeholder / sample toggle
+  var btn = document.getElementById('bindToggle');
+  if (btn) {
+    var showPh = false;
+    btn.addEventListener('click', function () {
+      showPh = !showPh;
+      document.querySelectorAll('#labelPreview [data-ph]').forEach(function (node) {
+        node.textContent = showPh ? node.getAttribute('data-ph') : node.getAttribute('data-val');
+      });
+      btn.textContent = showPh ? '显示样例值' : '显示占位符';
+      btn.setAttribute('aria-pressed', String(showPh));
+    });
+  }
+})();
+</script>

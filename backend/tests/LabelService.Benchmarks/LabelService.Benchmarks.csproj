@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- 渲染基准：必须用 Release 运行，命令见 docs/performance.md。 -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ServerGarbageCollection>true</ServerGarbageCollection>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\LabelService.Contracts\LabelService.Contracts.csproj" />
+    <ProjectReference Include="..\..\src\LabelService.Rendering\LabelService.Rendering.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BenchmarkDotNet" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- 基准进程在独立目录运行，模板以内嵌资源方式带上。 -->
+    <EmbeddedResource Include="..\..\samples\templates\*.json" LogicalName="templates/%(Filename)%(Extension)" />
+  </ItemGroup>
+
+</Project>

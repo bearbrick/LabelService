@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <!-- 服务端：开放 API、管理 API、鉴权、模板存储、监控。渲染逻辑只在 Rendering 里写。 -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ServerGarbageCollection>true</ServerGarbageCollection>
+    <ConcurrentGarbageCollection>true</ConcurrentGarbageCollection>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\LabelService.Contracts\LabelService.Contracts.csproj" />
+    <ProjectReference Include="..\LabelService.Rendering\LabelService.Rendering.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- SkiaSharp 的 Linux 原生库，Docker 部署需要。Windows 原生库随 SkiaSharp 包自带。 -->
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- 模板数据库（T-008）完成前，服务启动时从这里加载示例模板，版本号固定为 1。 -->
+    <Content Include="..\..\samples\templates\*.json" LinkBase="SeedTemplates" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

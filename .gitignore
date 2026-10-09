@@ -1,0 +1,66 @@
+# ---------------------------------------------------------------
+# 编译输出（backend/、client/ 的 .NET 项目）
+# ---------------------------------------------------------------
+bin/
+obj/
+publish/
+artifacts/
+TestResults/
+BenchmarkDotNet.Artifacts/
+*.nupkg
+*.snupkg
+
+# Visual Studio、Rider、VS Code 的个人设置
+.vs/
+.idea/
+*.user
+*.suo
+*.DotSettings.user
+.vscode/*
+!.vscode/extensions.json
+
+# ---------------------------------------------------------------
+# 前端（frontend/）：依赖和打包输出
+# ---------------------------------------------------------------
+node_modules/
+dist/
+coverage/
+*.local
+*.tsbuildinfo
+npm-debug.log*
+
+# ---------------------------------------------------------------
+# 运行时数据：SQLite 库、备份、日志（ADR 0003）
+# ---------------------------------------------------------------
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+backup/
+logs/
+*.log
+
+# ---------------------------------------------------------------
+# 本地配置与密钥：不进仓库
+# ---------------------------------------------------------------
+appsettings.*.local.json
+.env
+.env.*
+!.env.example
+*.pfx
+*.p12
+*.snk
+*.key
+
+# AI 助手的个人设置（共享规则写在 AGENTS.md）
+.claude/settings.local.json
+CLAUDE.local.md
+
+# 按 README 快速开始在仓库根目录生成的标签文件
+/*.png
+/*.pdf
+/*.zpl
+
+# 系统文件
+Thumbs.db
+.DS_Store

@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    客户端 SDK，发给业务系统和第三方。不引用本仓库任何项目，协议常量是后端 Contracts 的副本，由后端检查程序按文本核对一致。
+    兼容 .NET Framework 4.6.2：不要用 record、init、required、Index/Range 等需要新运行时类型的语法。
+  -->
+  <PropertyGroup>
+    <TargetFrameworks>net462;netstandard2.0;net8.0</TargetFrameworks>
+    <PackageId>LabelService.Client</PackageId>
+    <Description>标签生成服务的 .NET 客户端：生成标签文件、读取字段定义、发送到标签打印机。</Description>
+    <PackageTags>label;zpl;barcode</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' != 'net8.0'">
+    <PackageReference Include="System.Text.Json" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net462'">
+    <Reference Include="System.Net.Http" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="LabelService.Client.Checks" />
+  </ItemGroup>
+
+</Project>

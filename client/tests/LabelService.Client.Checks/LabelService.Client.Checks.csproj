@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- SDK 检查程序：对假服务端跑全部用例；设置 LABEL_SERVICE_URL 时再对真实服务跑端到端用例。运行命令见根目录 AGENTS.md。 -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\LabelService.Client\LabelService.Client.csproj" />
+  </ItemGroup>
+
+</Project>

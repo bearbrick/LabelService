@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "1.0",
+  "code": "BOX_LABEL",
+  "name": "成品箱标",
+  "page": { "width": 100, "height": 60, "dpi": 300 },
+  "fields": [
+    { "key": "partName", "name": "品名", "type": "string", "required": true, "sample": "电源适配器" },
+    { "key": "partNo", "name": "料号", "type": "string", "required": true, "sample": "3100-0123" },
+    { "key": "qty", "name": "数量", "type": "number", "required": true, "format": "0", "sample": 50 },
+    { "key": "batchNo", "name": "批次", "type": "string", "required": true, "sample": "20261008-A" },
+    { "key": "prodDate", "name": "生产日期", "type": "date", "required": false, "format": "yyyy-MM-dd", "sample": "2026-10-08" },
+    { "key": "boxNo", "name": "箱号", "type": "string", "required": true, "sample": "C2610080001" }
+  ],
+  "elements": [
+    { "id": "frame", "type": "rect", "name": "外框", "x": 1, "y": 1, "width": 98, "height": 58, "stroke": { "width": 0.4 }, "radius": 1 },
+    { "id": "e1", "type": "text", "x": 4, "y": 3, "width": 60, "height": 6,
+      "content": "XX 科技有限公司",
+      "style": { "fontFamily": "SourceHanSansSC", "fontSize": 10, "fit": "shrink", "minFontSize": 6 } },
+    { "id": "e2", "type": "text", "x": 66, "y": 3, "width": 30, "height": 6,
+      "content": "成品箱标", "style": { "fontSize": 11, "bold": true, "align": "right" } },
+    { "id": "e3", "type": "text", "x": 4, "y": 12, "width": 46, "height": 5,
+      "content": "品名：{{partName}}", "style": { "fontSize": 9, "fit": "shrink" } },
+    { "id": "e4", "type": "text", "x": 50, "y": 12, "width": 46, "height": 5,
+      "content": "数量：{{qty}} PCS", "style": { "fontSize": 9 } },
+    { "id": "e5", "type": "text", "x": 4, "y": 18, "width": 46, "height": 5,
+      "content": "批次：{{batchNo}}", "style": { "fontSize": 9 } },
+    { "id": "e6", "type": "text", "x": 50, "y": 18, "width": 46, "height": 5,
+      "content": "日期：{{prodDate:yyyy-MM-dd}}", "style": { "fontSize": 9 } },
+    { "id": "e7", "type": "line", "x": 4, "y": 25, "width": 92, "height": 0,
+      "stroke": { "width": 0.3 } },
+    { "id": "e8", "type": "barcode", "x": 4, "y": 30, "width": 64, "height": 16,
+      "symbology": "code128", "value": "{{boxNo}}", "align": "left",
+      "showText": true, "textPosition": "bottom", "textStyle": { "fontSize": 8 },
+      "minModuleDots": 2 },
+    { "id": "e9", "type": "qrcode", "x": 76, "y": 30, "width": 20, "height": 20,
+      "symbology": "qr", "value": "{{partNo}}|{{batchNo}}|{{boxNo}}", "ecLevel": "M" },
+    { "id": "e10", "type": "icon", "x": 76, "y": 52, "width": 6, "height": 6,
+      "icon": "gb191/fragile", "color": "#000000" }
+  ]
+}

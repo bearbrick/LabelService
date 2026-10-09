@@ -1,0 +1,16 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/LabelService.Contracts/LabelService.Contracts.csproj" />
+    <Project Path="src/LabelService.Rendering/LabelService.Rendering.csproj" />
+    <Project Path="src/LabelService.Server/LabelService.Server.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/LabelService.Backend.Checks/LabelService.Backend.Checks.csproj" />
+    <Project Path="tests/LabelService.Benchmarks/LabelService.Benchmarks.csproj" />
+  </Folder>
+  <Folder Name="/Solution Items/">
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Packages.props" />
+    <File Path="README.md" />
+  </Folder>
+</Solution>

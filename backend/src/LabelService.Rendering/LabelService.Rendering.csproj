@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- 渲染引擎：模板 + 数据 → 文件。只依赖 Contracts，不访问数据库、磁盘配置或网络。 -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\LabelService.Contracts\LabelService.Contracts.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="SkiaSharp" />
+    <PackageReference Include="ZXing.Net" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="LabelService.Backend.Checks" />
+    <InternalsVisibleTo Include="LabelService.Benchmarks" />
+  </ItemGroup>
+
+</Project>

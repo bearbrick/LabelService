@@ -1,0 +1,12 @@
+<Project>
+
+  <!-- 调用端（SDK、演示程序）的包版本。SDK 发给第三方，依赖越少越好，新增前先读根目录 AGENTS.md 的 R4、R8。 -->
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+
+  <ItemGroup Label="SDK（net462、netstandard2.0）">
+    <PackageVersion Include="System.Text.Json" Version="8.0.6" />
+  </ItemGroup>
+
+</Project>

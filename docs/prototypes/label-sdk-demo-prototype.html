@@ -1,0 +1,1749 @@
+<title>SDK 调用演示原型</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Noto+Sans+SC:wght@400;700&family=Noto+Serif+SC:wght@400;700&display=swap">
+<style>
+/* Layout: one Windows 11 desktop window (WinForms controls) centred on a flat desktop backdrop; the window scrolls sideways inside its own frame on narrow screens.
+   Single light look on purpose: it imitates the WinForms default theme. Accent colours follow the company's DB Studio (navy banner, blue primary button). */
+:root {
+  --desk: #dde3ea;
+  --ctl: #f0f0f0;
+  --ink: #1b1b1b;
+  --muted: #6b6f76;
+  --field-line: #7a7a7a;
+  --line: #d5d8dc;
+  --sys-blue: #0078d7;
+  --sel: #cce8ff;
+  --navy: #071f46;
+  --blue: #1555d4;
+  --ok: #107c10;
+  --bad: #c42b1c;
+  --font-ui: "Segoe UI", "Microsoft YaHei UI", "Microsoft YaHei", sans-serif;
+  --font-mono: Consolas, "Cascadia Mono", "JetBrains Mono", monospace;
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--desk); color: var(--ink); font: 12px/1.45 var(--font-ui); }
+[v-cloak] { display: none; }
+.page { padding-inline: 20px; padding-block: 18px 28px; }
+.intro { max-width: 1240px; margin: 0 auto 12px; display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: baseline; color: #3c4450; font-size: 13px; }
+.intro b { font-size: 15px; color: #102347; }
+.intro span { color: var(--muted); }
+.stage { overflow-x: auto; padding-bottom: 10px; }
+.svgi { width: 16px; height: 16px; fill: currentColor; flex: none; display: inline-block; vertical-align: middle; }
+.svgi.sm { width: 13px; height: 13px; }
+
+/* window chrome */
+.window { width: 1240px; margin: 0 auto; background: var(--ctl); border: 1px solid #b9bec5; border-radius: 8px; box-shadow: 0 18px 48px rgba(20, 30, 50, .28), 0 2px 6px rgba(20, 30, 50, .15); overflow: hidden; position: relative; display: flex; flex-direction: column; height: 860px; }
+.titlebar { height: 32px; background: #fff; display: flex; align-items: center; padding-left: 10px; gap: 8px; flex: none; user-select: none; }
+.titlebar .app-ico { width: 16px; height: 16px; border-radius: 3px; background: var(--navy); color: #fff; display: grid; place-items: center; }
+.titlebar .app-ico .svgi { width: 11px; height: 11px; }
+.titlebar .t { font-size: 12px; color: #1b1b1b; }
+.caption { margin-left: auto; display: flex; }
+.caption span { width: 46px; height: 32px; display: grid; place-items: center; color: #1b1b1b; font-size: 12px; }
+.caption span:hover { background: #e9e9e9; }
+.caption span.x:hover { background: #c42b1c; color: #fff; }
+.menubar { height: 24px; background: #fff; border-bottom: 1px solid #e4e4e4; display: flex; align-items: stretch; padding-left: 2px; flex: none; position: relative; z-index: 20; }
+.menu-item { position: relative; }
+.menu-item > button { height: 100%; border: 1px solid transparent; background: none; padding: 0 8px; font: inherit; cursor: default; color: var(--ink); }
+.menu-item > button:hover, .menu-item.open > button { background: #e5f3ff; border-color: #cce8ff; }
+.menu-drop { position: absolute; left: 0; top: 100%; min-width: 230px; background: #f9f9f9; border: 1px solid #a0a0a0; box-shadow: 2px 2px 6px rgba(0, 0, 0, .2); padding: 2px; }
+.menu-drop button { display: flex; align-items: center; gap: 10px; width: 100%; border: 1px solid transparent; background: none; padding: 3px 18px 3px 6px; font: inherit; text-align: left; cursor: default; color: var(--ink); }
+.menu-drop button:hover { background: #cce8ff; border-color: #99d1ff; }
+.menu-drop button .ico { width: 20px; display: grid; place-items: center; color: #3b4b63; }
+.menu-drop button .key { margin-left: auto; color: #6d6d6d; padding-left: 24px; }
+.menu-drop hr { border: 0; border-top: 1px solid #d7d7d7; margin: 3px 2px 3px 30px; }
+.banner { height: 54px; background: var(--navy); color: #fff; display: flex; align-items: center; gap: 12px; padding: 0 16px; flex: none; }
+.banner .svgi { width: 24px; height: 24px; }
+.banner b { font-size: 16px; font-weight: 600; }
+.banner .sub { color: #a9bddc; font-size: 12px; }
+.banner .ver { margin-left: auto; color: #aec3e7; border: 1px solid #ffffff30; border-radius: 3px; padding: 2px 7px; font-size: 11px; font-family: var(--font-mono); }
+
+/* client area */
+.client { flex: 1; min-height: 0; display: grid; grid-template-columns: 430px 5px minmax(0, 1fr); padding: 8px; gap: 0; }
+.left { display: flex; flex-direction: column; gap: 8px; min-height: 0; overflow-y: auto; padding-right: 3px; }
+.splitter { cursor: col-resize; }
+.splitter:hover { background: #dadada; }
+.right { min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+fieldset.gb { border: 1px solid #dcdcdc; margin: 0; padding: 4px 10px 10px; min-width: 0; }
+fieldset.gb legend { padding: 0 3px; color: #1b1b1b; }
+.row { display: grid; grid-template-columns: 70px minmax(0, 1fr); align-items: center; gap: 6px; margin-top: 7px; }
+.row > label { color: #1b1b1b; }
+.inline { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.inp { height: 23px; border: 1px solid var(--field-line); background: #fff; padding: 2px 5px; font: inherit; color: var(--ink); min-width: 0; width: 100%; border-radius: 0; outline: none; }
+.inp:hover { border-color: #1b1b1b; }
+.inp:focus { border-color: var(--sys-blue); }
+.inp:disabled { background: #f0f0f0; color: #8a8a8a; border-color: #cccccc; }
+select.inp { padding: 1px 2px; }
+.inp.num { width: 64px; }
+.mono { font-family: var(--font-mono); }
+.chk { display: inline-flex; align-items: center; gap: 5px; cursor: default; user-select: none; }
+.chk input { margin: 0; accent-color: var(--sys-blue); width: 13px; height: 13px; }
+.btn { height: 25px; min-width: 75px; padding: 0 10px; border: 1px solid #adadad; background: #e1e1e1; font: inherit; color: var(--ink); cursor: default; display: inline-flex; align-items: center; justify-content: center; gap: 6px; border-radius: 0; white-space: nowrap; }
+.btn:hover { background: #e5f1fb; border-color: var(--sys-blue); }
+.btn:active { background: #cce4f7; border-color: #005499; }
+.btn:focus-visible { outline: 1px dotted #000; outline-offset: -4px; }
+.btn:disabled { color: #a0a0a0; background: #cccccc; border-color: #bfbfbf; }
+.btn.primary { background: var(--blue); border-color: var(--blue); color: #fff; font-weight: 600; }
+.btn.primary:hover { background: #0d47bd; border-color: #0d47bd; }
+.btn.primary:disabled { background: #9db6e8; border-color: #9db6e8; color: #f3f6fc; }
+.btn.big { height: 32px; min-width: 120px; font-size: 13px; }
+.hint { color: var(--muted); }
+.actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 10px; }
+
+/* DataGridView */
+.dgv { border: 1px solid #a0a0a0; background: #ababab; height: 178px; overflow: auto; margin-top: 7px; }
+.dgv table { border-collapse: collapse; width: 100%; background: #fff; table-layout: fixed; }
+.dgv th { background: #fff; font-weight: 400; text-align: left; padding: 3px 5px; border-right: 1px solid #e5e5e5; border-bottom: 1px solid #a0a0a0; position: sticky; top: 0; z-index: 1; white-space: nowrap; overflow: hidden; }
+.dgv td { border-right: 1px solid #e3e3e3; border-bottom: 1px solid #e3e3e3; padding: 0 5px; height: 22px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dgv .rh { width: 18px; padding: 0; text-align: center; background: #fff; border-right: 1px solid #a0a0a0; color: #1b1b1b; font-size: 9px; }
+.dgv tr.cur td:not(.rh) { background: #f2f8ff; }
+.dgv td.val { padding: 0; }
+.dgv td.val input { width: 100%; height: 21px; border: 1px solid transparent; padding: 0 4px; font: inherit; background: transparent; outline: none; }
+.dgv td.val input:focus { border-color: var(--sys-blue); background: #fff; }
+.dgv td.req { text-align: center; }
+.dgv td.missing input { background: #fff4f4; }
+.dgv .empty-grid { background: #ababab; height: 100%; }
+
+/* TabControl */
+.tabs { display: flex; align-items: flex-end; padding-left: 2px; flex: none; }
+.tabs button { border: 1px solid #d9d9d9; border-bottom: 0; background: #f0f0f0; padding: 3px 12px 4px; margin-right: -1px; font: inherit; color: var(--ink); cursor: default; position: relative; top: 1px; display: inline-flex; gap: 6px; align-items: center; }
+.tabs button:hover { background: #d8eaf9; }
+.tabs button.on { background: #fff; padding-bottom: 6px; top: 1px; z-index: 2; }
+.tabs .badge { background: #e0e0e0; border-radius: 8px; padding: 0 6px; font-size: 10px; }
+.tabs .badge.bad { background: #fde7e9; color: var(--bad); }
+.tabpage { flex: 1; min-height: 0; background: #fff; border: 1px solid #d9d9d9; display: flex; flex-direction: column; position: relative; z-index: 1; }
+.toolstrip { display: flex; align-items: center; gap: 2px; padding: 3px 4px; background: #f5f6f7; border-bottom: 1px solid #e3e3e3; flex: none; flex-wrap: wrap; }
+.tsb { height: 24px; border: 1px solid transparent; background: none; padding: 0 7px; font: inherit; color: var(--ink); display: inline-flex; align-items: center; gap: 5px; cursor: default; }
+.tsb:hover { background: #cce8ff; border-color: #99d1ff; }
+.tsb:disabled { color: #a0a0a0; }
+.tsb:disabled:hover { background: none; border-color: transparent; }
+.ts-sep { width: 1px; height: 18px; background: #c9c9c9; margin: 0 4px; }
+.infobar { padding: 5px 8px; border-bottom: 1px solid #ececec; display: flex; flex-wrap: wrap; gap: 4px 16px; color: #3c4450; flex: none; }
+.infobar b { font-weight: 600; color: var(--ink); }
+.infobar .ok { color: var(--ok); }
+.infobar .bad { color: var(--bad); }
+.preview { flex: 1; min-height: 0; overflow: auto; background: #e9ecef; display: grid; place-items: center; padding: 16px; }
+.preview img { background: #fff; box-shadow: 0 1px 4px rgba(0, 0, 0, .3); display: block; }
+.thumbs { display: flex; gap: 8px; padding: 8px; overflow-x: auto; border-top: 1px solid #e3e3e3; background: #fafafa; flex: none; }
+.thumbs button { border: 1px solid #d0d0d0; background: #fff; padding: 4px; cursor: default; display: grid; gap: 3px; justify-items: center; font: inherit; color: #3c4450; flex: none; }
+.thumbs button.on { border-color: var(--sys-blue); background: var(--sel); }
+.thumbs img { height: 54px; display: block; }
+.empty-state { color: var(--muted); display: grid; justify-items: center; gap: 8px; text-align: center; max-width: 360px; }
+.empty-state .svgi { width: 36px; height: 36px; opacity: .35; }
+.zpl-split { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.zpl-split .preview { border-left: 1px solid #e3e3e3; }
+textarea.code { flex: 1; min-height: 0; width: 100%; border: 0; resize: none; font: 12px/1.55 var(--font-mono); padding: 8px 10px; color: #1b1b1b; background: #fff; outline: none; white-space: pre; overflow: auto; }
+.zpl-split textarea.code { font-size: 11px; white-space: pre-wrap; word-break: break-all; }
+
+/* ListView (details) */
+.lv { flex: 1; min-height: 0; overflow: auto; }
+.lv table { border-collapse: collapse; width: 100%; }
+.lv th { position: sticky; top: 0; background: #fff; font-weight: 400; text-align: left; padding: 4px 7px; border-right: 1px solid #e5e5e5; border-bottom: 1px solid #e5e5e5; white-space: nowrap; color: #4c607a; }
+.lv td { padding: 3px 7px; white-space: nowrap; border-bottom: 1px solid #f3f3f3; }
+.lv tr:hover td { background: #e5f3ff; }
+.lv tr.sel td { background: var(--sel); }
+.lv .ok { color: var(--ok); }
+.lv .bad { color: var(--bad); }
+.lv .muted { color: var(--muted); }
+.props { flex: 1; min-height: 0; overflow: auto; padding: 10px 12px; }
+.props h4 { margin: 4px 0 8px; font-size: 12px; font-weight: 600; }
+.props table { border-collapse: collapse; margin-bottom: 14px; min-width: 520px; }
+.props td { border: 1px solid #e3e3e3; padding: 3px 8px; vertical-align: top; }
+.props td:first-child { background: #f7f7f7; color: #3c4450; width: 160px; font-family: var(--font-mono); }
+.props .bad { color: var(--bad); }
+.props .ok { color: var(--ok); }
+.note-box { border: 1px solid #f0d58a; background: #fff8e1; padding: 6px 9px; margin-bottom: 10px; color: #6b4d00; }
+.err-box { border: 1px solid #f1bbbb; background: #fdf0f0; padding: 6px 9px; margin-bottom: 10px; color: #8a1f15; }
+
+/* StatusStrip */
+.statusstrip { height: 23px; display: flex; align-items: center; border-top: 1px solid #d7d7d7; background: var(--ctl); flex: none; padding-left: 6px; color: #1b1b1b; }
+.statusstrip > span { padding: 0 10px; border-right: 1px solid #c9c9c9; white-space: nowrap; }
+.statusstrip > span:first-child { flex: 1; border-right: 0; padding-left: 2px; }
+.statusstrip .bad { color: var(--bad); }
+.statusstrip .ok { color: var(--ok); }
+.marquee { width: 100px; height: 12px; border: 1px solid #bcbcbc; background: #e6e6e6; overflow: hidden; position: relative; display: inline-block; vertical-align: middle; margin-right: 8px; }
+.marquee::after { content: ""; position: absolute; top: 0; bottom: 0; width: 34px; background: #06b025; animation: mq 1.1s linear infinite; }
+@keyframes mq { from { left: -34px; } to { left: 100px; } }
+
+/* modal forms inside the window */
+.modal-veil { position: absolute; inset: 32px 0 0; background: rgba(240, 240, 240, .35); z-index: 50; display: grid; place-items: center; }
+.dlg { background: var(--ctl); border: 1px solid #8a8a8a; box-shadow: 0 10px 34px rgba(0, 0, 0, .3); width: 460px; border-radius: 6px; overflow: hidden; }
+.dlg .titlebar { height: 30px; }
+.dlg-body { padding: 12px 14px 4px; }
+.dlg-foot { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 14px 14px; }
+.msg { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 12px; align-items: start; padding: 16px 16px 6px; background: #fff; border-bottom: 1px solid #dfdfdf; }
+.msg .svgi { width: 32px; height: 32px; }
+.msg .info { color: var(--sys-blue); }
+.msg .err { color: var(--bad); }
+.msg p { margin: 0 0 10px; white-space: pre-line; }
+.toast { position: absolute; right: 16px; bottom: 34px; background: #fff; border: 1px solid #c8c8c8; box-shadow: 0 6px 20px rgba(0, 0, 0, .18); padding: 10px 14px; display: flex; gap: 10px; align-items: flex-start; z-index: 60; max-width: 380px; border-radius: 6px; }
+.toast .svgi { color: var(--ok); margin-top: 1px; }
+@media (prefers-reduced-motion: reduce) { .marquee::after { animation: none; left: 30px; } }
+</style>
+
+<div class="page">
+  <div class="intro">
+    <b>LabelServiceDemo.exe 原型</b>
+    <span>WinForms 调用演示程序，引用 LabelService.Client.dll。所有按钮都能点；调用由内置模拟服务完成，标签图片是真实渲染。</span>
+  </div>
+  <div class="stage">
+    <div class="window" id="app" v-cloak>
+      <div class="titlebar">
+        <span class="app-ico"><ui-icon name="brand"></ui-icon></span>
+        <span class="t">标签服务 SDK 调用演示 - LabelServiceDemo</span>
+        <div class="caption" aria-hidden="true"><span>&#x2014;</span><span>&#x25A2;</span><span class="x">&#x2715;</span></div>
+      </div>
+      <div class="menubar" role="menubar">
+        <div class="menu-item" :class="{open: menu === 'file'}">
+          <button type="button" @click.stop="menu = menu === 'file' ? null : 'file'">文件(F)</button>
+          <div class="menu-drop" v-if="menu === 'file'" @click.stop>
+            <button type="button" :disabled="!result" @click="openSave()"><span class="ico"><ui-icon name="upload" class="sm"></ui-icon></span>保存结果…<span class="key">Ctrl+S</span></button>
+            <button type="button" :disabled="!result" @click="openWithShell()"><span class="ico"><ui-icon name="preview" class="sm"></ui-icon></span>用默认程序打开</button>
+            <hr>
+            <button type="button" @click="menu = null; toast('原型中不会关闭窗口')"><span class="ico"></span>退出(X)<span class="key">Alt+F4</span></button>
+          </div>
+        </div>
+        <div class="menu-item" :class="{open: menu === 'tool'}">
+          <button type="button" @click.stop="menu = menu === 'tool' ? null : 'tool'">工具(T)</button>
+          <div class="menu-drop" v-if="menu === 'tool'" @click.stop>
+            <button type="button" @click="menu = null; testConnection()"><span class="ico"><ui-icon name="refresh" class="sm"></ui-icon></span>测试连接</button>
+            <button type="button" :disabled="!result" @click="openPrint()"><span class="ico"><ui-icon name="printer" class="sm"></ui-icon></span>发送到打印机…<span class="key">Ctrl+P</span></button>
+            <hr>
+            <button type="button" @click="menu = null; logs.splice(0); toast('已清空调用日志')"><span class="ico"><ui-icon name="trash" class="sm"></ui-icon></span>清空调用日志</button>
+          </div>
+        </div>
+        <div class="menu-item" :class="{open: menu === 'help'}">
+          <button type="button" @click.stop="menu = menu === 'help' ? null : 'help'">帮助(H)</button>
+          <div class="menu-drop" v-if="menu === 'help'" @click.stop>
+            <button type="button" @click="menu = null; tab = 'code'"><span class="ico"><ui-icon name="api" class="sm"></ui-icon></span>查看调用代码</button>
+            <button type="button" @click="menu = null; dialog = 'about'"><span class="ico"><ui-icon name="help" class="sm"></ui-icon></span>关于 LabelServiceDemo</button>
+          </div>
+        </div>
+      </div>
+      <div class="banner">
+        <ui-icon name="brand"></ui-icon>
+        <b>标签服务 SDK 调用演示</b>
+        <span class="sub">读取模板字段、填数据、生成标签、发送到打印机</span>
+        <span class="ver">LabelService.Client 1.0.0-preview.1 · .NET Framework 4.8</span>
+      </div>
+
+      <div class="client">
+        <div class="left">
+          <fieldset class="gb">
+            <legend>连接设置</legend>
+            <div class="row"><label for="w-url">服务地址</label><input id="w-url" class="inp mono" v-model.trim="conn.baseUrl"></div>
+            <div class="row"><label for="w-key">API Key</label>
+              <div class="inline" style="flex-wrap: nowrap"><input id="w-key" class="inp mono" :type="conn.showKey ? 'text' : 'password'" v-model.trim="conn.apiKey"><button class="btn" type="button" style="min-width: 48px" @click="conn.showKey = !conn.showKey">[[ conn.showKey ? '隐藏' : '显示' ]]</button></div>
+            </div>
+            <div class="row"><label for="w-timeout">超时（秒）</label>
+              <div class="inline"><input id="w-timeout" class="inp num" type="number" min="1" max="300" v-model.number="conn.timeout"><label for="w-retry" style="margin-left: 12px">重试次数</label><input id="w-retry" class="inp num" type="number" min="0" max="5" v-model.number="conn.retries"></div>
+            </div>
+            <div class="row"><span></span><label class="chk"><input id="w-mock" type="checkbox" v-model="conn.useMock">使用内置模拟服务（不连服务器也能演示）</label></div>
+            <div class="row" style="margin-top: 4px"><span></span><label class="chk"><input id="w-flaky" type="checkbox" v-model="conn.flaky">模拟网络抖动（首次返回 503，看自动重试）</label></div>
+            <div class="actions"><button class="btn" type="button" :disabled="busy" @click="testConnection()">测试连接</button></div>
+          </fieldset>
+
+          <fieldset class="gb">
+            <legend>模板与数据</legend>
+            <div class="row"><label for="w-tpl">模板编码</label>
+              <div class="inline" style="flex-wrap: nowrap">
+                <input id="w-tpl" class="inp mono" list="w-tpl-list" v-model.trim="tplCode" @change="schema = null">
+                <datalist id="w-tpl-list"><option v-for="t in tplList" :key="t.code" :value="t.code">[[ t.name ]]</option></datalist>
+                <button class="btn" type="button" :disabled="busy" @click="readSchema()">读取字段</button>
+              </div>
+            </div>
+            <div class="dgv">
+              <table v-if="rows.length">
+                <colgroup><col style="width: 18px"><col style="width: 90px"><col style="width: 58px"><col style="width: 68px"><col style="width: 38px"><col></colgroup>
+                <thead><tr><th class="rh"></th><th>字段</th><th>名称</th><th>类型</th><th>必填</th><th>值</th></tr></thead>
+                <tbody>
+                  <tr v-for="(r, i) in rows" :key="r.key" :class="{cur: curRow === i}">
+                    <td class="rh">[[ curRow === i ? '&#x25B6;' : '' ]]</td>
+                    <td class="mono">[[ r.key ]]</td>
+                    <td>[[ r.name ]]</td>
+                    <td class="mono">[[ r.type ]]</td>
+                    <td class="req"><input type="checkbox" :checked="r.required" disabled aria-label="必填"></td>
+                    <td class="val" :class="{missing: r.required && r.value === '' && !r.def}"><input :id="'w-v-' + r.key" v-model="r.value" :placeholder="r.def ? '默认 ' + r.def : ''" @focus="curRow = i" :aria-label="r.key + ' 的值'"></td>
+                  </tr>
+                </tbody>
+              </table>
+              <div class="empty-grid" v-else></div>
+            </div>
+            <div class="hint" style="margin-top: 5px">[[ schema ? schema.name + ' · v' + schema.version + ' · ' + schema.size + ' · ' + rows.length + ' 个字段' : '点“读取字段”从服务端取字段定义（GetSchemaAsync）' ]]</div>
+          </fieldset>
+
+          <fieldset class="gb">
+            <legend>生成选项</legend>
+            <div class="row"><span>格式</span>
+              <div class="inline" style="gap: 14px">
+                <label class="chk" v-for="f in ['png', 'pdf', 'zpl']" :key="f"><input type="radio" name="w-fmt" :value="f" v-model="opt.format">[[ f.toUpperCase() ]]</label>
+                <label for="w-dpi" style="margin-left: 10px">DPI</label>
+                <select id="w-dpi" class="inp" style="width: 104px" v-model="opt.dpi"><option value="">模板默认</option><option value="203">203</option><option value="300">300</option><option value="600">600</option></select>
+              </div>
+            </div>
+            <div class="row"><label for="w-copies">份数</label><div class="inline"><input id="w-copies" class="inp num" type="number" min="1" max="100" v-model.number="opt.copies"><span class="hint">单张生成时每张打几份（1–100）</span></div></div>
+            <div class="row"><label for="w-batch">批量条数</label>
+              <div class="inline"><input id="w-batch" class="inp num" type="number" min="1" max="600" v-model.number="opt.batchCount"><label for="w-inc" style="margin-left: 10px">递增字段</label>
+                <select id="w-inc" class="inp" style="width: 120px" v-model="opt.incKey"><option v-for="r in rows" :key="r.key" :value="r.key">[[ r.key ]]</option></select>
+              </div>
+            </div>
+            <div class="actions" style="margin-top: 12px">
+              <button class="btn big primary" type="button" :disabled="busy" @click="renderSingle()"><ui-icon name="play" class="sm"></ui-icon>生成单张</button>
+              <button class="btn big" type="button" :disabled="busy" @click="renderBatch()">批量生成 [[ opt.batchCount ]] 条</button>
+            </div>
+          </fieldset>
+        </div>
+        <div class="splitter" aria-hidden="true"></div>
+
+        <div class="right">
+          <div class="tabs" role="tablist">
+            <button type="button" role="tab" :class="{on: tab === 'preview'}" @click="tab = 'preview'">预览</button>
+            <button type="button" role="tab" :class="{on: tab === 'code'}" @click="tab = 'code'">调用代码</button>
+            <button type="button" role="tab" :class="{on: tab === 'log'}" @click="tab = 'log'">调用日志 <span class="badge">[[ logs.length ]]</span></button>
+            <button type="button" role="tab" :class="{on: tab === 'resp'}" @click="tab = 'resp'">响应信息 <span class="badge bad" v-if="error">错误</span></button>
+          </div>
+
+          <div class="tabpage" v-if="tab === 'preview'">
+            <div class="toolstrip">
+              <button class="tsb" type="button" :disabled="!result" @click="openSave()"><ui-icon name="upload" class="sm"></ui-icon>保存文件…</button>
+              <button class="tsb" type="button" :disabled="!result" @click="openWithShell()"><ui-icon name="preview" class="sm"></ui-icon>用默认程序打开</button>
+              <button class="tsb" type="button" :disabled="!result" @click="openPrint()"><ui-icon name="printer" class="sm"></ui-icon>发送到打印机…</button>
+              <span class="ts-sep"></span>
+              <label for="w-zoom" style="padding: 0 4px">缩放</label>
+              <select id="w-zoom" class="inp" style="width: 92px; height: 22px" v-model="zoom"><option value="fit">适应窗口</option><option value="1">100%</option><option value="0.5">50%</option></select>
+            </div>
+            <template v-if="result">
+              <div class="infobar">
+                <span class="ok">200 OK</span>
+                <span><b>[[ result.fileName ]]</b></span>
+                <span>[[ result.sizeText ]]</span>
+                <span>v[[ result.version ]] · [[ result.count ]] 张 · [[ result.dpi ]] dpi</span>
+                <span>[[ result.ms ]] ms<template v-if="result.attempts > 1"> · 重试 [[ result.attempts - 1 ]] 次</template></span>
+                <span class="mono hint">traceId [[ result.traceId.slice(3, 19) ]]…</span>
+              </div>
+              <div class="zpl-split" v-if="result.format === 'zpl'">
+                <textarea class="code" readonly aria-label="ZPL 文本">[[ result.zplPreview ]]</textarea>
+                <div class="preview"><div style="display: grid; gap: 6px; justify-items: center"><img :src="result.images[curImg]" :style="imgStyle" alt="ZPL 打印效果"><span class="hint">打印效果（[[ result.dpi ]] dpi 黑白位图，^GFA 指令）</span></div></div>
+              </div>
+              <div class="preview" v-else>
+                <div style="display: grid; gap: 6px; justify-items: center">
+                  <img :src="result.images[curImg]" :style="imgStyle" alt="标签预览">
+                  <span class="hint" v-if="result.format === 'pdf'">PDF 第 [[ curImg + 1 ]] 页。WinForms 里不直接显示 PDF，演示程序用“用默认程序打开”查看。</span>
+                </div>
+              </div>
+              <div class="thumbs" v-if="result.images.length > 1">
+                <button type="button" v-for="(u, i) in result.images" :key="i" :class="{on: curImg === i}" @click="curImg = i"><img :src="u" :alt="'第 ' + (i + 1) + ' 张'"><span>[[ result.labels[i] ]]</span></button>
+                <span class="hint" style="align-self: center; padding: 0 8px" v-if="result.count > result.images.length">共 [[ result.count ]] 张，预览前 [[ result.images.length ]] 张</span>
+              </div>
+            </template>
+            <div class="preview" v-else>
+              <div class="empty-state" v-if="error"><ui-icon name="alert"></ui-icon><b class="bad" style="color: var(--bad)">[[ error.status ? error.status + ' ' : '' ]][[ error.code ]]</b><span>[[ error.message ]]</span><button class="btn" type="button" @click="tab = 'resp'">查看响应信息</button></div>
+              <div class="empty-state" v-else><ui-icon name="image"></ui-icon><span>点左侧“生成单张”或“批量生成”，结果显示在这里</span></div>
+            </div>
+          </div>
+
+          <div class="tabpage" v-if="tab === 'code'">
+            <div class="toolstrip">
+              <button class="tsb" type="button" @click="copyCode()"><ui-icon name="copy" class="sm"></ui-icon>复制代码</button>
+              <span class="ts-sep"></span>
+              <label class="chk" style="padding: 0 6px"><input id="w-code-batch" type="checkbox" v-model="codeBatch">批量写法</label>
+              <span class="hint" style="padding-left: 6px">根据左侧当前设置生成，C# 7.3 起可用（.NET Framework 4.6.2+ / .NET 8+）</span>
+            </div>
+            <textarea class="code" readonly aria-label="调用代码" id="w-code">[[ codeText ]]</textarea>
+          </div>
+
+          <div class="tabpage" v-if="tab === 'log'">
+            <div class="toolstrip">
+              <button class="tsb" type="button" @click="logs.splice(0)"><ui-icon name="trash" class="sm"></ui-icon>清空</button>
+              <span class="hint" style="padding-left: 6px">来自 LabelServiceClient.CallCompleted 事件</span>
+            </div>
+            <div class="lv">
+              <table>
+                <thead><tr><th>时间</th><th>操作</th><th>模板</th><th>结果</th><th>耗时</th><th>重试</th><th>requestId</th><th>traceId</th><th>说明</th></tr></thead>
+                <tbody>
+                  <tr v-for="(l, i) in logs" :key="l.id" :class="{sel: selLog === i}" @click="selLog = i">
+                    <td class="mono">[[ l.time ]]</td><td class="mono">[[ l.op ]]</td><td class="mono">[[ l.tpl ]]</td>
+                    <td :class="l.ok ? 'ok' : 'bad'">[[ l.result ]]</td><td>[[ l.ms ]] ms</td><td>[[ l.retries ]]</td>
+                    <td class="mono muted">[[ l.requestId.slice(0, 8) ]]</td><td class="mono muted">[[ l.traceId ? l.traceId.slice(3, 15) + '…' : '—' ]]</td><td>[[ l.note ]]</td>
+                  </tr>
+                  <tr v-if="!logs.length"><td colspan="9" class="muted" style="padding: 20px; text-align: center">还没有调用记录</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="tabpage" v-if="tab === 'resp'">
+            <div class="props">
+              <template v-if="error">
+                <div class="err-box" v-if="error.clientSide"><b>请求没有发出。</b>SDK 在本地校验参数时抛出 [[ error.exType ]]，不会占用服务端配额。</div>
+                <div class="err-box" v-else><b>调用失败。</b>SDK 抛出 LabelServiceException，下面是它的属性。</div>
+                <h4>[[ error.clientSide ? error.exType : 'LabelServiceException' ]]</h4>
+                <table>
+                  <tbody>
+                    <tr v-if="!error.clientSide"><td>StatusCode</td><td>[[ error.status ]]</td></tr>
+                    <tr><td>[[ error.clientSide ? 'ParamName' : 'ErrorCode' ]]</td><td class="bad">[[ error.code ]]</td></tr>
+                    <tr><td>Message</td><td>[[ error.message ]]</td></tr>
+                    <tr v-if="!error.clientSide"><td>TraceId</td><td class="mono">[[ error.traceId || '（网络层错误，没有服务端 traceId）' ]]</td></tr>
+                    <tr v-if="!error.clientSide"><td>IsTransient</td><td>[[ error.transient ? 'true（SDK 已自动重试）' : 'false（不会重试，需要修改请求）' ]]</td></tr>
+                    <tr v-if="!error.clientSide"><td>尝试次数</td><td>[[ error.attempts ]]</td></tr>
+                  </tbody>
+                </table>
+                <template v-if="error.errors && error.errors.length">
+                  <h4>Errors（逐条错误）</h4>
+                  <table>
+                    <tbody>
+                      <tr><td>Index · Field</td><td>Code · Message</td></tr>
+                      <tr v-for="(e, i) in error.errors" :key="i"><td>[[ e.index === undefined ? '—' : e.index ]] · [[ e.field || '—' ]]</td><td><span class="bad">[[ e.code ]]</span> · [[ e.message ]]</td></tr>
+                    </tbody>
+                  </table>
+                </template>
+              </template>
+              <template v-else-if="result">
+                <div class="note-box">成功时 SDK 返回 LabelFile；这些值来自响应头和响应体。</div>
+                <h4>LabelFile</h4>
+                <table>
+                  <tbody>
+                    <tr><td>FileName</td><td>[[ result.fileName ]]</td></tr>
+                    <tr><td>ContentType</td><td>[[ result.contentType ]]</td></tr>
+                    <tr><td>Format</td><td>LabelFormat.[[ result.format.charAt(0).toUpperCase() + result.format.slice(1) ]]</td></tr>
+                    <tr><td>Content.Length</td><td>[[ result.bytes.toLocaleString() ]] 字节</td></tr>
+                    <tr><td>TemplateVersion</td><td>[[ result.version ]]</td></tr>
+                    <tr><td>LabelCount</td><td>[[ result.count ]]</td></tr>
+                    <tr><td>Dpi</td><td>[[ result.dpi ]]</td></tr>
+                    <tr><td>TraceId</td><td class="mono">[[ result.traceId ]]</td></tr>
+                    <tr><td>Warnings</td><td>[[ result.warnings.length ? result.warnings.join('；') : '（无）' ]]</td></tr>
+                  </tbody>
+                </table>
+                <h4>响应头</h4>
+                <table><tbody><tr v-for="(v, k) in result.headers" :key="k"><td>[[ k ]]</td><td class="mono">[[ v ]]</td></tr></tbody></table>
+              </template>
+              <div class="hint" v-else>还没有调用。</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="statusstrip">
+        <span :class="statusKind"><span class="marquee" v-if="busy"></span>[[ status ]]</span>
+        <span>[[ conn.useMock ? '内置模拟服务' : conn.baseUrl ]]</span>
+        <span>SDK 1.0.0-preview.1</span>
+        <span>.NET Framework 4.8</span>
+      </div>
+
+      <!-- 发送到打印机 -->
+      <div class="modal-veil" v-if="dialog === 'print'">
+        <div class="dlg" role="dialog" aria-modal="true" aria-labelledby="dlg-print-t">
+          <div class="titlebar"><span class="t" id="dlg-print-t">发送到打印机</span><div class="caption"><span class="x" @click="dialog = null">&#x2715;</span></div></div>
+          <div class="dlg-body">
+            <div class="note-box" v-if="result && result.format === 'pdf'">PDF 不能直接发给标签打印机。演示程序会用系统默认的 PDF 程序打开，再由用户打印。</div>
+            <fieldset class="gb">
+              <legend>打印方式</legend>
+              <div style="display: grid; gap: 8px; padding-top: 6px">
+                <label class="chk"><input type="radio" name="w-pm" value="net" v-model="print.mode" :disabled="!result || result.format !== 'zpl'">网络打印机（ZPL 原始数据，TCP 9100）</label>
+                <div class="inline" style="padding-left: 20px"><input id="w-host" class="inp mono" style="width: 150px" v-model.trim="print.host" :disabled="print.mode !== 'net'"><span>端口</span><input id="w-port" class="inp num" type="number" v-model.number="print.port" :disabled="print.mode !== 'net'"></div>
+                <label class="chk"><input type="radio" name="w-pm" value="win" v-model="print.mode" :disabled="!result || result.format === 'pdf'">Windows 打印机</label>
+                <div style="padding-left: 20px"><select id="w-printer" class="inp" v-model="print.printer" :disabled="print.mode !== 'win'"><option v-for="p in printers" :key="p">[[ p ]]</option></select></div>
+                <div class="hint" style="padding-left: 20px">[[ result && result.format === 'zpl' ? 'ZPL 用 WindowsRawPrinter 以 RAW 方式写入打印队列。' : 'PNG 用 PrintDocument 按 ' + (result ? result.dpi : 300) + ' dpi 原尺寸打印。' ]]</div>
+              </div>
+            </fieldset>
+          </div>
+          <div class="dlg-foot"><button class="btn primary" type="button" :disabled="!result || result.format === 'pdf'" @click="doPrint()">发送</button><button class="btn" type="button" @click="dialog = null">取消</button></div>
+        </div>
+      </div>
+
+      <!-- 保存 -->
+      <div class="modal-veil" v-if="dialog === 'save'">
+        <div class="dlg" role="dialog" aria-modal="true" aria-labelledby="dlg-save-t">
+          <div class="titlebar"><span class="t" id="dlg-save-t">保存文件</span><div class="caption"><span class="x" @click="dialog = null">&#x2715;</span></div></div>
+          <div class="dlg-body">
+            <div class="row"><label for="w-path">文件名</label><input id="w-path" class="inp mono" v-model="savePath"></div>
+            <div class="row"><span>保存类型</span><span>[[ result ? result.contentType : '' ]]</span></div>
+            <div class="hint" style="margin-top: 8px">对应 SDK 调用：file.Save(path)</div>
+          </div>
+          <div class="dlg-foot"><button class="btn primary" type="button" @click="doSave()">保存</button><button class="btn" type="button" @click="dialog = null">取消</button></div>
+        </div>
+      </div>
+
+      <!-- 关于 -->
+      <div class="modal-veil" v-if="dialog === 'about'">
+        <div class="dlg" role="dialog" aria-modal="true" aria-labelledby="dlg-about-t" style="width: 480px">
+          <div class="titlebar"><span class="t" id="dlg-about-t">关于 LabelServiceDemo</span><div class="caption"><span class="x" @click="dialog = null">&#x2715;</span></div></div>
+          <div class="msg" style="grid-template-columns: 40px minmax(0, 1fr)">
+            <span class="app-ico" style="width: 36px; height: 36px; border-radius: 7px; background: var(--navy); color: #fff; display: grid; place-items: center"><ui-icon name="brand"></ui-icon></span>
+            <div>
+              <p><b>标签服务 SDK 调用演示</b>　1.0.0-preview.1</p>
+              <p>LabelService.Client.dll 1.0.0-preview.1<br>目标框架：net462 · netstandard2.0 · net8.0<br>依赖：System.Text.Json 8.x（仅 .NET Framework 和 .NET Standard 版本）</p>
+              <p class="hint">演示程序同时提供 .NET Framework 4.8 和 .NET 10 两个版本，源码随 SDK 一起发给对接方。</p>
+            </div>
+          </div>
+          <div class="dlg-foot"><button class="btn" type="button" @click="dialog = null">确定</button></div>
+        </div>
+      </div>
+
+      <!-- 消息框 -->
+      <div class="modal-veil" v-if="msgBox">
+        <div class="dlg" role="alertdialog" aria-modal="true" aria-labelledby="dlg-msg-t" style="width: 420px">
+          <div class="titlebar"><span class="t" id="dlg-msg-t">[[ msgBox.title ]]</span><div class="caption"><span class="x" @click="msgBox = null">&#x2715;</span></div></div>
+          <div class="msg"><ui-icon :name="msgBox.err ? 'alert' : 'checkCircle'" :class="msgBox.err ? 'err' : 'info'"></ui-icon><p>[[ msgBox.text ]]</p></div>
+          <div class="dlg-foot"><button class="btn" type="button" @click="msgBox = null">确定</button></div>
+        </div>
+      </div>
+
+      <div class="toast" v-if="toastText" role="status"><ui-icon name="checkCircle"></ui-icon><span>[[ toastText ]]</span></div>
+    </div>
+  </div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.4.38/vue.global.prod.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/konva@9.3.14/konva.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bwip-js/4.5.1/bwip-js-min.js"></script>
+<script>
+/* Bootstrap Icons 1.11.3 (MIT)，与 DB Studio 使用同一套图标 */
+const UI_ICONS = {"tag":"<path d=\"M6 4.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0m-1 0a.5.5 0 1 0-1 0 .5.5 0 0 0 1 0\"/> <path d=\"M2 1h4.586a1 1 0 0 1 .707.293l7 7a1 1 0 0 1 0 1.414l-4.586 4.586a1 1 0 0 1-1.414 0l-7-7A1 1 0 0 1 1 6.586V2a1 1 0 0 1 1-1m0 5.586 7 7L13.586 9l-7-7H2z\"/>",
+  "chevL":"<path fill-rule=\"evenodd\" d=\"M11.354 1.646a.5.5 0 0 1 0 .708L5.707 8l5.647 5.646a.5.5 0 0 1-.708.708l-6-6a.5.5 0 0 1 0-.708l6-6a.5.5 0 0 1 .708 0\"/>",
+  "chevR":"<path fill-rule=\"evenodd\" d=\"M4.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L10.293 8 4.646 2.354a.5.5 0 0 1 0-.708\"/>",
+  "chevD":"<path fill-rule=\"evenodd\" d=\"M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708\"/>",
+  "pen":"<path d=\"M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z\"/> <path fill-rule=\"evenodd\" d=\"M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5z\"/>",
+  "braces":"<path d=\"M2.114 8.063V7.9c1.005-.102 1.497-.615 1.497-1.6V4.503c0-1.094.39-1.538 1.354-1.538h.273V2h-.376C3.25 2 2.49 2.759 2.49 4.352v1.524c0 1.094-.376 1.456-1.49 1.456v1.299c1.114 0 1.49.362 1.49 1.456v1.524c0 1.593.759 2.352 2.372 2.352h.376v-.964h-.273c-.964 0-1.354-.444-1.354-1.538V9.663c0-.984-.492-1.497-1.497-1.6M13.886 7.9v.163c-1.005.103-1.497.616-1.497 1.6v1.798c0 1.094-.39 1.538-1.354 1.538h-.273v.964h.376c1.613 0 2.372-.759 2.372-2.352v-1.524c0-1.094.376-1.456 1.49-1.456V7.332c-1.114 0-1.49-.362-1.49-1.456V4.352C13.51 2.759 12.75 2 11.138 2h-.376v.964h.273c.964 0 1.354.444 1.354 1.538V6.3c0 .984.492 1.497 1.497 1.6\"/>",
+  "api":"<path d=\"M10.478 1.647a.5.5 0 1 0-.956-.294l-4 13a.5.5 0 0 0 .956.294zM4.854 4.146a.5.5 0 0 1 0 .708L1.707 8l3.147 3.146a.5.5 0 0 1-.708.708l-3.5-3.5a.5.5 0 0 1 0-.708l3.5-3.5a.5.5 0 0 1 .708 0m6.292 0a.5.5 0 0 0 0 .708L14.293 8l-3.147 3.146a.5.5 0 0 0 .708.708l3.5-3.5a.5.5 0 0 0 0-.708l-3.5-3.5a.5.5 0 0 0-.708 0\"/>",
+  "history":"<path d=\"M8.515 1.019A7 7 0 0 0 8 1V0a8 8 0 0 1 .589.022zm2.004.45a7 7 0 0 0-.985-.299l.219-.976q.576.129 1.126.342zm1.37.71a7 7 0 0 0-.439-.27l.493-.87a8 8 0 0 1 .979.654l-.615.789a7 7 0 0 0-.418-.302zm1.834 1.79a7 7 0 0 0-.653-.796l.724-.69q.406.429.747.91zm.744 1.352a7 7 0 0 0-.214-.468l.893-.45a8 8 0 0 1 .45 1.088l-.95.313a7 7 0 0 0-.179-.483m.53 2.507a7 7 0 0 0-.1-1.025l.985-.17q.1.58.116 1.17zm-.131 1.538q.05-.254.081-.51l.993.123a8 8 0 0 1-.23 1.155l-.964-.267q.069-.247.12-.501m-.952 2.379q.276-.436.486-.908l.914.405q-.24.54-.555 1.038zm-.964 1.205q.183-.183.35-.378l.758.653a8 8 0 0 1-.401.432z\"/> <path d=\"M8 1a7 7 0 1 0 4.95 11.95l.707.707A8.001 8.001 0 1 1 8 0z\"/> <path d=\"M7.5 3a.5.5 0 0 1 .5.5v5.21l3.248 1.856a.5.5 0 0 1-.496.868l-3.5-2A.5.5 0 0 1 7 9V3.5a.5.5 0 0 1 .5-.5\"/>",
+  "publish":"<path fill-rule=\"evenodd\" d=\"M7.646 5.146a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1-.708.708L8.5 6.707V10.5a.5.5 0 0 1-1 0V6.707L6.354 7.854a.5.5 0 1 1-.708-.708z\"/> <path d=\"M4.406 3.342A5.53 5.53 0 0 1 8 2c2.69 0 4.923 2 5.166 4.579C14.758 6.804 16 8.137 16 9.773 16 11.569 14.502 13 12.687 13H3.781C1.708 13 0 11.366 0 9.318c0-1.763 1.266-3.223 2.942-3.593.143-.863.698-1.723 1.464-2.383m.653.757c-.757.653-1.153 1.44-1.153 2.056v.448l-.445.049C2.064 6.805 1 7.952 1 9.318 1 10.785 2.23 12 3.781 12h8.906C13.98 12 15 10.988 15 9.773c0-1.216-1.02-2.228-2.313-2.228h-.5v-.5C12.188 4.825 10.328 3 8 3a4.53 4.53 0 0 0-2.941 1.1z\"/>",
+  "ruler":"<path d=\"M1 0a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h5v-1H2v-1h4v-1H4v-1h2v-1H2v-1h4V9H4V8h2V7H2V6h4V2h1v4h1V4h1v2h1V2h1v4h1V4h1v2h1V2h1v4h1V1a1 1 0 0 0-1-1z\"/>",
+  "plus":"<path fill-rule=\"evenodd\" d=\"M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2\"/>",
+  "copy":"<path fill-rule=\"evenodd\" d=\"M4 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zm2-1a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1zM2 5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-1h1v1a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h1v1z\"/>",
+  "trash":"<path d=\"M6.5 1h3a.5.5 0 0 1 .5.5v1H6v-1a.5.5 0 0 1 .5-.5M11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3A1.5 1.5 0 0 0 5 1.5v1H1.5a.5.5 0 0 0 0 1h.538l.853 10.66A2 2 0 0 0 4.885 16h6.23a2 2 0 0 0 1.994-1.84l.853-10.66h.538a.5.5 0 0 0 0-1zm1.958 1-.846 10.58a1 1 0 0 1-.997.92h-6.23a1 1 0 0 1-.997-.92L3.042 3.5zm-7.487 1a.5.5 0 0 1 .528.47l.5 8.5a.5.5 0 0 1-.998.06L5 5.03a.5.5 0 0 1 .47-.53Zm5.058 0a.5.5 0 0 1 .47.53l-.5 8.5a.5.5 0 1 1-.998-.06l.5-8.5a.5.5 0 0 1 .528-.47M8 4.5a.5.5 0 0 1 .5.5v8.5a.5.5 0 0 1-1 0V5a.5.5 0 0 1 .5-.5\"/>",
+  "undo":"<path fill-rule=\"evenodd\" d=\"M8 3a5 5 0 1 1-4.546 2.914.5.5 0 0 0-.908-.417A6 6 0 1 0 8 2z\"/> <path d=\"M8 4.466V.534a.25.25 0 0 0-.41-.192L5.23 2.308a.25.25 0 0 0 0 .384l2.36 1.966A.25.25 0 0 0 8 4.466\"/>",
+  "redo":"<path fill-rule=\"evenodd\" d=\"M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2z\"/> <path d=\"M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466\"/>",
+  "alignL":"<path fill-rule=\"evenodd\" d=\"M1.5 1a.5.5 0 0 1 .5.5v13a.5.5 0 0 1-1 0v-13a.5.5 0 0 1 .5-.5\"/> <path d=\"M3 7a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z\"/>",
+  "alignCH":"<path d=\"M8 1a.5.5 0 0 1 .5.5V6h-1V1.5A.5.5 0 0 1 8 1m0 14a.5.5 0 0 1-.5-.5V10h1v4.5a.5.5 0 0 1-.5.5M2 7a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1z\"/>",
+  "alignR":"<path fill-rule=\"evenodd\" d=\"M14.5 1a.5.5 0 0 0-.5.5v13a.5.5 0 0 0 1 0v-13a.5.5 0 0 0-.5-.5\"/> <path d=\"M13 7a1 1 0 0 0-1-1H2a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1z\"/>",
+  "alignT":"<rect width=\"4\" height=\"12\" rx=\"1\" transform=\"matrix(1 0 0 -1 6 15)\"/> <path d=\"M1.5 2a.5.5 0 0 1 0-1zm13-1a.5.5 0 0 1 0 1zm-13 0h13v1h-13z\"/>",
+  "alignCV":"<path d=\"M6 13a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1zM1 8a.5.5 0 0 0 .5.5H6v-1H1.5A.5.5 0 0 0 1 8m14 0a.5.5 0 0 1-.5.5H10v-1h4.5a.5.5 0 0 1 .5.5\"/>",
+  "alignB":"<rect width=\"4\" height=\"12\" x=\"6\" y=\"1\" rx=\"1\"/> <path d=\"M1.5 14a.5.5 0 0 0 0 1zm13 1a.5.5 0 0 0 0-1zm-13 0h13v-1h-13z\"/>",
+  "distH":"<path fill-rule=\"evenodd\" d=\"M14.5 1a.5.5 0 0 0-.5.5v13a.5.5 0 0 0 1 0v-13a.5.5 0 0 0-.5-.5m-13 0a.5.5 0 0 0-.5.5v13a.5.5 0 0 0 1 0v-13a.5.5 0 0 0-.5-.5\"/> <path d=\"M6 13a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1z\"/>",
+  "distV":"<path fill-rule=\"evenodd\" d=\"M1 1.5a.5.5 0 0 0 .5.5h13a.5.5 0 0 0 0-1h-13a.5.5 0 0 0-.5.5m0 13a.5.5 0 0 0 .5.5h13a.5.5 0 0 0 0-1h-13a.5.5 0 0 0-.5.5\"/> <path d=\"M2 7a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1z\"/>",
+  "toFront":"<path d=\"M0 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2h2a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2H2a2 2 0 0 1-2-2zm5 10v2a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1h-2v5a2 2 0 0 1-2 2z\"/>",
+  "forward":"<path fill-rule=\"evenodd\" d=\"M8 15a.5.5 0 0 0 .5-.5V2.707l3.146 3.147a.5.5 0 0 0 .708-.708l-4-4a.5.5 0 0 0-.708 0l-4 4a.5.5 0 1 0 .708.708L7.5 2.707V14.5a.5.5 0 0 0 .5.5\"/>",
+  "backward":"<path fill-rule=\"evenodd\" d=\"M8 1a.5.5 0 0 1 .5.5v11.793l3.146-3.147a.5.5 0 0 1 .708.708l-4 4a.5.5 0 0 1-.708 0l-4-4a.5.5 0 0 1 .708-.708L7.5 13.293V1.5A.5.5 0 0 1 8 1\"/>",
+  "toBack":"<path d=\"M0 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2h2a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2H2a2 2 0 0 1-2-2zm2-1a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1z\"/>",
+  "lock":"<path d=\"M8 1a2 2 0 0 1 2 2v4H6V3a2 2 0 0 1 2-2m3 6V3a3 3 0 0 0-6 0v4a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2M5 8h6a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1\"/>",
+  "unlock":"<path d=\"M11 1a2 2 0 0 0-2 2v4a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h5V3a3 3 0 0 1 6 0v4a.5.5 0 0 1-1 0V3a2 2 0 0 0-2-2M3 8a1 1 0 0 0-1 1v5a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V9a1 1 0 0 0-1-1z\"/>",
+  "eye":"<path d=\"M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8M1.173 8a13 13 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5s3.879 1.168 5.168 2.457A13 13 0 0 1 14.828 8q-.086.13-.195.288c-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.119 12.5 8 12.5s-3.879-1.168-5.168-2.457A13 13 0 0 1 1.172 8z\"/> <path d=\"M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5M4.5 8a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0\"/>",
+  "eyeOff":"<path d=\"M13.359 11.238C15.06 9.72 16 8 16 8s-3-5.5-8-5.5a7 7 0 0 0-2.79.588l.77.771A6 6 0 0 1 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13 13 0 0 1 14.828 8q-.086.13-.195.288c-.335.48-.83 1.12-1.465 1.755q-.247.248-.517.486z\"/> <path d=\"M11.297 9.176a3.5 3.5 0 0 0-4.474-4.474l.823.823a2.5 2.5 0 0 1 2.829 2.829zm-2.943 1.299.822.822a3.5 3.5 0 0 1-4.474-4.474l.823.823a2.5 2.5 0 0 0 2.829 2.829\"/> <path d=\"M3.35 5.47q-.27.24-.518.487A13 13 0 0 0 1.172 8l.195.288c.335.48.83 1.12 1.465 1.755C4.121 11.332 5.881 12.5 8 12.5c.716 0 1.39-.133 2.02-.36l.77.772A7 7 0 0 1 8 13.5C3 13.5 0 8 0 8s.939-1.721 2.641-3.238l.708.709zm10.296 8.884-12-12 .708-.708 12 12z\"/>",
+  "grid":"<path d=\"M0 1.5A1.5 1.5 0 0 1 1.5 0h13A1.5 1.5 0 0 1 16 1.5v13a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 0 14.5zM1.5 1a.5.5 0 0 0-.5.5V5h4V1zM5 6H1v4h4zm1 4h4V6H6zm-1 1H1v3.5a.5.5 0 0 0 .5.5H5zm1 0v4h4v-4zm5 0v4h3.5a.5.5 0 0 0 .5-.5V11zm0-1h4V6h-4zm0-5h4V1.5a.5.5 0 0 0-.5-.5H11zm-1 0V1H6v4z\"/>",
+  "magnet":"<path d=\"M8 1a7 7 0 0 0-7 7v3h4V8a3 3 0 0 1 6 0v3h4V8a7 7 0 0 0-7-7m7 11h-4v3h4zM5 12H1v3h4zM0 8a8 8 0 1 1 16 0v8h-6V8a2 2 0 1 0-4 0v8H0z\"/>",
+  "zoomIn":"<path fill-rule=\"evenodd\" d=\"M6.5 12a5.5 5.5 0 1 0 0-11 5.5 5.5 0 0 0 0 11M13 6.5a6.5 6.5 0 1 1-13 0 6.5 6.5 0 0 1 13 0\"/> <path d=\"M10.344 11.742q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1 6.5 6.5 0 0 1-1.398 1.4z\"/> <path fill-rule=\"evenodd\" d=\"M6.5 3a.5.5 0 0 1 .5.5V6h2.5a.5.5 0 0 1 0 1H7v2.5a.5.5 0 0 1-1 0V7H3.5a.5.5 0 0 1 0-1H6V3.5a.5.5 0 0 1 .5-.5\"/>",
+  "zoomOut":"<path fill-rule=\"evenodd\" d=\"M6.5 12a5.5 5.5 0 1 0 0-11 5.5 5.5 0 0 0 0 11M13 6.5a6.5 6.5 0 1 1-13 0 6.5 6.5 0 0 1 13 0\"/> <path d=\"M10.344 11.742q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1 6.5 6.5 0 0 1-1.398 1.4z\"/> <path fill-rule=\"evenodd\" d=\"M3 6.5a.5.5 0 0 1 .5-.5h6a.5.5 0 0 1 0 1h-6a.5.5 0 0 1-.5-.5\"/>",
+  "fit":"<path d=\"M1.5 1a.5.5 0 0 0-.5.5v4a.5.5 0 0 1-1 0v-4A1.5 1.5 0 0 1 1.5 0h4a.5.5 0 0 1 0 1zM10 .5a.5.5 0 0 1 .5-.5h4A1.5 1.5 0 0 1 16 1.5v4a.5.5 0 0 1-1 0v-4a.5.5 0 0 0-.5-.5h-4a.5.5 0 0 1-.5-.5M.5 10a.5.5 0 0 1 .5.5v4a.5.5 0 0 0 .5.5h4a.5.5 0 0 1 0 1h-4A1.5 1.5 0 0 1 0 14.5v-4a.5.5 0 0 1 .5-.5m15 0a.5.5 0 0 1 .5.5v4a1.5 1.5 0 0 1-1.5 1.5h-4a.5.5 0 0 1 0-1h4a.5.5 0 0 0 .5-.5v-4a.5.5 0 0 1 .5-.5\"/>",
+  "preview":"<path d=\"M0 4s0-2 2-2h12s2 0 2 2v6s0 2-2 2h-4q0 1 .25 1.5H11a.5.5 0 0 1 0 1H5a.5.5 0 0 1 0-1h.75Q6 13 6 12H2s-2 0-2-2zm1.398-.855a.76.76 0 0 0-.254.302A1.5 1.5 0 0 0 1 4.01V10c0 .325.078.502.145.602q.105.156.302.254a1.5 1.5 0 0 0 .538.143L2.01 11H14c.325 0 .502-.078.602-.145a.76.76 0 0 0 .254-.302 1.5 1.5 0 0 0 .143-.538L15 9.99V4c0-.325-.078-.502-.145-.602a.76.76 0 0 0-.302-.254A1.5 1.5 0 0 0 13.99 3H2c-.325 0-.502.078-.602.145\"/>",
+  "text":"<path d=\"M12.258 3h-8.51l-.083 2.46h.479c.26-1.544.758-1.783 2.693-1.845l.424-.013v7.827c0 .663-.144.82-1.3.923v.52h4.082v-.52c-1.162-.103-1.306-.26-1.306-.923V3.602l.431.013c1.934.062 2.434.301 2.693 1.846h.479z\"/>",
+  "barcode":"<path d=\"M3 4.5a.5.5 0 0 1 1 0v7a.5.5 0 0 1-1 0zm2 0a.5.5 0 0 1 1 0v7a.5.5 0 0 1-1 0zm2 0a.5.5 0 0 1 1 0v7a.5.5 0 0 1-1 0zm2 0a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5zm3 0a.5.5 0 0 1 1 0v7a.5.5 0 0 1-1 0z\"/>",
+  "qrcode":"<path d=\"M2 2h2v2H2z\"/> <path d=\"M6 0v6H0V0zM5 1H1v4h4zM4 12H2v2h2z\"/> <path d=\"M6 10v6H0v-6zm-5 1v4h4v-4zm11-9h2v2h-2z\"/> <path d=\"M10 0v6h6V0zm5 1v4h-4V1zM8 1V0h1v2H8v2H7V1zm0 5V4h1v2zM6 8V7h1V6h1v2h1V7h5v1h-4v1H7V8zm0 0v1H2V8H1v1H0V7h3v1zm10 1h-1V7h1zm-1 0h-1v2h2v-1h-1zm-4 0h2v1h-1v1h-1zm2 3v-1h-1v1h-1v1H9v1h3v-2zm0 0h3v1h-2v1h-1zm-4-1v1h1v-2H7v1z\"/> <path d=\"M7 12h1v3h4v1H7zm9 2v2h-3v-1h2v-1z\"/>",
+  "image":"<path d=\"M6.002 5.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0\"/> <path d=\"M2.002 1a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V3a2 2 0 0 0-2-2zm12 1a1 1 0 0 1 1 1v6.5l-3.777-1.947a.5.5 0 0 0-.577.093l-3.71 3.71-2.66-1.772a.5.5 0 0 0-.63.062L1.002 12V3a1 1 0 0 1 1-1z\"/>",
+  "shapes":"<path d=\"M8 0a.5.5 0 0 1 .5.5v.514C12.625 1.238 16 4.22 16 8c0 0 0 .5-.5.5-.149 0-.352-.145-.352-.145l-.004-.004-.025-.023a3.5 3.5 0 0 0-.555-.394A3.17 3.17 0 0 0 13 7.5c-.638 0-1.178.213-1.564.434a3.5 3.5 0 0 0-.555.394l-.025.023-.003.003s-.204.146-.353.146-.352-.145-.352-.145l-.004-.004-.025-.023a3.5 3.5 0 0 0-.555-.394 3.3 3.3 0 0 0-1.064-.39V13.5H8h.5v.039l-.005.083a3 3 0 0 1-.298 1.102 2.26 2.26 0 0 1-.763.88C7.06 15.851 6.587 16 6 16s-1.061-.148-1.434-.396a2.26 2.26 0 0 1-.763-.88 3 3 0 0 1-.302-1.185v-.025l-.001-.009v-.003s0-.002.5-.002h-.5V13a.5.5 0 0 1 1 0v.506l.003.044a2 2 0 0 0 .195.726c.095.191.23.367.423.495.19.127.466.229.879.229s.689-.102.879-.229c.193-.128.328-.304.424-.495a2 2 0 0 0 .197-.77V7.544a3.3 3.3 0 0 0-1.064.39 3.5 3.5 0 0 0-.58.417l-.004.004S5.65 8.5 5.5 8.5s-.352-.145-.352-.145l-.004-.004a3.5 3.5 0 0 0-.58-.417A3.17 3.17 0 0 0 3 7.5c-.638 0-1.177.213-1.564.434a3.5 3.5 0 0 0-.58.417l-.004.004S.65 8.5.5 8.5C0 8.5 0 8 0 8c0-3.78 3.375-6.762 7.5-6.986V.5A.5.5 0 0 1 8 0M6.577 2.123c-2.833.5-4.99 2.458-5.474 4.854A4.1 4.1 0 0 1 3 6.5c.806 0 1.48.25 1.962.511a9.7 9.7 0 0 1 .344-2.358c.242-.868.64-1.765 1.271-2.53m-.615 4.93A4.16 4.16 0 0 1 8 6.5a4.16 4.16 0 0 1 2.038.553 8.7 8.7 0 0 0-.307-2.13C9.434 3.858 8.898 2.83 8 2.117c-.898.712-1.434 1.74-1.731 2.804a8.7 8.7 0 0 0-.307 2.131zm3.46-4.93c.631.765 1.03 1.662 1.272 2.53.233.833.328 1.66.344 2.358A4.14 4.14 0 0 1 13 6.5c.77 0 1.42.23 1.897.477-.484-2.396-2.641-4.355-5.474-4.854z\"/>",
+  "line":"<path fill-rule=\"evenodd\" d=\"M2 8a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11A.5.5 0 0 1 2 8\"/>",
+  "rect":"<path d=\"M14 1a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1zM2 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2z\"/>",
+  "layers":"<path d=\"M8.235 1.559a.5.5 0 0 0-.47 0l-7.5 4a.5.5 0 0 0 0 .882L3.188 8 .264 9.559a.5.5 0 0 0 0 .882l7.5 4a.5.5 0 0 0 .47 0l7.5-4a.5.5 0 0 0 0-.882L12.813 8l2.922-1.559a.5.5 0 0 0 0-.882zm3.515 7.008L14.438 10 8 13.433 1.562 10 4.25 8.567l3.515 1.874a.5.5 0 0 0 .47 0zM8 9.433 1.562 6 8 2.567 14.438 6z\"/>",
+  "x":"<path d=\"M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8z\"/>",
+  "check":"<path d=\"M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0\"/>",
+  "alert":"<path d=\"M7.938 2.016A.13.13 0 0 1 8.002 2a.13.13 0 0 1 .063.016.15.15 0 0 1 .054.057l6.857 11.667c.036.06.035.124.002.183a.2.2 0 0 1-.054.06.1.1 0 0 1-.066.017H1.146a.1.1 0 0 1-.066-.017.2.2 0 0 1-.054-.06.18.18 0 0 1 .002-.183L7.884 2.073a.15.15 0 0 1 .054-.057m1.044-.45a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767z\"/> <path d=\"M7.002 12a1 1 0 1 1 2 0 1 1 0 0 1-2 0M7.1 5.995a.905.905 0 1 1 1.8 0l-.35 3.507a.552.552 0 0 1-1.1 0z\"/>",
+  "upload":"<path d=\"M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5\"/> <path d=\"M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708z\"/>",
+  "keyboard":"<path d=\"M14 5a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zM2 4a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z\"/> <path d=\"M13 10.25a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25zm0-2a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25zm-5 0A.25.25 0 0 1 8.25 8h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 8 8.75zm2 0a.25.25 0 0 1 .25-.25h1.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-1.5a.25.25 0 0 1-.25-.25zm1 2a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25zm-5-2A.25.25 0 0 1 6.25 8h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 6 8.75zm-2 0A.25.25 0 0 1 4.25 8h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 4 8.75zm-2 0A.25.25 0 0 1 2.25 8h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 2 8.75zm11-2a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25zm-2 0a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25zm-2 0A.25.25 0 0 1 9.25 6h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 9 6.75zm-2 0A.25.25 0 0 1 7.25 6h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 7 6.75zm-2 0A.25.25 0 0 1 5.25 6h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 5 6.75zm-3 0A.25.25 0 0 1 2.25 6h1.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-1.5A.25.25 0 0 1 2 6.75zm0 4a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25zm2 0a.25.25 0 0 1 .25-.25h5.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-5.5a.25.25 0 0 1-.25-.25z\"/>",
+  "send":"<path d=\"M15.854.146a.5.5 0 0 1 .11.54l-5.819 14.547a.75.75 0 0 1-1.329.124l-3.178-4.995L.643 7.184a.75.75 0 0 1 .124-1.33L15.314.037a.5.5 0 0 1 .54.11ZM6.636 10.07l2.761 4.338L14.13 2.576zm6.787-8.201L1.591 6.602l4.339 2.76z\"/>",
+  "refresh":"<path d=\"M11.534 7h3.932a.25.25 0 0 1 .192.41l-1.966 2.36a.25.25 0 0 1-.384 0l-1.966-2.36a.25.25 0 0 1 .192-.41m-11 2h3.932a.25.25 0 0 0 .192-.41L2.692 6.23a.25.25 0 0 0-.384 0L.342 8.59A.25.25 0 0 0 .534 9\"/> <path fill-rule=\"evenodd\" d=\"M8 3c-1.552 0-2.94.707-3.857 1.818a.5.5 0 1 1-.771-.636A6.002 6.002 0 0 1 13.917 7H12.9A5 5 0 0 0 8 3M3.1 9a5.002 5.002 0 0 0 8.757 2.182.5.5 0 1 1 .771.636A6.002 6.002 0 0 1 2.083 9z\"/>",
+  "alignTextL":"<path fill-rule=\"evenodd\" d=\"M2 12.5a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5m0-3a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5m0-3a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5m0-3a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5\"/>",
+  "alignTextC":"<path fill-rule=\"evenodd\" d=\"M4 12.5a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5m-2-3a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5m2-3a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5m-2-3a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5\"/>",
+  "alignTextR":"<path fill-rule=\"evenodd\" d=\"M6 12.5a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5m-4-3a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5m4-3a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5m-4-3a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5\"/>",
+  "vTop":"<rect width=\"4\" height=\"12\" rx=\"1\" transform=\"matrix(1 0 0 -1 6 15)\"/> <path d=\"M1.5 2a.5.5 0 0 1 0-1zm13-1a.5.5 0 0 1 0 1zm-13 0h13v1h-13z\"/>",
+  "vMid":"<path d=\"M6 13a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1zM1 8a.5.5 0 0 0 .5.5H6v-1H1.5A.5.5 0 0 0 1 8m14 0a.5.5 0 0 1-.5.5H10v-1h4.5a.5.5 0 0 1 .5.5\"/>",
+  "vBot":"<rect width=\"4\" height=\"12\" x=\"6\" y=\"1\" rx=\"1\"/> <path d=\"M1.5 14a.5.5 0 0 0 0 1zm13 1a.5.5 0 0 0 0-1zm-13 0h13v-1h-13z\"/>",
+  "home":"<path d=\"M8.707 1.5a1 1 0 0 0-1.414 0L.646 8.146a.5.5 0 0 0 .708.708L2 8.207V13.5A1.5 1.5 0 0 0 3.5 15h9a1.5 1.5 0 0 0 1.5-1.5V8.207l.646.647a.5.5 0 0 0 .708-.708L13 5.793V2.5a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5v1.293zM13 7.207V13.5a.5.5 0 0 1-.5.5h-9a.5.5 0 0 1-.5-.5V7.207l5-5z\"/>",
+  "dashboard":"<path d=\"M8 4a.5.5 0 0 1 .5.5V6a.5.5 0 0 1-1 0V4.5A.5.5 0 0 1 8 4M3.732 5.732a.5.5 0 0 1 .707 0l.915.914a.5.5 0 1 1-.708.708l-.914-.915a.5.5 0 0 1 0-.707M2 10a.5.5 0 0 1 .5-.5h1.586a.5.5 0 0 1 0 1H2.5A.5.5 0 0 1 2 10m9.5 0a.5.5 0 0 1 .5-.5h1.5a.5.5 0 0 1 0 1H12a.5.5 0 0 1-.5-.5m.754-4.246a.39.39 0 0 0-.527-.02L7.547 9.31a.91.91 0 1 0 1.302 1.258l3.434-4.297a.39.39 0 0 0-.029-.518z\"/> <path fill-rule=\"evenodd\" d=\"M0 10a8 8 0 1 1 15.547 2.661c-.442 1.253-1.845 1.602-2.932 1.25C11.309 13.488 9.475 13 8 13c-1.474 0-3.31.488-4.615.911-1.087.352-2.49.003-2.932-1.25A8 8 0 0 1 0 10m8-7a7 7 0 0 0-6.603 9.329c.203.575.923.876 1.68.63C4.397 12.533 6.358 12 8 12s3.604.532 4.923.96c.757.245 1.477-.056 1.68-.631A7 7 0 0 0 8 3\"/>",
+  "folder":"<path d=\"M1 3.5A1.5 1.5 0 0 1 2.5 2h2.764c.958 0 1.76.56 2.311 1.184C7.985 3.648 8.48 4 9 4h4.5A1.5 1.5 0 0 1 15 5.5v7a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 1 12.5zM2.5 3a.5.5 0 0 0-.5.5V6h12v-.5a.5.5 0 0 0-.5-.5H9c-.964 0-1.71-.629-2.174-1.154C6.374 3.334 5.82 3 5.264 3zM14 7H2v5.5a.5.5 0 0 0 .5.5h11a.5.5 0 0 0 .5-.5z\"/>",
+  "folderOpen":"<path d=\"M1 3.5A1.5 1.5 0 0 1 2.5 2h2.764c.958 0 1.76.56 2.311 1.184C7.985 3.648 8.48 4 9 4h4.5A1.5 1.5 0 0 1 15 5.5v.64c.57.265.94.876.856 1.546l-.64 5.124A2.5 2.5 0 0 1 12.733 15H3.266a2.5 2.5 0 0 1-2.481-2.19l-.64-5.124A1.5 1.5 0 0 1 1 6.14zM2 6h12v-.5a.5.5 0 0 0-.5-.5H9c-.964 0-1.71-.629-2.174-1.154C6.374 3.334 5.82 3 5.264 3H2.5a.5.5 0 0 0-.5.5zm-.367 1a.5.5 0 0 0-.496.562l.64 5.124A1.5 1.5 0 0 0 3.266 14h9.468a1.5 1.5 0 0 0 1.489-1.314l.64-5.124A.5.5 0 0 0 14.367 7z\"/>",
+  "briefcase":"<path d=\"M6.5 1A1.5 1.5 0 0 0 5 2.5V3H1.5A1.5 1.5 0 0 0 0 4.5v8A1.5 1.5 0 0 0 1.5 14h13a1.5 1.5 0 0 0 1.5-1.5v-8A1.5 1.5 0 0 0 14.5 3H11v-.5A1.5 1.5 0 0 0 9.5 1zm0 1h3a.5.5 0 0 1 .5.5V3H6v-.5a.5.5 0 0 1 .5-.5m1.886 6.914L15 7.151V12.5a.5.5 0 0 1-.5.5h-13a.5.5 0 0 1-.5-.5V7.15l6.614 1.764a1.5 1.5 0 0 0 .772 0M1.5 4h13a.5.5 0 0 1 .5.5v1.616L8.129 7.948a.5.5 0 0 1-.258 0L1 6.116V4.5a.5.5 0 0 1 .5-.5\"/>",
+  "box":"<path d=\"M8.186 1.113a.5.5 0 0 0-.372 0L1.846 3.5l2.404.961L10.404 2zm3.564 1.426L5.596 5 8 5.961 14.154 3.5zm3.25 1.7-6.5 2.6v7.922l6.5-2.6V4.24zM7.5 14.762V6.838L1 4.239v7.923zM7.443.184a1.5 1.5 0 0 1 1.114 0l7.129 2.852A.5.5 0 0 1 16 3.5v8.662a1 1 0 0 1-.629.928l-7.185 2.874a.5.5 0 0 1-.372 0L.63 13.09a1 1 0 0 1-.63-.928V3.5a.5.5 0 0 1 .314-.464z\"/>",
+  "key":"<path d=\"M0 8a4 4 0 0 1 7.465-2H14a.5.5 0 0 1 .354.146l1.5 1.5a.5.5 0 0 1 0 .708l-1.5 1.5a.5.5 0 0 1-.708 0L13 9.207l-.646.647a.5.5 0 0 1-.708 0L11 9.207l-.646.647a.5.5 0 0 1-.708 0L9 9.207l-.646.647A.5.5 0 0 1 8 10h-.535A4 4 0 0 1 0 8m4-3a3 3 0 1 0 2.712 4.285A.5.5 0 0 1 7.163 9h.63l.853-.854a.5.5 0 0 1 .708 0l.646.647.646-.647a.5.5 0 0 1 .708 0l.646.647.646-.647a.5.5 0 0 1 .708 0l.646.647.793-.793-1-1h-6.63a.5.5 0 0 1-.451-.285A3 3 0 0 0 4 5\"/> <path d=\"M4 8a1 1 0 1 1-2 0 1 1 0 0 1 2 0\"/>",
+  "logs":"<path d=\"M5 10.5a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5m0-2a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5m0-2a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5m0-2a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5\"/> <path d=\"M3 0h10a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2v-1h1v1a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1v1H1V2a2 2 0 0 1 2-2\"/> <path d=\"M1 5v-.5a.5.5 0 0 1 1 0V5h.5a.5.5 0 0 1 0 1h-2a.5.5 0 0 1 0-1zm0 3v-.5a.5.5 0 0 1 1 0V8h.5a.5.5 0 0 1 0 1h-2a.5.5 0 0 1 0-1zm0 3v-.5a.5.5 0 0 1 1 0v.5h.5a.5.5 0 0 1 0 1h-2a.5.5 0 0 1 0-1z\"/>",
+  "activity":"<path fill-rule=\"evenodd\" d=\"M6 2a.5.5 0 0 1 .47.33L10 12.036l1.53-4.208A.5.5 0 0 1 12 7.5h3.5a.5.5 0 0 1 0 1h-3.15l-1.88 5.17a.5.5 0 0 1-.94 0L6 3.964 4.47 8.171A.5.5 0 0 1 4 8.5H.5a.5.5 0 0 1 0-1h3.15l1.88-5.17A.5.5 0 0 1 6 2\"/>",
+  "users":"<path d=\"M15 14s1 0 1-1-1-4-5-4-5 3-5 4 1 1 1 1zm-7.978-1L7 12.996c.001-.264.167-1.03.76-1.72C8.312 10.629 9.282 10 11 10c1.717 0 2.687.63 3.24 1.276.593.69.758 1.457.76 1.72l-.008.002-.014.002zM11 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4m3-2a3 3 0 1 1-6 0 3 3 0 0 1 6 0M6.936 9.28a6 6 0 0 0-1.23-.247A7 7 0 0 0 5 9c-4 0-5 3-5 4q0 1 1 1h4.216A2.24 2.24 0 0 1 5 13c0-1.01.377-2.042 1.09-2.904.243-.294.526-.569.846-.816M4.92 10A5.5 5.5 0 0 0 4 13H1c0-.26.164-1.03.76-1.724.545-.636 1.492-1.256 3.16-1.275ZM1.5 5.5a3 3 0 1 1 6 0 3 3 0 0 1-6 0m3-2a2 2 0 1 0 0 4 2 2 0 0 0 0-4\"/>",
+  "shield":"<path d=\"M5.338 1.59a61 61 0 0 0-2.837.856.48.48 0 0 0-.328.39c-.554 4.157.726 7.19 2.253 9.188a10.7 10.7 0 0 0 2.287 2.233c.346.244.652.42.893.533q.18.085.293.118a1 1 0 0 0 .101.025 1 1 0 0 0 .1-.025q.114-.034.294-.118c.24-.113.547-.29.893-.533a10.7 10.7 0 0 0 2.287-2.233c1.527-1.997 2.807-5.031 2.253-9.188a.48.48 0 0 0-.328-.39c-.651-.213-1.75-.56-2.837-.855C9.552 1.29 8.531 1.067 8 1.067c-.53 0-1.552.223-2.662.524zM5.072.56C6.157.265 7.31 0 8 0s1.843.265 2.928.56c1.11.3 2.229.655 2.887.87a1.54 1.54 0 0 1 1.044 1.262c.596 4.477-.787 7.795-2.465 9.99a11.8 11.8 0 0 1-2.517 2.453 7 7 0 0 1-1.048.625c-.28.132-.581.24-.829.24s-.548-.108-.829-.24a7 7 0 0 1-1.048-.625 11.8 11.8 0 0 1-2.517-2.453C1.928 10.487.545 7.169 1.141 2.692A1.54 1.54 0 0 1 2.185 1.43 63 63 0 0 1 5.072.56\"/> <path d=\"M10.854 5.146a.5.5 0 0 1 0 .708l-3 3a.5.5 0 0 1-.708 0l-1.5-1.5a.5.5 0 1 1 .708-.708L7.5 7.793l2.646-2.647a.5.5 0 0 1 .708 0\"/>",
+  "user":"<path d=\"M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6m2-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0m4 8c0 1-1 1-1 1H3s-1 0-1-1 1-4 6-4 6 3 6 4m-1-.004c-.001-.246-.154-.986-.832-1.664C11.516 10.68 10.289 10 8 10s-3.516.68-4.168 1.332c-.678.678-.83 1.418-.832 1.664z\"/>",
+  "logout":"<path fill-rule=\"evenodd\" d=\"M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0z\"/> <path fill-rule=\"evenodd\" d=\"M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708z\"/>",
+  "menu":"<path fill-rule=\"evenodd\" d=\"M2.5 12a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5m0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5m0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5\"/>",
+  "font":"<path d=\"m2.244 13.081.943-2.803H6.66l.944 2.803H8.86L5.54 3.75H4.322L1 13.081zm2.7-7.923L6.34 9.314H3.51l1.4-4.156zm9.146 7.027h.035v.896h1.128V8.125c0-1.51-1.114-2.345-2.646-2.345-1.736 0-2.59.916-2.666 2.174h1.108c.068-.718.595-1.19 1.517-1.19.971 0 1.518.52 1.518 1.464v.731H12.19c-1.647.007-2.522.8-2.522 2.058 0 1.319.957 2.18 2.345 2.18 1.06 0 1.716-.43 2.078-1.011zm-1.763.035c-.752 0-1.456-.397-1.456-1.244 0-.65.424-1.115 1.408-1.115h1.805v.834c0 .896-.752 1.525-1.757 1.525\"/>",
+  "play":"<path d=\"m11.596 8.697-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 0 1 0 1.393\"/>",
+  "filter":"<path d=\"M1.5 1.5A.5.5 0 0 1 2 1h12a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-.128.334L10 8.692V13.5a.5.5 0 0 1-.342.474l-3 1A.5.5 0 0 1 6 14.5V8.692L1.628 3.834A.5.5 0 0 1 1.5 3.5zm1 .5v1.308l4.372 4.858A.5.5 0 0 1 7 8.5v5.306l2-.666V8.5a.5.5 0 0 1 .128-.334L13.5 3.308V2z\"/>",
+  "clock":"<path d=\"M8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71z\"/> <path d=\"M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16m7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0\"/>",
+  "cards":"<path d=\"M1 2.5A1.5 1.5 0 0 1 2.5 1h3A1.5 1.5 0 0 1 7 2.5v3A1.5 1.5 0 0 1 5.5 7h-3A1.5 1.5 0 0 1 1 5.5zM2.5 2a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5v-3a.5.5 0 0 0-.5-.5zm6.5.5A1.5 1.5 0 0 1 10.5 1h3A1.5 1.5 0 0 1 15 2.5v3A1.5 1.5 0 0 1 13.5 7h-3A1.5 1.5 0 0 1 9 5.5zm1.5-.5a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5v-3a.5.5 0 0 0-.5-.5zM1 10.5A1.5 1.5 0 0 1 2.5 9h3A1.5 1.5 0 0 1 7 10.5v3A1.5 1.5 0 0 1 5.5 15h-3A1.5 1.5 0 0 1 1 13.5zm1.5-.5a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5v-3a.5.5 0 0 0-.5-.5zm6.5.5A1.5 1.5 0 0 1 10.5 9h3a1.5 1.5 0 0 1 1.5 1.5v3a1.5 1.5 0 0 1-1.5 1.5h-3A1.5 1.5 0 0 1 9 13.5zm1.5-.5a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5v-3a.5.5 0 0 0-.5-.5z\"/>",
+  "table":"<path d=\"M0 2a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2zm15 2h-4v3h4zm0 4h-4v3h4zm0 4h-4v3h3a1 1 0 0 0 1-1zm-5 3v-3H6v3zm-5 0v-3H1v2a1 1 0 0 0 1 1zm-4-4h4V8H1zm0-4h4V4H1zm5-3v3h4V4zm4 4H6v3h4z\"/>",
+  "search":"<path d=\"M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0\"/>",
+  "settings":"<path fill-rule=\"evenodd\" d=\"M11.5 2a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3M9.05 3a2.5 2.5 0 0 1 4.9 0H16v1h-2.05a2.5 2.5 0 0 1-4.9 0H0V3zM4.5 7a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3M2.05 8a2.5 2.5 0 0 1 4.9 0H16v1H6.95a2.5 2.5 0 0 1-4.9 0H0V8zm9.45 4a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3m-2.45 1a2.5 2.5 0 0 1 4.9 0H16v1h-2.05a2.5 2.5 0 0 1-4.9 0H0v-1z\"/>",
+  "edit":"<path d=\"M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168zM11.207 2.5 13.5 4.793 14.793 3.5 12.5 1.207zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293zm-9.761 5.175-.106.106-1.528 3.821 3.821-1.528.106-.106A.5.5 0 0 1 5 12.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.468-.325\"/>",
+  "power":"<path d=\"M7.5 1v7h1V1z\"/> <path d=\"M3 8.812a5 5 0 0 1 2.578-4.375l-.485-.874A6 6 0 1 0 11 3.616l-.501.865A5 5 0 1 1 3 8.812\"/>",
+  "brand":"<path d=\"M1.5 1a.5.5 0 0 0-.5.5v3a.5.5 0 0 1-1 0v-3A1.5 1.5 0 0 1 1.5 0h3a.5.5 0 0 1 0 1zM11 .5a.5.5 0 0 1 .5-.5h3A1.5 1.5 0 0 1 16 1.5v3a.5.5 0 0 1-1 0v-3a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 1-.5-.5M.5 11a.5.5 0 0 1 .5.5v3a.5.5 0 0 0 .5.5h3a.5.5 0 0 1 0 1h-3A1.5 1.5 0 0 1 0 14.5v-3a.5.5 0 0 1 .5-.5m15 0a.5.5 0 0 1 .5.5v3a1.5 1.5 0 0 1-1.5 1.5h-3a.5.5 0 0 1 0-1h3a.5.5 0 0 0 .5-.5v-3a.5.5 0 0 1 .5-.5M3 4.5a.5.5 0 0 1 1 0v7a.5.5 0 0 1-1 0zm2 0a.5.5 0 0 1 1 0v7a.5.5 0 0 1-1 0zm2 0a.5.5 0 0 1 1 0v7a.5.5 0 0 1-1 0zm2 0a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5zm3 0a.5.5 0 0 1 1 0v7a.5.5 0 0 1-1 0z\"/>",
+  "help":"<path d=\"M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16\"/> <path d=\"M5.255 5.786a.237.237 0 0 0 .241.247h.825c.138 0 .248-.113.266-.25.09-.656.54-1.134 1.342-1.134.686 0 1.314.343 1.314 1.168 0 .635-.374.927-.965 1.371-.673.489-1.206 1.06-1.168 1.987l.003.217a.25.25 0 0 0 .25.246h.811a.25.25 0 0 0 .25-.25v-.105c0-.718.273-.927 1.01-1.486.609-.463 1.244-.977 1.244-2.056 0-1.511-1.276-2.241-2.673-2.241-1.267 0-2.655.59-2.75 2.286m1.557 5.763c0 .533.425.927 1.01.927.609 0 1.028-.394 1.028-.927 0-.552-.42-.94-1.029-.94-.584 0-1.009.388-1.009.94\"/>",
+  "checkCircle":"<path d=\"M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16\"/> <path d=\"m10.97 4.97-.02.022-3.473 4.425-2.093-2.094a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-1.071-1.05\"/>",
+  "back":"<path fill-rule=\"evenodd\" d=\"M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8\"/>",
+  "printer":"<path d=\"M2.5 8a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1\"/> <path d=\"M5 1a2 2 0 0 0-2 2v2H2a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1v1a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-1h1a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-1V3a2 2 0 0 0-2-2zM4 3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2H4zm1 5a2 2 0 0 0-2 2v1H2a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v-1a2 2 0 0 0-2-2zm7 2v3a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1\"/>"};
+/* ================= 常量 ================= */
+const MM_PER_PT = 25.4 / 72;
+const BASE_PPMM = 96 / 25.4; // 100% = 屏幕上的实际尺寸
+const BIND_RE = /\{\{\s*([A-Za-z_]\w*)\s*(?::([^}]*))?\}\}/g;
+
+// 画布占位图用的线框图标（24 网格）
+const PH_IMAGE = 'M4 5h16v14H4z M4 16l5-5 4 4 2-2 5 5 M14 9.5a1.5 1.5 0 1 0 3 0a1.5 1.5 0 1 0-3 0';
+function mulberry32(a) { return function () { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+
+// GB/T 191 包装储运图示标志（简化示意）
+const LABEL_ICONS = {
+  fragile: { name: '易碎物品', d: 'M7 3h10l-.7 5.6a4.3 4.3 0 0 1-8.6 0z M12 12.3v7.2 M8.5 20.5h7 M11 3.2l1.4 2.4-1.6 1.3 1.4 2' },
+  up: { name: '向上', d: 'M8 18V4.5 M4.8 7.7L8 4.5l3.2 3.2 M16 18V4.5 M12.8 7.7L16 4.5l3.2 3.2 M4 20.5h16' },
+  dry: { name: '怕雨', d: 'M3.5 13a8.5 8.5 0 0 1 17 0z M12 13v5.5a2 2 0 0 1-4 0 M6 2.5l-.8 1.6 M11.2 1.5l-.8 1.6 M16.5 2.5l-.8 1.6' },
+  sun: { name: '怕晒', d: 'M8.5 12a3.5 3.5 0 1 0 7 0a3.5 3.5 0 1 0-7 0 M12 2.5V5 M12 19v2.5 M2.5 12H5 M19 12h2.5 M5.3 5.3l1.8 1.8 M16.9 16.9l1.8 1.8 M5.3 18.7l1.8-1.8 M16.9 7.1l1.8-1.8' },
+  nohook: { name: '禁用手钩', d: 'M12 3v9.5a3.5 3.5 0 1 1-3.5-3.5 M4 4l16 16 M20 4L4 20' },
+  temp: { name: '温度极限', d: 'M10 14.6V5a2 2 0 0 1 4 0v9.6a4 4 0 1 1-4 0z M12 9v8 M16.5 6h3 M16.5 10h3' },
+  stack: { name: '堆码层数极限', d: 'M4 20h16 M6 16h12v4H6z M6 12h12v4H6z M6 8h12v4H6z M12 2.5v3 M10.3 4.2L12 2.5l1.7 1.7' },
+  center: { name: '重心', d: 'M4 4h16v16H4z M12 8v8 M8 12h8 M9.5 12a2.5 2.5 0 1 0 5 0a2.5 2.5 0 1 0-5 0' },
+};
+
+const FONTS = [
+  { value: 'Noto Sans SC', label: '思源黑体' },
+  { value: 'Noto Serif SC', label: '思源宋体' },
+  { value: 'JetBrains Mono', label: '等宽字体' },
+];
+const FIELD_TYPES = [{ value: 'string' }, { value: 'number' }, { value: 'date' }, { value: 'image' }];
+const SYM_1D = [
+  { value: 'code128', label: 'Code 128' }, { value: 'code39', label: 'Code 39' }, { value: 'ean13', label: 'EAN-13' },
+  { value: 'ean8', label: 'EAN-8' }, { value: 'upca', label: 'UPC-A' }, { value: 'itf14', label: 'ITF-14' }, { value: 'gs1-128', label: 'GS1-128' },
+];
+const SYM_2D = [{ value: 'qr', label: 'QR Code' }, { value: 'datamatrix', label: 'Data Matrix' }, { value: 'pdf417', label: 'PDF417' }];
+const SYM_LABEL = Object.fromEntries([...SYM_1D, ...SYM_2D].map(s => [s.value, s.label]));
+const H_ALIGNS = [{ v: 'left', icon: 'alignTextL', label: '左对齐' }, { v: 'center', icon: 'alignTextC', label: '居中' }, { v: 'right', icon: 'alignTextR', label: '右对齐' }];
+const V_ALIGNS = [{ v: 'top', icon: 'vTop', label: '顶部' }, { v: 'middle', icon: 'vMid', label: '居中' }, { v: 'bottom', icon: 'vBot', label: '底部' }];
+const IMG_FITS = [{ v: 'contain', label: '适应' }, { v: 'cover', label: '填满' }, { v: 'stretch', label: '拉伸' }];
+const ELEMENT_TYPES = [
+  { type: 'text', label: '文本', icon: 'text' }, { type: 'barcode', label: '一维码', icon: 'barcode' },
+  { type: 'qrcode', label: '二维码', icon: 'qrcode' }, { type: 'image', label: '图片', icon: 'image' },
+  { type: 'icon', label: '图标', icon: 'shapes' }, { type: 'line', label: '线', icon: 'line' },
+  { type: 'rect', label: '矩形', icon: 'rect' },
+];
+const TYPE_ICON = Object.fromEntries(ELEMENT_TYPES.map(t => [t.type, t.icon]));
+const TYPE_LABEL = Object.fromEntries(ELEMENT_TYPES.map(t => [t.type, t.label]));
+const SHORTCUTS = [
+  ['撤销 / 重做', 'Ctrl+Z / Ctrl+Y'], ['复制 / 粘贴', 'Ctrl+C / Ctrl+V'], ['原地复制一份', 'Ctrl+D'], ['全选', 'Ctrl+A'],
+  ['删除', 'Delete'], ['微调 0.1mm / 1mm', '方向键 / Shift+方向键'], ['多选', 'Shift+单击 或 框选'], ['等比缩放', '拖控制点时按 Shift'],
+  ['编辑文本', '双击文本'], ['插入字段', '编辑时输入 {{'], ['锁定 / 解锁', 'Ctrl+L'], ['上移 / 下移一层', 'Ctrl+] / Ctrl+['],
+  ['置顶 / 置底', 'Ctrl+Shift+] / Ctrl+Shift+['], ['平移画布', '空格+拖动 或 滚轮'], ['缩放', 'Ctrl+滚轮'],
+  ['放大 / 缩小', 'Ctrl+= / Ctrl+-'], ['适应窗口 / 实际大小', 'Ctrl+0 / Ctrl+1'], ['保存', 'Ctrl+S'], ['取消选择', 'Esc'],
+];
+
+const svgUri = s => 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(s);
+const BUILTIN_ASSETS = [
+  { id: 'logo', name: '公司 Logo（示例）', builtin: true, src: svgUri('<svg xmlns="http://www.w3.org/2000/svg" width="240" height="80" viewBox="0 0 240 80"><rect x="4" y="12" width="56" height="56" rx="12" fill="#111"/><path d="M18 54l14-28 14 28z" fill="#fff"/><text x="74" y="52" font-family="Arial, Helvetica, sans-serif" font-weight="700" font-size="34" fill="#111">XX TECH</text></svg>') },
+  { id: 'qcpass', name: 'QC PASS 印章', builtin: true, src: svgUri('<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160" viewBox="0 0 80 80"><circle cx="40" cy="40" r="36" fill="none" stroke="#111" stroke-width="4"/><circle cx="40" cy="40" r="29" fill="none" stroke="#111" stroke-width="1.5"/><text x="40" y="39" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-weight="700" font-size="17" fill="#111">QC</text><text x="40" y="56" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-weight="700" font-size="13" fill="#111">PASS</text></svg>') },
+];
+
+/* ================= 工具函数 ================= */
+const uid = (p = 'e') => p + Math.random().toString(36).slice(2, 9);
+const r1 = v => Math.round((+v || 0) * 10) / 10;
+const clone = o => JSON.parse(JSON.stringify(o));
+const publicJson = (o, indent = 2) => JSON.stringify(o, (k, v) => (k.startsWith('_') ? undefined : v), indent);
+// 与属性顺序无关的比较用序列化（忽略 _ 开头的内部字段）
+function stableJson(o) {
+  const norm = v => {
+    if (Array.isArray(v)) return v.map(norm);
+    if (v && typeof v === 'object') { const out = {}; Object.keys(v).filter(k => !k.startsWith('_')).sort().forEach(k => { out[k] = norm(v[k]); }); return out; }
+    return v;
+  };
+  return JSON.stringify(norm(o));
+}
+const pad2 = n => String(n).padStart(2, '0');
+
+function fmtNumber(v, fmt) {
+  const n = Number(v);
+  if (!isFinite(n)) return String(v);
+  if (!fmt) return String(n);
+  let dec, group;
+  if (/^N\d*$/i.test(fmt)) { dec = fmt.length > 1 ? +fmt.slice(1) : 2; group = true; }
+  else { dec = (fmt.split('.')[1] || '').length; group = fmt.includes(','); }
+  const s = n.toFixed(dec);
+  if (!group) return s;
+  const [i, d] = s.split('.');
+  return i.replace(/\B(?=(\d{3})+(?!\d))/g, ',') + (d ? '.' + d : '');
+}
+function parseDate(v) {
+  if (v instanceof Date) return v;
+  const s = String(v).trim();
+  const m = /^(\d{4})-(\d{1,2})-(\d{1,2})(?:[T ](\d{1,2}):(\d{2})(?::(\d{2}))?)?/.exec(s);
+  if (!m) return null;
+  const d = new Date(+m[1], +m[2] - 1, +m[3], +(m[4] || 0), +(m[5] || 0), +(m[6] || 0));
+  return isNaN(d) ? null : d;
+}
+function fmtDate(v, fmt) {
+  const d = parseDate(v);
+  if (!d) return String(v);
+  const map = { yyyy: d.getFullYear(), yy: String(d.getFullYear()).slice(2), MM: pad2(d.getMonth() + 1), M: d.getMonth() + 1, dd: pad2(d.getDate()), d: d.getDate(), HH: pad2(d.getHours()), mm: pad2(d.getMinutes()), ss: pad2(d.getSeconds()) };
+  return (fmt || 'yyyy-MM-dd').replace(/yyyy|yy|MM|M|dd|d|HH|mm|ss/g, t => map[t]);
+}
+function fmtValue(v, type, fmt) {
+  if (v === undefined || v === null) return '';
+  if (type === 'number') return fmtNumber(v, fmt);
+  if (type === 'date') return fmtDate(v, fmt);
+  return String(v);
+}
+function keysIn(str) {
+  const out = [];
+  if (typeof str !== 'string') return out;
+  str.replace(BIND_RE, (m, k) => { out.push(k); return m; });
+  return out;
+}
+function elementBindingText(el) {
+  if (el.type === 'text') return el.content || '';
+  if (el.type === 'barcode' || el.type === 'qrcode') return el.value || '';
+  if (el.type === 'image') return el.src || '';
+  return '';
+}
+function contentKeys(elements) {
+  const s = new Set();
+  for (const el of elements) keysIn(elementBindingText(el)).forEach(k => s.add(k));
+  return s;
+}
+// mode: 'placeholder' 保留 {{key}}；'sample' 用样例值；'data' 用调用数据（缺失时用默认值）
+function resolveText(str, rc) {
+  if (typeof str !== 'string') return '';
+  if (rc.mode === 'placeholder') return str;
+  return str.replace(BIND_RE, (m, key, fmt) => {
+    const f = rc.fieldMap[key];
+    let v = rc.data ? rc.data[key] : undefined;
+    if (v === undefined || v === null || v === '') v = f ? (rc.mode === 'sample' ? f.sample : f.default) : undefined;
+    if (v === undefined || v === null || v === '') return rc.mode === 'sample' ? m : '';
+    return fmtValue(v, f ? f.type : 'string', (fmt && fmt.trim()) || (f && f.format));
+  });
+}
+const mapFields = fields => Object.fromEntries((fields || []).map(f => [f.key, f]));
+function incrementCode(s) {
+  const m = /(\d+)(?!.*\d)/.exec(String(s));
+  if (!m) return String(s) + '-2';
+  const n = String(+m[1] + 1).padStart(m[1].length, '0');
+  return s.slice(0, m.index) + n + s.slice(m.index + m[1].length);
+}
+function fmtBytes(n) { return n < 1024 ? n + ' B' : n < 1048576 ? (n / 1024).toFixed(1) + ' KB' : (n / 1048576).toFixed(2) + ' MB'; }
+
+/* ================= 元素默认值 ================= */
+function defaultTextStyle() {
+  return { fontFamily: 'Noto Sans SC', fontSize: 10, bold: false, italic: false, underline: false, color: '#000000', align: 'left', vAlign: 'middle', fit: 'none', minFontSize: 6, lineHeight: 1.2, letterSpacing: 0 };
+}
+function normalizeElement(el) {
+  const base = { rotation: 0, locked: false, hidden: false, name: TYPE_LABEL[el.type] || el.type };
+  for (const k in base) if (el[k] === undefined) el[k] = base[k];
+  if (el.type === 'text') { el.style = Object.assign(defaultTextStyle(), el.style || {}); if (el.content === undefined) el.content = ''; }
+  if (el.type === 'barcode') {
+    const d = { symbology: 'code128', value: '', align: 'left', showText: true, textPosition: 'bottom', minModuleDots: 2 };
+    for (const k in d) if (el[k] === undefined) el[k] = d[k];
+    el.textStyle = Object.assign({ fontSize: 8 }, el.textStyle || {});
+  }
+  if (el.type === 'qrcode') { if (!el.symbology) el.symbology = 'qr'; if (!el.ecLevel) el.ecLevel = 'M'; if (el.value === undefined) el.value = ''; }
+  if (el.type === 'image') { if (!el.fit) el.fit = 'contain'; if (el.mono === undefined) el.mono = false; if (!el.src) el.src = 'asset:logo'; }
+  if (el.type === 'icon') { if (!el.icon) el.icon = 'fragile'; if (!el.color) el.color = '#000000'; }
+  if (el.type === 'line' || el.type === 'rect') el.stroke = Object.assign({ width: 0.3, dash: false, color: '#000000' }, el.stroke || {});
+  if (el.type === 'rect') { if (el.radius === undefined) el.radius = 0; if (el.fill === undefined) el.fill = null; }
+  return el;
+}
+function makeElement(type, extra, fields) {
+  const firstKey = (fields || []).find(f => f.type !== 'image');
+  const sizes = { text: [32, 6], barcode: [50, 15], qrcode: [18, 18], image: [24, 8], icon: [8, 8], line: [40, 0], rect: [30, 20] };
+  const [w, h] = sizes[type];
+  const el = { id: uid(), type, x: 0, y: 0, width: w, height: h };
+  if (type === 'text') el.content = '双击编辑文本';
+  if (type === 'barcode') el.value = firstKey ? '{{' + firstKey.key + '}}' : '123456789012';
+  if (type === 'qrcode') el.value = firstKey ? '{{' + firstKey.key + '}}' : 'https://example.com/trace';
+  if (type === 'qrcode') el.symbology = 'qr';
+  if (type === 'image' && extra && extra.src && extra.src.startsWith('asset:qcpass')) { el.width = 14; el.height = 14; }
+  Object.assign(el, extra || {});
+  return normalizeElement(el);
+}
+
+/* ================= 条码编码（bwip-js raw，无图片缩放） ================= */
+const encodeCache = new Map();
+function encodeSymbol(sym, text, opts) {
+  const key = sym + '|' + text + '|' + JSON.stringify(opts || {});
+  if (encodeCache.has(key)) return encodeCache.get(key);
+  let res;
+  try {
+    const r = bwipjs.raw(sym === 'qr' ? 'qrcode' : sym, text, opts || {})[0];
+    res = { ok: true, r };
+  } catch (e) {
+    const raw = String(e && e.message || e).replace(/^bwipp\.[\w#]+:\s*/, '').replace(/^bwip-js:\s*/, '');
+    const zh = [
+      [/EAN-13 must be 12 or 13 digits/i, '必须是 12 或 13 位数字'], [/EAN-8 must be 7 or 8 digits/i, '必须是 7 或 8 位数字'],
+      [/UPC-A must be 11 or 12 digits/i, '必须是 11 或 12 位数字'], [/ITF-14 must be 13 or 14 digits/i, '必须是 13 或 14 位数字'],
+      [/must contain only digits/i, '只能包含数字'], [/check digit/i, '校验位不正确'],
+      [/Code 39 must contain only/i, '只支持大写字母、数字和 - . 空格 $ / + %'],
+      [/GS1|AI/, 'GS1 数据格式不正确，应形如 (00)069012345678901236'],
+    ].find(([re]) => re.test(raw));
+    const msg = zh ? zh[1] : raw;
+    res = { ok: false, msg: msg.length > 90 ? msg.slice(0, 90) + '…' : msg };
+  }
+  if (encodeCache.size > 400) encodeCache.clear();
+  encodeCache.set(key, res);
+  return res;
+}
+
+/* ================= 图片缓存 ================= */
+const imageCache = new Map();
+function getImage(src, mono, onReady) {
+  const key = (mono ? 'mono|' : '') + src;
+  const hit = imageCache.get(key);
+  if (hit && hit.ready) return hit.el;
+  if (hit) { if (onReady) hit.waiters.push(onReady); return null; }
+  const entry = { ready: false, el: null, waiters: onReady ? [onReady] : [] };
+  imageCache.set(key, entry);
+  const img = new Image();
+  img.onload = () => {
+    let out = img;
+    if (mono) {
+      const W = Math.min(img.naturalWidth || 300, 1600), H = Math.round(W * (img.naturalHeight || 150) / (img.naturalWidth || 300));
+      const c = document.createElement('canvas'); c.width = W; c.height = H;
+      const cx = c.getContext('2d'); cx.drawImage(img, 0, 0, W, H);
+      const d = cx.getImageData(0, 0, W, H), p = d.data;
+      for (let i = 0; i < p.length; i += 4) {
+        if (p[i + 3] < 20) continue;
+        const a = p[i + 3] / 255, lum = (0.299 * p[i] + 0.587 * p[i + 1] + 0.114 * p[i + 2]) * a + 255 * (1 - a);
+        const v = lum < 150 ? 0 : 255; p[i] = p[i + 1] = p[i + 2] = v; p[i + 3] = v === 0 ? 255 : 0;
+      }
+      cx.putImageData(d, 0, 0); out = c;
+    }
+    entry.ready = true; entry.el = out;
+    entry.waiters.splice(0).forEach(fn => fn());
+  };
+  img.onerror = () => { entry.ready = true; entry.el = null; entry.failed = true; entry.waiters.splice(0).forEach(fn => fn()); };
+  img.src = src;
+  return null;
+}
+
+/* ================= 元素绘制（设计器和输出共用） ================= */
+const MEAS = new Konva.Text({ text: '' });
+function measureText(attrs) { MEAS.setAttrs(Object.assign({ width: 'auto', height: 'auto', wrap: 'none', padding: 0 }, attrs)); return { w: MEAS.width(), h: MEAS.height() }; }
+function fontStyleOf(st) { return st.italic && st.bold ? 'italic bold' : st.italic ? 'italic' : st.bold ? 'bold' : 'normal'; }
+
+function setGeom(g, el) {
+  g.setAttrs({ x: el.x + el.width / 2, y: el.y + el.height / 2, offsetX: el.width / 2, offsetY: el.height / 2, rotation: el.rotation || 0 });
+}
+function hitRect(el) {
+  if (el.type === 'line' && el.height === 0) return { x: 0, y: -1.2, width: el.width, height: 2.4 };
+  if (el.type === 'line' && el.width === 0) return { x: -1.2, y: 0, width: 2.4, height: el.height };
+  return { x: 0, y: 0, width: Math.max(el.width, 0.5), height: Math.max(el.height, 0.5) };
+}
+function setMetric(rc, el, text, cls) { if (rc.metrics) rc.metrics[el.id] = { text, cls: cls || '' }; }
+function drawProblem(g, el, msg) {
+  const w = Math.max(el.width, 4), h = Math.max(el.height, 4);
+  g.add(new Konva.Rect({ x: 0, y: 0, width: w, height: h, fill: 'rgba(192,58,40,0.07)', stroke: '#C03A28', strokeWidth: 0.25, dash: [1, 0.6], listening: false }));
+  g.add(new Konva.Text({ x: 0.8, y: 0.8, width: w - 1.6, height: h - 1.6, text: msg, fontSize: Math.min(2.6, Math.max(1.4, h / 4)), fontFamily: 'Noto Sans SC', fill: '#C03A28', wrap: 'char', verticalAlign: 'middle', align: 'center', listening: false }));
+}
+function drawPlaceholder(g, el, label) {
+  const w = el.width, h = el.height;
+  g.add(new Konva.Rect({ x: 0, y: 0, width: w, height: h, fill: 'rgba(120,130,140,0.08)', stroke: '#8A939D', strokeWidth: 0.2, dash: [0.8, 0.6], listening: false }));
+  const s = Math.min(w, h) * 0.45;
+  g.add(new Konva.Path({ data: PH_IMAGE, x: (w - s) / 2, y: (h - s) / 2 - (label ? s * 0.18 : 0), scaleX: s / 24, scaleY: s / 24, stroke: '#8A939D', strokeWidth: 1.5, lineCap: 'round', lineJoin: 'round', listening: false }));
+  if (label && h > 6) g.add(new Konva.Text({ x: 0, y: h / 2 + s * 0.38, width: w, text: label, align: 'center', fontSize: Math.min(2.2, h / 6), fontFamily: 'JetBrains Mono', fill: '#6B747E', listening: false }));
+}
+
+function drawElement(g, el, rc) {
+  g.destroyChildren();
+  if (!rc.output) g.add(new Konva.Rect(Object.assign({ name: 'hit', fill: 'transparent' }, hitRect(el))));
+  const fn = { text: drawTextEl, barcode: drawBarcodeEl, qrcode: drawMatrixEl, image: drawImageEl, icon: drawIconEl, line: drawLineEl, rect: drawRectEl }[el.type];
+  if (fn) fn(g, el, rc);
+}
+
+function drawTextEl(g, el, rc) {
+  const st = el.style, w = el.width, h = el.height;
+  const text = resolveText(el.content, rc);
+  const fsMax = st.fontSize * MM_PER_PT;
+  const base = { text, fontFamily: st.fontFamily, fontStyle: fontStyleOf(st), letterSpacing: st.letterSpacing || 0, lineHeight: st.lineHeight || 1.2 };
+  let fs = fsMax;
+  if (st.fit === 'shrink' && text) {
+    const fits = s => { const m = measureText(Object.assign({}, base, { fontSize: s })); return m.w <= w + 1e-3 && m.h <= h + 1e-3; };
+    if (!fits(fsMax)) {
+      let lo = Math.max(1, (st.minFontSize || 4) * MM_PER_PT), hi = fsMax;
+      if (fits(lo)) { for (let i = 0; i < 14; i++) { const mid = (lo + hi) / 2; if (fits(mid)) lo = mid; else hi = mid; } }
+      fs = lo;
+    }
+  }
+  const clip = new Konva.Group({ clip: { x: 0, y: 0, width: w, height: h }, listening: false });
+  clip.add(new Konva.Text(Object.assign({}, base, {
+    x: 0, y: 0, width: w, height: h, fontSize: fs, align: st.align, verticalAlign: st.vAlign,
+    wrap: st.fit === 'wrap' ? 'char' : 'none', ellipsis: false, fill: st.color || '#000000',
+    textDecoration: st.underline ? 'underline' : '', listening: false,
+  })));
+  g.add(clip);
+  if (rc.metrics) {
+    const m = measureText(Object.assign({}, base, { fontSize: fs, width: st.fit === 'wrap' ? w : 'auto', wrap: st.fit === 'wrap' ? 'char' : 'none' }));
+    const over = (st.fit !== 'wrap' && m.w > w + 0.05) || m.h > h + 0.05;
+    if (fs < fsMax - 1e-3) setMetric(rc, el, over ? `缩到最小字号 ${st.minFontSize} pt 仍放不下，超出部分不会打印` : `已自动缩小到 ${(fs / MM_PER_PT).toFixed(1)} pt`, over ? 'bad' : '');
+    else if (over) setMetric(rc, el, '文字超出文本框，超出部分不会打印。可以改成自动换行或自动缩小。', 'bad');
+    else setMetric(rc, el, '', '');
+  }
+}
+
+function snapX(rc, el, x0) {
+  if (!rc.output || (el.rotation || 0) % 360 !== 0) return x0;
+  const dpm = rc.dpi / 25.4, abs = el.x + x0;
+  return x0 + Math.round(abs * dpm) / dpm - abs;
+}
+
+function drawBarcodeEl(g, el, rc) {
+  const w = el.width, h = el.height;
+  const bars = resolveText(el.value, rc.mode === 'placeholder' ? Object.assign({}, rc, { mode: 'sample' }) : rc);
+  const human = rc.mode === 'placeholder' ? el.value : bars;
+  if (!bars || BIND_RE.test(bars)) { BIND_RE.lastIndex = 0; drawProblem(g, el, bars ? '字段没有样例值，无法预览条码' : '条码内容为空'); setMetric(rc, el, '内容为空或缺少样例值', 'bad'); return; }
+  BIND_RE.lastIndex = 0;
+  const enc = encodeSymbol(el.symbology, bars, {});
+  if (!enc.ok) {
+    drawProblem(g, el, `内容不符合 ${SYM_LABEL[el.symbology]}：${enc.msg}`);
+    setMetric(rc, el, `内容“${bars}”不符合 ${SYM_LABEL[el.symbology]} 规则：${enc.msg}`, 'bad');
+    if (rc.errors) rc.errors.push({ code: 'BARCODE_INVALID', el: el.name, msg: `${el.name}：内容不符合 ${SYM_LABEL[el.symbology]}（${enc.msg}）` });
+    return;
+  }
+  const sbs = enc.r.sbs || [];
+  const modules = sbs.reduce((a, b) => a + b, 0);
+  const dpm = rc.dpi / 25.4;
+  const tfs = el.showText ? (el.textStyle.fontSize || 8) * MM_PER_PT : 0;
+  const textH = el.showText ? tfs * 1.2 : 0;
+  const barH = Math.max(1, h - textH);
+  let md = Math.floor((w * dpm + 1e-6) / modules);
+  const minDots = el.minModuleDots || 2;
+  const dense = md < minDots;
+  if (md < 1) md = 1;
+  const mod = md / dpm, bw = modules * mod;
+  let x0 = el.align === 'center' ? (w - bw) / 2 : el.align === 'right' ? w - bw : 0;
+  x0 = snapX(rc, el, x0);
+  const barY = el.showText && el.textPosition === 'top' ? textH : 0;
+  g.add(new Konva.Shape({
+    listening: false, fill: '#000000',
+    sceneFunc(ctx, shape) {
+      ctx.beginPath();
+      let x = x0;
+      for (let i = 0; i < sbs.length; i++) { const ww = sbs[i] * mod; if (i % 2 === 0) ctx.rect(x, barY, ww, barH); x += ww; }
+      ctx.fillShape(shape);
+    },
+  }));
+  if (el.showText) {
+    const tw = Math.max(bw, Math.min(w, measureText({ text: human, fontSize: tfs, fontFamily: 'JetBrains Mono' }).w));
+    const tx = bw >= tw ? x0 : Math.max(0, x0 + (bw - tw) / 2);
+    g.add(new Konva.Text({ x: tx, y: el.textPosition === 'top' ? 0 : barH + tfs * 0.12, width: tw, text: human, fontSize: tfs, fontFamily: 'JetBrains Mono', align: 'center', fill: '#000000', wrap: 'none', listening: false }));
+  }
+  if (dense) {
+    const need = Math.ceil(modules * minDots / dpm * 10) / 10;
+    setMetric(rc, el, `条码过密：${modules} 个模块，框宽只够每个模块 ${Math.floor((w * dpm + 1e-6) / modules)} 点（要求至少 ${minDots} 点 @${rc.dpi}dpi）。把宽度加到 ${need} mm，或缩短内容。`, 'bad');
+    if (rc.errors) rc.errors.push({ code: 'BARCODE_TOO_DENSE', el: el.name, msg: `${el.name}：条码过密，需要至少 ${need} mm 宽` });
+  } else {
+    setMetric(rc, el, `${modules} 个模块 · 每模块 ${md} 点（${mod.toFixed(3)} mm @${rc.dpi}dpi）· 实际条宽 ${bw.toFixed(1)} mm`, 'good');
+  }
+}
+
+function drawMatrixEl(g, el, rc) {
+  const w = el.width, h = el.height;
+  const val = resolveText(el.value, rc.mode === 'placeholder' ? Object.assign({}, rc, { mode: 'sample' }) : rc);
+  if (!val) { drawProblem(g, el, '二维码内容为空'); setMetric(rc, el, '内容为空', 'bad'); return; }
+  const enc = encodeSymbol(el.symbology, val, el.symbology === 'qr' ? { eclevel: el.ecLevel || 'M' } : {});
+  if (!enc.ok) {
+    drawProblem(g, el, `${SYM_LABEL[el.symbology]}：${enc.msg}`);
+    setMetric(rc, el, `${SYM_LABEL[el.symbology]} 编码失败：${enc.msg}`, 'bad');
+    if (rc.errors) rc.errors.push({ code: 'BARCODE_INVALID', el: el.name, msg: `${el.name}：${enc.msg}` });
+    return;
+  }
+  const { pixs, pixx, pixy } = enc.r;
+  const dpm = rc.dpi / 25.4;
+  let m = Math.floor(Math.min(w * dpm / pixx, h * dpm / pixy) + 1e-6);
+  const dense = m < 2;
+  if (m < 1) m = 1;
+  const mod = m / dpm, W = pixx * mod, H = pixy * mod;
+  const x0 = snapX(rc, el, (w - W) / 2), y0 = (h - H) / 2;
+  g.add(new Konva.Shape({
+    listening: false, fill: '#000000',
+    sceneFunc(ctx, shape) {
+      ctx.beginPath();
+      for (let y = 0; y < pixy; y++) {
+        let x = 0;
+        while (x < pixx) {
+          if (pixs[y * pixx + x]) { const s = x; while (x < pixx && pixs[y * pixx + x]) x++; ctx.rect(x0 + s * mod, y0 + y * mod, (x - s) * mod, mod); }
+          else x++;
+        }
+      }
+      ctx.fillShape(shape);
+    },
+  }));
+  if (dense) {
+    setMetric(rc, el, `码太密：${pixx}×${pixy} 个模块，每模块不到 2 点。把尺寸加大，或减少内容。`, 'bad');
+    if (rc.errors) rc.errors.push({ code: 'BARCODE_TOO_DENSE', el: el.name, msg: `${el.name}：二维码过密` });
+  } else {
+    setMetric(rc, el, `${pixx}×${pixy} 个模块 · 每模块 ${m} 点（${mod.toFixed(3)} mm）· 实际 ${W.toFixed(1)}×${H.toFixed(1)} mm`, 'good');
+  }
+}
+
+function drawImageEl(g, el, rc) {
+  const w = el.width, h = el.height, src = el.src || '';
+  let url = null, label = '';
+  if (src.startsWith('asset:')) {
+    const a = rc.assets && rc.assets.find(x => x.id === src.slice(6));
+    url = a ? a.src : null; label = a ? '' : '素材不存在';
+  } else {
+    const key = keysIn(src)[0];
+    label = key ? '{{' + key + '}}' : '未设置来源';
+    const v = key && rc.data ? rc.data[key] : null;
+    if (v && rc.mode !== 'placeholder') url = String(v).startsWith('data:') ? v : 'data:image/png;base64,' + v;
+  }
+  if (!url) { drawPlaceholder(g, el, label); return; }
+  const img = getImage(url, el.mono, rc.onAsync);
+  if (!img) { drawPlaceholder(g, el, ''); return; }
+  const iw = img.naturalWidth || img.width, ih = img.naturalHeight || img.height;
+  const attrs = { image: img, listening: false };
+  if (el.fit === 'stretch') Object.assign(attrs, { x: 0, y: 0, width: w, height: h });
+  else if (el.fit === 'cover') {
+    const s = Math.max(w / iw, h / ih), cw = w / s, ch = h / s;
+    Object.assign(attrs, { x: 0, y: 0, width: w, height: h, crop: { x: (iw - cw) / 2, y: (ih - ch) / 2, width: cw, height: ch } });
+  } else {
+    const s = Math.min(w / iw, h / ih), dw = iw * s, dh = ih * s;
+    Object.assign(attrs, { x: (w - dw) / 2, y: (h - dh) / 2, width: dw, height: dh });
+  }
+  g.add(new Konva.Image(attrs));
+}
+
+function drawIconEl(g, el, rc) {
+  const ic = LABEL_ICONS[el.icon] || LABEL_ICONS.fragile;
+  g.add(new Konva.Path({ data: ic.d, x: 0, y: 0, scaleX: el.width / 24, scaleY: el.height / 24, stroke: el.color || '#000000', strokeWidth: 1.7, lineCap: 'round', lineJoin: 'round', listening: false }));
+}
+function drawLineEl(g, el, rc) {
+  const s = el.stroke;
+  const pts = el.height === 0 ? [0, 0, el.width, 0] : el.width === 0 ? [0, 0, 0, el.height] : [0, 0, el.width, el.height];
+  g.add(new Konva.Line({ points: pts, stroke: s.color, strokeWidth: s.width, dash: s.dash ? [s.width * 4, s.width * 3] : null, listening: false }));
+}
+function drawRectEl(g, el, rc) {
+  const s = el.stroke;
+  g.add(new Konva.Rect({ x: 0, y: 0, width: el.width, height: el.height, cornerRadius: el.radius || 0, fill: el.fill || null, stroke: s.color, strokeWidth: s.width, strokeEnabled: s.width > 0, dash: s.dash ? [s.width * 4, s.width * 3] : null, listening: false }));
+}
+
+/* ================= 输出渲染（模拟服务端） ================= */
+function renderLabel(content, data, opts) {
+  const dpi = opts.dpi || content.page.dpi;
+  const dpm = dpi / 25.4;
+  const W = Math.max(1, Math.round(content.page.width * dpm)), H = Math.max(1, Math.round(content.page.height * dpm));
+  const div = document.createElement('div');
+  const stage = new Konva.Stage({ container: div, width: W, height: H });
+  const layer = new Konva.Layer({ listening: false });
+  stage.add(layer);
+  layer.add(new Konva.Rect({ x: 0, y: 0, width: W, height: H, fill: '#FFFFFF' }));
+  const root = new Konva.Group({ scaleX: dpm, scaleY: dpm });
+  layer.add(root);
+  const rc = { mode: opts.mode || 'data', data: data || {}, fieldMap: mapFields(content.fields), dpi, output: true, errors: [], metrics: null, assets: opts.assets, onAsync: opts.onAsync };
+  for (const el of content.elements) {
+    if (el.hidden) continue;
+    const g = new Konva.Group();
+    setGeom(g, el);
+    drawElement(g, el, rc);
+    root.add(g);
+  }
+  const canvas = layer.toCanvas({ pixelRatio: 1 });
+  stage.destroy();
+  if (opts.mono) monoCanvas(canvas);
+  return { canvas, errors: rc.errors, W, H, dpi };
+}
+function monoCanvas(c) {
+  const cx = c.getContext('2d'), d = cx.getImageData(0, 0, c.width, c.height), p = d.data;
+  for (let i = 0; i < p.length; i += 4) {
+    const a = p[i + 3] / 255, lum = (0.299 * p[i] + 0.587 * p[i + 1] + 0.114 * p[i + 2]) * a + 255 * (1 - a);
+    const v = lum < 128 ? 0 : 255; p[i] = p[i + 1] = p[i + 2] = v; p[i + 3] = 255;
+  }
+  cx.putImageData(d, 0, 0);
+}
+const HEX = Array.from({ length: 256 }, (_, i) => i.toString(16).toUpperCase().padStart(2, '0'));
+function canvasToZPL(c) {
+  const W = c.width, H = c.height, bpr = Math.ceil(W / 8);
+  const p = c.getContext('2d').getImageData(0, 0, W, H).data;
+  const rows = new Array(H);
+  for (let y = 0; y < H; y++) {
+    let s = '';
+    for (let bx = 0; bx < bpr; bx++) {
+      let byte = 0;
+      for (let b = 0; b < 8; b++) {
+        const x = bx * 8 + b;
+        if (x < W) { const i = (y * W + x) * 4; if (p[i] < 128) byte |= 0x80 >> b; }
+      }
+      s += HEX[byte];
+    }
+    rows[y] = s;
+  }
+  const total = bpr * H;
+  return `^XA\n^PW${W}\n^LL${H}\n^FO0,0^GFA,${total},${total},${bpr},${rows.join('')}^FS\n^XZ\n`;
+}
+
+/* ================= 业务、用户、权限、调用方、日志的示例数据 ================= */
+const DAY = 24 * 3600e3;
+const BIZ_COLORS = ['#00939A', '#5B6CD6', '#C77C02', '#B24C8E', '#3D8C40', '#D2553F', '#6B7A89'];
+const PERMS = [
+  { key: 'tpl.view', label: '查看模板', group: '模板' },
+  { key: 'tpl.edit', label: '新建和编辑模板', group: '模板' },
+  { key: 'tpl.publish', label: '发布模板', group: '模板' },
+  { key: 'tpl.delete', label: '删除模板', group: '模板' },
+  { key: 'biz.manage', label: '管理业务分组', group: '模板' },
+  { key: 'res.manage', label: '管理画布预设和素材', group: '资源' },
+  { key: 'api.test', label: '接口调试', group: '接口' },
+  { key: 'api.manage', label: '管理调用方和密钥', group: '接口' },
+  { key: 'log.view', label: '查看日志', group: '日志' },
+  { key: 'sys.user', label: '管理用户', group: '系统' },
+  { key: 'sys.role', label: '管理角色权限', group: '系统' },
+];
+const PERM_GROUPS = [...new Set(PERMS.map(p => p.group))];
+const RANGES = [{ v: 'today', label: '今天' }, { v: '7d', label: '近 7 天' }, { v: '30d', label: '近 30 天' }, { v: 'all', label: '全部' }];
+const OP_TYPES = ['登录', '退出', '新建模板', '编辑模板', '发布模板', '删除模板', '回滚版本', '修改字段', '业务分组', '画布预设', '素材', '调用方', '用户', '角色', '个人设置'];
+const TPL_STATUS = [{ v: 'all', label: '全部' }, { v: 'published', label: '已发布' }, { v: 'changed', label: '有未发布改动' }, { v: 'draft', label: '未发布' }];
+const FONT_INFO = [
+  { family: 'Noto Sans SC', name: '思源黑体', license: 'SIL OFL 1.1，可免费商用', usage: '默认中文字体，正文、标题' },
+  { family: 'Noto Serif SC', name: '思源宋体', license: 'SIL OFL 1.1，可免费商用', usage: '证书、合格证类标题' },
+  { family: 'JetBrains Mono', name: '等宽字体', license: 'SIL OFL 1.1，可免费商用', usage: '条码下方文字、编号' },
+];
+const PAGE_TITLES = { dashboard: '概览', business: '业务分组', presets: '画布预设', assets: '素材与字体', clients: '调用方与密钥', apitest: '接口调试', calllogs: '调用日志', oplogs: '操作日志', users: '用户管理', roles: '角色权限', profile: '个人设置' };
+
+function seedBusinesses() {
+  return [
+    { id: 'b_pack', code: 'PACK', name: '成品包装', desc: '成品箱标、产品铭牌', ownerId: 'u_zm', color: BIZ_COLORS[0] },
+    { id: 'b_wms', code: 'WMS', name: '来料仓储', desc: '来料、库位、领料标签', ownerId: 'u_lf', color: BIZ_COLORS[1] },
+    { id: 'b_logi', code: 'LOGI', name: '物流发货', desc: '托盘标、发货标签', ownerId: 'u_lf', color: BIZ_COLORS[2] },
+    { id: 'b_export', code: 'EXPORT', name: '出口唛头', desc: '出口箱正唛、侧唛，A4 / A5 纸张打印', ownerId: 'u_lf', color: BIZ_COLORS[3] },
+    { id: 'b_qc', code: 'QC', name: '质量检验', desc: '合格证、检验状态标签', ownerId: 'u_zm', color: BIZ_COLORS[4] },
+  ];
+}
+function seedRoles() {
+  return [
+    { id: 'r_admin', name: '系统管理员', desc: '全部权限', all: true, perms: PERMS.map(p => p.key) },
+    { id: 'r_designer', name: '模板设计员', desc: '设计和发布本业务的模板', perms: ['tpl.view', 'tpl.edit', 'tpl.publish', 'res.manage', 'api.test', 'log.view'] },
+    { id: 'r_ops', name: '接口运维', desc: '管理调用方，排查调用问题', perms: ['tpl.view', 'api.test', 'api.manage', 'log.view'] },
+    { id: 'r_viewer', name: '只读访客', desc: '只能查看模板和日志', perms: ['tpl.view', 'log.view'] },
+  ];
+}
+function seedUsers() {
+  const now = Date.now();
+  return [
+    { id: 'u_admin', account: 'admin', name: '系统管理员', roleId: 'r_admin', bizIds: 'all', status: 'active', lastLogin: now - 3 * DAY, phone: '' },
+    { id: 'u_zm', account: 'zhangming', name: '张明', roleId: 'r_designer', bizIds: ['b_pack', 'b_qc'], status: 'active', lastLogin: now - 25 * 60e3, phone: '' },
+    { id: 'u_lf', account: 'lifang', name: '李芳', roleId: 'r_designer', bizIds: ['b_wms', 'b_logi', 'b_export'], status: 'active', lastLogin: now - 5 * 3600e3, phone: '' },
+    { id: 'u_wq', account: 'wangqiang', name: '王强', roleId: 'r_ops', bizIds: 'all', status: 'active', lastLogin: now - 4 * DAY, phone: '' },
+    { id: 'u_zmin', account: 'zhaomin', name: '赵敏', roleId: 'r_viewer', bizIds: 'all', status: 'disabled', lastLogin: now - 31 * DAY, phone: '' },
+  ];
+}
+function seedClients() {
+  const now = Date.now();
+  return [
+    { id: 'c_mes', name: 'MES 生产执行系统', appId: 'mes-prod', desc: '车间打印站，对接人：张明', keyPrefix: 'lbl_live_7Hq2', bizIds: ['b_pack', 'b_qc'], ip: '10.20.1.0/24', status: 'active', createdAt: now - 60 * DAY, ip0: '10.20.1.15' },
+    { id: 'c_wms', name: 'WMS 仓储管理系统', appId: 'wms-prod', desc: '收货和发货打印，对接人：李芳', keyPrefix: 'lbl_live_Pz81', bizIds: ['b_wms', 'b_logi'], ip: '10.20.2.0/24', status: 'active', createdAt: now - 58 * DAY, ip0: '10.20.2.31' },
+    { id: 'c_erp', name: 'ERP 出口模块', appId: 'erp-export', desc: '出口订单打印唛头', keyPrefix: 'lbl_live_kE4m', bizIds: ['b_export'], ip: '', status: 'active', createdAt: now - 40 * DAY, ip0: '10.20.5.8' },
+    { id: 'c_test', name: '测试环境', appId: 'label-test', desc: '联调用，已停用', keyPrefix: 'lbl_test_0aB9', bizIds: 'all', ip: '', status: 'disabled', createdAt: now - 70 * DAY, ip0: '10.30.0.12' },
+  ];
+}
+function traceFrom(rnd) {
+  const hex = n => Array.from({ length: n }, () => '0123456789abcdef'[Math.floor(rnd() * 16)]).join('');
+  return '00-' + hex(32) + '-' + hex(16) + '-01';
+}
+function seedCallLogs(templates, clients) {
+  const rnd = mulberry32(20261008);
+  const pick = a => a[Math.floor(rnd() * a.length)];
+  const now = Date.now(), d0 = new Date(); d0.setHours(0, 0, 0, 0);
+  const cs = Object.fromEntries(clients.map(c => [c.id, c]));
+  const logs = [];
+  for (let d = 13; d >= 0; d--) {
+    const day = d0.getTime() - d * DAY, wd = new Date(day).getDay(), weekend = wd === 0 || wd === 6;
+    const n = Math.round((weekend ? 9 : 24) + rnd() * 14);
+    for (let i = 0; i < n; i++) {
+      const time = Math.round(day + (7 + rnd() * 14) * 3600e3);
+      if (time > now) continue;
+      const r = rnd(), c = cs[r < 0.5 ? 'c_mes' : r < 0.83 ? 'c_wms' : 'c_erp'];
+      const list = templates.filter(t => t.versions.length && t.versions[0].publishedAt <= time && (c.bizIds === 'all' || c.bizIds.includes(t.bizId)));
+      if (!list.length) continue;
+      const t = pick(list);
+      const version = t.versions.filter(v => v.publishedAt <= time).length;
+      const batch = rnd() < 0.42;
+      let count = batch ? 5 + Math.floor(rnd() * 96) : (rnd() < 0.85 ? 1 : 2);
+      const format = c.id === 'c_erp' ? 'pdf' : c.id === 'c_wms' ? (rnd() < 0.85 ? 'zpl' : 'pdf') : (rnd() < 0.6 ? 'zpl' : 'pdf');
+      let status = 200, code = '', message = '', tcode = t.code, ver = version;
+      const f = rnd();
+      const req = t.fields.filter(x => x.required);
+      const nums = t.fields.filter(x => x.type === 'number' || x.type === 'date');
+      if (f < 0.025 && req.length) { status = 400; code = 'FIELD_REQUIRED'; message = (batch ? `第 ${1 + Math.floor(rnd() * count)} 条` : '') + `缺少必填字段 ${pick(req).key}`; }
+      else if (f < 0.04) { status = 400; code = 'BARCODE_INVALID'; message = '条码内容不符合 Code 128：含有不支持的字符'; }
+      else if (f < 0.05 && nums.length) { const x = pick(nums); status = 400; code = 'FIELD_TYPE_INVALID'; message = x.type === 'number' ? `字段 ${x.key} 应该是数字，收到 "${pick(['50箱', '二十', '—'])}"` : `字段 ${x.key} 应该是 ISO 日期，收到 "2026/10/8"`; }
+      else if (f < 0.06 && c.id === 'c_wms' && d <= 1) { status = 404; code = 'TEMPLATE_NOT_FOUND'; message = '模板 PALLET_LABEL 还没有发布过，请先在设计器里发布'; tcode = 'PALLET_LABEL'; ver = null; }
+      else if (f < 0.064) { status = 413; code = 'BATCH_TOO_LARGE'; message = '单次最多 500 张（含份数），这次是 640 张'; count = 640; }
+      else if (f < 0.066) { status = 500; code = 'RENDER_FAILED'; message = '渲染时出错：字体文件读取超时'; }
+      const ms = status === 200 ? Math.round(18 + count * (format === 'zpl' ? 9 : 6) * (0.7 + rnd() * 0.6)) : Math.round(4 + rnd() * 12);
+      logs.push({ id: 'l' + time + '_' + i, time, clientId: c.id, clientName: c.name, mode: batch ? 'batch' : 'single', templateCode: tcode, version: ver, format, count, ms, status, code, message, traceId: traceFrom(rnd), ip: c.ip0 });
+    }
+  }
+  return logs.sort((a, b) => b.time - a.time);
+}
+function seedOpLogs() {
+  const now = Date.now(), H = 3600e3, M = 60e3;
+  const ips = { u_admin: '10.20.3.2', u_zm: '10.20.3.15', u_lf: '10.20.3.22', u_wq: '10.20.3.31', u_zmin: '10.20.3.40' };
+  const E = (ago, userId, type, target, detail) => ({ id: uid('o'), time: now - ago, userId, type, target, detail, ip: ips[userId] });
+  const out = [
+    E(25 * M, 'u_zm', '登录', '系统', '登录成功'),
+    E(3 * H, 'u_lf', '编辑模板', 'PALLET_LABEL 托盘标签', '调整了条码和储运图标'),
+    E(5 * H, 'u_lf', '登录', '系统', '登录成功'),
+    E(DAY + 2 * H, 'u_lf', '发布模板', 'EXPORT_FRONT 出口箱正唛', '发布 v2：箱号改为“第几箱 / 共几箱”'),
+    E(DAY + 5 * H, 'u_lf', '新建模板', 'PALLET_LABEL 托盘标签', '业务：物流发货，100×100 mm'),
+    E(2 * DAY + 3 * H, 'u_zm', '发布模板', 'BOX_LABEL 成品箱标', '发布 v3：加易碎物品标志'),
+    E(2 * DAY + 4 * H, 'u_zm', '修改字段', 'BOX_LABEL 成品箱标', 'prodDate 改为非必填'),
+    E(3 * DAY, 'u_admin', '用户', '赵敏（zhaomin）', '停用账号'),
+    E(3 * DAY + 20 * M, 'u_admin', '登录', '系统', '登录成功'),
+    E(4 * DAY, 'u_wq', '登录', '系统', '登录成功'),
+    E(4 * DAY + 30 * M, 'u_wq', '调用方', 'WMS 仓储管理系统（wms-prod）', '修改 IP 白名单为 10.20.2.0/24'),
+    E(6 * DAY, 'u_zm', '发布模板', 'BOX_LABEL 成品箱标', '发布 v2：二维码加入批次号'),
+    E(7 * DAY, 'u_wq', '调用方', '测试环境（label-test）', '停用调用方'),
+    E(8 * DAY, 'u_lf', '发布模板', 'EXPORT_FRONT 出口箱正唛', '发布 v1：首版'),
+    E(8 * DAY - 10 * M, 'u_lf', '发布模板', 'EXPORT_SIDE 出口箱侧唛', '发布 v1：首版'),
+    E(9 * DAY, 'u_lf', '画布预设', 'A5 横向唛头', '使用 A5 预设新建唛头模板'),
+    E(10 * DAY, 'u_zm', '发布模板', 'BOX_LABEL 成品箱标', '发布 v1：首版'),
+    E(12 * DAY, 'u_zm', '发布模板', 'QC_CERT 合格证', '发布 v1：首版'),
+    E(12 * DAY + H, 'u_admin', '业务分组', '质量检验（QC）', '新建业务，负责人：张明'),
+    E(15 * DAY, 'u_admin', '角色', '接口运维', '开启“管理调用方和密钥”'),
+    E(20 * DAY, 'u_lf', '发布模板', 'MAT_LABEL 来料物料标签', '发布 v1：首版'),
+    E(20 * DAY + 2 * H, 'u_wq', '调用方', 'WMS 仓储管理系统（wms-prod）', '重置密钥'),
+    E(30 * DAY, 'u_admin', '用户', '赵敏（zhaomin）', '新建用户，角色：只读访客'),
+    E(45 * DAY, 'u_admin', '画布预设', 'A5', '新建预设 148×210 mm'),
+    E(60 * DAY, 'u_admin', '调用方', 'MES 生产执行系统（mes-prod）', '新建调用方，可调用：成品包装、质量检验'),
+  ];
+  const rnd = mulberry32(7);
+  for (let d = 1; d < 14; d++) ['u_zm', 'u_lf'].forEach(u => { if (rnd() < 0.7) out.push(E(d * DAY + Math.round(rnd() * 3 * H), u, '登录', '系统', '登录成功')); });
+  return out.sort((a, b) => b.time - a.time);
+}
+
+/* ================= 示例模板 ================= */
+function F(key, name, type, sample, more) { return Object.assign({ _id: uid('f'), key, name, type, required: true, default: '', format: '', sample }, more || {}); }
+function E(type, x, y, w, h, more) { return normalizeElement(Object.assign({ id: uid(), type, x, y, width: w, height: h }, more || {})); }
+const TS = (fontSize, more) => Object.assign(defaultTextStyle(), { fontSize }, more || {});
+const snapshotOf = t => ({ page: clone(t.page), fields: clone(t.fields), elements: clone(t.elements) });
+
+function seedPresets() {
+  return [
+    ['A4', 210, 297, '办公纸张'], ['A5', 148, 210, '办公纸张'], ['A6', 105, 148, '办公纸张'],
+    ['物流面单 100×150', 100, 150, '标签纸'], ['100×100', 100, 100, '标签纸'], ['100×60', 100, 60, '标签纸'], ['100×50', 100, 50, '标签纸'],
+    ['80×50', 80, 50, '标签纸'], ['70×50', 70, 50, '标签纸'], ['60×40', 60, 40, '标签纸'], ['50×30', 50, 30, '标签纸'], ['40×30', 40, 30, '标签纸'],
+  ].map(([name, width, height, type]) => ({ id: uid('p'), name, width, height, type }));
+}
+function seedTemplates() {
+  const now = Date.now(), H = 3600e3, D = DAY;
+  const box = {
+    id: 't_box', code: 'BOX_LABEL', name: '成品箱标', bizId: 'b_pack', createdBy: 'u_zm', updatedBy: 'u_zm', page: { width: 100, height: 60, dpi: 300 },
+    fields: [
+      F('partName', '品名', 'string', '电源适配器'), F('partNo', '料号', 'string', '3100-0123'),
+      F('qty', '数量', 'number', '50', { format: '0' }), F('batchNo', '批次', 'string', '20261008-A'),
+      F('prodDate', '生产日期', 'date', '2026-10-08', { required: false, format: 'yyyy-MM-dd' }), F('boxNo', '箱号', 'string', 'C2610080001'),
+    ],
+    elements: [
+      E('text', 4, 3, 60, 6, { name: '公司名称', content: 'XX 科技有限公司', style: TS(10, { fit: 'shrink' }) }),
+      E('text', 66, 3, 30, 6, { name: '标题', content: '成品箱标', style: TS(11, { bold: true, align: 'right' }) }),
+      E('text', 4, 12, 46, 5, { name: '品名', content: '品名：{{partName}}', style: TS(9, { fit: 'shrink' }) }),
+      E('text', 50, 12, 46, 5, { name: '数量', content: '数量：{{qty}} PCS', style: TS(9) }),
+      E('text', 4, 18, 46, 5, { name: '批次', content: '批次：{{batchNo}}', style: TS(9) }),
+      E('text', 50, 18, 46, 5, { name: '日期', content: '日期：{{prodDate:yyyy-MM-dd}}', style: TS(9) }),
+      E('line', 4, 25, 92, 0, { name: '分隔线' }),
+      E('barcode', 4, 30, 64, 16, { name: '箱号条码', symbology: 'code128', value: '{{boxNo}}', textStyle: { fontSize: 8 } }),
+      E('qrcode', 76, 30, 20, 20, { name: '追溯二维码', symbology: 'qr', value: '{{partNo}}|{{batchNo}}|{{boxNo}}', ecLevel: 'M' }),
+      E('icon', 76, 52, 6, 6, { name: '易碎物品', icon: 'fragile' }),
+    ],
+  };
+  const v1 = { page: clone(box.page), fields: clone(box.fields), elements: clone(box.elements.slice(0, 9)) };
+  box.versions = [
+    { no: 1, publishedAt: now - 10 * D, publishedBy: 'u_zm', note: '首版', content: v1 },
+    { no: 2, publishedAt: now - 6 * D, publishedBy: 'u_zm', note: '二维码加入批次号', content: clone(v1) },
+    { no: 3, publishedAt: now - 2 * D - 3 * H, publishedBy: 'u_zm', note: '加易碎物品标志', content: snapshotOf(box) },
+  ];
+  box.updatedAt = now - 2 * D - 3 * H;
+
+  const mat = {
+    id: 't_mat', code: 'MAT_LABEL', name: '来料物料标签', bizId: 'b_wms', createdBy: 'u_lf', updatedBy: 'u_lf', page: { width: 60, height: 40, dpi: 203 },
+    fields: [
+      F('partNo', '料号', 'string', '3100-0123'), F('partName', '品名', 'string', '电源适配器 65W'), F('spec', '规格', 'string', 'DC 19V 3.42A'),
+      F('qty', '数量', 'number', '2000', { format: '0' }), F('unit', '单位', 'string', 'PCS', { required: false, default: 'PCS' }),
+      F('supplier', '供应商', 'string', '华东电子'), F('lotNo', '来料批次', 'string', 'L2610-0815'),
+      F('recvDate', '收货日期', 'date', '2026-10-08', { format: 'yyyy-MM-dd' }),
+    ],
+    elements: [
+      E('rect', 0.8, 0.8, 58.4, 38.4, { name: '外框', radius: 1.2, stroke: { width: 0.3 } }),
+      E('text', 2.5, 1.8, 28, 5.2, { name: '标题', content: '物料标签', style: TS(11, { bold: true }) }),
+      E('text', 30, 1.8, 27.5, 5.2, { name: '收货日期', content: '{{recvDate:yyyy-MM-dd}}', style: TS(7, { align: 'right' }) }),
+      E('line', 2.5, 7.6, 55, 0, { name: '分隔线' }),
+      E('text', 2.5, 9, 37, 4.6, { name: '料号', content: '料号：{{partNo}}', style: TS(8, { bold: true }) }),
+      E('text', 2.5, 14, 37, 4.6, { name: '品名', content: '品名：{{partName}}', style: TS(8, { fit: 'shrink' }) }),
+      E('text', 2.5, 19, 37, 4.6, { name: '规格', content: '规格：{{spec}}', style: TS(8, { fit: 'shrink' }) }),
+      E('text', 2.5, 24, 37, 4.6, { name: '数量', content: '数量：{{qty}} {{unit}}', style: TS(8) }),
+      E('text', 2.5, 29, 37, 4.6, { name: '供应商', content: '供应商：{{supplier}}', style: TS(8, { fit: 'shrink' }) }),
+      E('text', 2.5, 34, 37, 4.4, { name: '批次', content: '批次：{{lotNo}}', style: TS(8) }),
+      E('qrcode', 41, 9.5, 17, 17, { name: '收货二维码', symbology: 'qr', value: '{{partNo}}|{{lotNo}}|{{qty}}' }),
+      E('text', 41, 27.5, 17, 4, { name: '提示', content: '扫码收货', style: TS(7, { align: 'center' }) }),
+    ],
+  };
+  mat.versions = [{ no: 1, publishedAt: now - 20 * D, publishedBy: 'u_lf', note: '首版', content: snapshotOf(mat) }];
+  mat.updatedAt = now - 20 * D;
+
+  const pal = {
+    id: 't_pallet', code: 'PALLET_LABEL', name: '托盘标签', bizId: 'b_logi', createdBy: 'u_lf', updatedBy: 'u_lf', page: { width: 100, height: 100, dpi: 203 },
+    fields: [
+      F('palletNo', '托盘号', 'string', 'P2610080012'), F('customer', '客户', 'string', '东方汽车零部件有限公司'), F('poNo', '订单号', 'string', 'PO-26-10421'),
+      F('shipDate', '发货日期', 'date', '2026-10-09', { format: 'yyyy-MM-dd' }), F('partNo', '料号', 'string', '3100-0123'),
+      F('boxCount', '箱数', 'number', '24', { format: '0' }), F('totalQty', '总数量', 'number', '1200'),
+    ],
+    elements: [
+      E('rect', 2, 2, 96, 96, { name: '外框', stroke: { width: 0.5 } }),
+      E('text', 6, 5, 50, 9, { name: '标题', content: '托盘标签', style: TS(18, { bold: true }) }),
+      E('image', 68, 5.5, 26, 8.6, { name: 'Logo', src: 'asset:logo' }),
+      E('line', 6, 16, 88, 0, { name: '分隔线 1', stroke: { width: 0.4 } }),
+      E('text', 6, 19, 88, 7, { name: '客户', content: '客户：{{customer}}', style: TS(12, { fit: 'shrink' }) }),
+      E('text', 6, 28, 44, 6, { name: '订单号', content: '订单号：{{poNo}}', style: TS(10) }),
+      E('text', 50, 28, 44, 6, { name: '发货日期', content: '发货日期：{{shipDate}}', style: TS(10) }),
+      E('text', 6, 35, 44, 6, { name: '料号', content: '料号：{{partNo}}', style: TS(10) }),
+      E('text', 50, 35, 44, 6, { name: '箱数', content: '箱数：{{boxCount}} 箱', style: TS(10) }),
+      E('text', 6, 42, 88, 6, { name: '总数量', content: '总数量：{{totalQty:N0}} PCS', style: TS(10) }),
+      E('line', 6, 51, 88, 0, { name: '分隔线 2', stroke: { width: 0.4 } }),
+      E('barcode', 10, 55, 80, 24, { name: '托盘号条码', value: '{{palletNo}}', align: 'center', textStyle: { fontSize: 11 } }),
+      E('icon', 6, 86, 9, 9, { name: '向上', icon: 'up' }),
+      E('icon', 17, 86, 9, 9, { name: '怕雨', icon: 'dry' }),
+      E('icon', 28, 86, 9, 9, { name: '易碎物品', icon: 'fragile' }),
+      E('text', 40, 87, 54, 7, { name: '储运提示', content: '向上放置 · 防潮 · 小心轻放', style: TS(9, { align: 'right' }) }),
+    ],
+    versions: [], updatedAt: now - 3 * H,
+  };
+
+  const front = {
+    id: 't_front', code: 'EXPORT_FRONT', name: '出口箱正唛', bizId: 'b_export', createdBy: 'u_lf', updatedBy: 'u_lf', page: { width: 210, height: 148, dpi: 300 },
+    fields: [
+      F('consignee', '收货人', 'string', 'ABC TRADING GMBH'), F('destPort', '目的港', 'string', 'HAMBURG, GERMANY'),
+      F('poNo', '订单号', 'string', '4500123456'), F('itemNo', '货号', 'string', 'PA-65W-EU'),
+      F('cartonNo', '箱号', 'number', '12', { format: '0' }), F('cartonTotal', '总箱数', 'number', '120', { format: '0' }),
+      F('origin', '原产地', 'string', 'MADE IN CHINA', { required: false, default: 'MADE IN CHINA' }),
+    ],
+    elements: [
+      E('rect', 5, 5, 200, 138, { name: '外框', stroke: { width: 0.8 } }),
+      E('text', 12, 12, 186, 16, { name: '收货人', content: '{{consignee}}', style: TS(30, { bold: true, align: 'center', fit: 'shrink', minFontSize: 14 }) }),
+      E('line', 12, 32, 186, 0, { name: '分隔线', stroke: { width: 0.6 } }),
+      E('text', 12, 36, 186, 13, { name: '目的港', content: '{{destPort}}', style: TS(24, { bold: true, align: 'center', fit: 'shrink', minFontSize: 12 }) }),
+      E('text', 20, 56, 170, 10, { name: '订单号', content: 'PO NO.: {{poNo}}', style: TS(18) }),
+      E('text', 20, 68, 170, 10, { name: '货号', content: 'ITEM NO.: {{itemNo}}', style: TS(18) }),
+      E('text', 20, 80, 170, 10, { name: '箱号', content: 'C/NO.: {{cartonNo}} OF {{cartonTotal}}', style: TS(18) }),
+      E('text', 20, 95, 100, 11, { name: '原产地', content: '{{origin}}', style: TS(20, { bold: true }) }),
+      E('barcode', 118, 100, 80, 30, { name: '箱号条码', value: '{{poNo}}-{{cartonNo}}', align: 'right', textStyle: { fontSize: 10 } }),
+      E('icon', 20, 114, 16, 16, { name: '向上', icon: 'up' }),
+      E('icon', 40, 114, 16, 16, { name: '怕雨', icon: 'dry' }),
+      E('icon', 60, 114, 16, 16, { name: '易碎物品', icon: 'fragile' }),
+    ],
+  };
+  const fv1 = snapshotOf(front);
+  fv1.elements.find(e => e.name === '箱号').content = 'C/NO.: {{cartonNo}}';
+  front.versions = [
+    { no: 1, publishedAt: now - 8 * D, publishedBy: 'u_lf', note: '首版', content: fv1 },
+    { no: 2, publishedAt: now - D - 2 * H, publishedBy: 'u_lf', note: '箱号改为“第几箱 / 共几箱”', content: snapshotOf(front) },
+  ];
+  front.updatedAt = now - D - 2 * H;
+
+  const side = {
+    id: 't_side', code: 'EXPORT_SIDE', name: '出口箱侧唛', bizId: 'b_export', createdBy: 'u_lf', updatedBy: 'u_lf', page: { width: 210, height: 148, dpi: 300 },
+    fields: [
+      F('itemNo', '货号', 'string', 'PA-65W-EU'), F('qty', '每箱数量', 'number', '24', { format: '0' }),
+      F('gw', '毛重 kg', 'number', '12.5', { format: '0.0' }), F('nw', '净重 kg', 'number', '11', { format: '0.0' }),
+      F('meas', '外箱尺寸 cm', 'string', '60×40×35'),
+    ],
+    elements: [
+      E('rect', 5, 5, 200, 138, { name: '外框', stroke: { width: 0.8 } }),
+      E('text', 15, 14, 180, 12, { name: '货号', content: 'ITEM NO.: {{itemNo}}', style: TS(22, { bold: true }) }),
+      E('line', 15, 30, 180, 0, { name: '分隔线', stroke: { width: 0.6 } }),
+      E('text', 15, 38, 120, 11, { name: '数量', content: 'QTY: {{qty}} PCS', style: TS(20) }),
+      E('text', 15, 55, 120, 11, { name: '毛重', content: 'G.W.: {{gw}} KG', style: TS(20) }),
+      E('text', 15, 72, 120, 11, { name: '净重', content: 'N.W.: {{nw}} KG', style: TS(20) }),
+      E('text', 15, 89, 120, 11, { name: '尺寸', content: 'MEAS.: {{meas}} CM', style: TS(20) }),
+      E('qrcode', 150, 40, 40, 40, { name: '装箱二维码', symbology: 'qr', value: '{{itemNo}}|{{qty}}|{{gw}}' }),
+      E('text', 15, 116, 180, 12, { name: '原产地', content: 'MADE IN CHINA', style: TS(20, { bold: true, align: 'center' }) }),
+    ],
+  };
+  side.versions = [{ no: 1, publishedAt: now - 8 * D - 10 * 60e3, publishedBy: 'u_lf', note: '首版', content: snapshotOf(side) }];
+  side.updatedAt = now - 8 * D;
+
+  const qc = {
+    id: 't_qc', code: 'QC_CERT', name: '合格证', bizId: 'b_qc', createdBy: 'u_zm', updatedBy: 'u_zm', page: { width: 50, height: 30, dpi: 300 },
+    fields: [F('inspector', '检验员', 'string', 'QC-07'), F('checkDate', '检验日期', 'date', '2026-10-08', { format: 'yyyy-MM-dd' }), F('batchNo', '批次', 'string', '20261008-A')],
+    elements: [
+      E('image', 2, 2, 14, 14, { name: 'QC PASS 印章', src: 'asset:qcpass' }),
+      E('text', 18, 1.6, 30, 6, { name: '标题', content: '合格证', style: TS(12, { bold: true, fontFamily: 'Noto Serif SC' }) }),
+      E('text', 18, 8.2, 30, 4.2, { name: '检验员', content: '检验员：{{inspector}}', style: TS(7) }),
+      E('text', 18, 12.4, 30, 4.2, { name: '检验日期', content: '日期：{{checkDate}}', style: TS(7) }),
+      E('barcode', 2, 18, 46, 10.5, { name: '批次条码', value: '{{batchNo}}', align: 'center', textStyle: { fontSize: 6 } }),
+    ],
+  };
+  qc.versions = [{ no: 1, publishedAt: now - 12 * D, publishedBy: 'u_zm', note: '首版', content: snapshotOf(qc) }];
+  qc.updatedAt = now - 12 * D;
+  return [box, mat, pal, front, side, qc];
+}
+function normalizeTemplate(t) {
+  t.fields = (t.fields || []).map(f => Object.assign({ _id: uid('f'), required: true, default: '', format: '', sample: '' }, f));
+  t.elements = (t.elements || []).map(normalizeElement);
+  t.versions = t.versions || [];
+  t.page = Object.assign({ width: 100, height: 60, dpi: 300 }, t.page || {});
+  if (!t.bizId) t.bizId = 'b_pack';
+  return t;
+}
+
+
+/* ================= WinForms 演示程序原型：模拟 SDK 行为 ================= */
+const { createApp, reactive, ref, computed, nextTick } = Vue;
+const TEMPLATES = seedTemplates().map(normalizeTemplate);
+const TPL = Object.fromEntries(TEMPLATES.map(t => [t.code, t]));
+const pad = (n, w = 2) => String(n).padStart(w, '0');
+const clock = () => { const d = new Date(); return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}.${pad(d.getMilliseconds(), 3)}`; };
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const hex = n => Array.from({ length: n }, () => '0123456789abcdef'[Math.floor(Math.random() * 16)]).join('');
+const newTrace = () => `00-${hex(32)}-${hex(16)}-01`;
+const newGuid = () => `${hex(8)}-${hex(4)}-4${hex(3)}-${'89ab'[Math.floor(Math.random() * 4)]}${hex(3)}-${hex(12)}`;
+const sizeOf = p => `${p.width} × ${p.height} mm`;
+class ApiError {
+  constructor(status, code, message, errors) { this.status = status; this.code = code; this.message = message; this.errors = errors || []; this.transient = status === 0 || status === 502 || status === 503 || status === 504; }
+}
+function validateData(fields, data, idx, batch) {
+  const out = [], where = batch ? `第 ${idx + 1} 条` : '';
+  for (const f of fields) {
+    const v = data[f.key];
+    if (v === undefined || v === null || v === '') {
+      if (f.required && !f.default) out.push({ index: batch ? idx : undefined, field: f.key, code: 'FIELD_REQUIRED', message: `${where}缺少必填字段 ${f.key}` });
+      continue;
+    }
+    if (f.type === 'number' && !isFinite(Number(v))) out.push({ index: batch ? idx : undefined, field: f.key, code: 'FIELD_TYPE_INVALID', message: `${where}字段 ${f.key} 应该是数字，收到 "${v}"` });
+    if (f.type === 'date' && !parseDate(v)) out.push({ index: batch ? idx : undefined, field: f.key, code: 'FIELD_TYPE_INVALID', message: `${where}字段 ${f.key} 应该是 ISO 日期（如 2026-10-08），收到 "${v}"` });
+  }
+  return out;
+}
+function downscale(c, max) {
+  if (c.width <= max) return c;
+  const s = max / c.width, d = document.createElement('canvas');
+  d.width = max; d.height = Math.round(c.height * s);
+  d.getContext('2d').drawImage(c, 0, 0, d.width, d.height);
+  return d;
+}
+const csStr = s => '"' + String(s).replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"';
+
+const app = createApp({
+  setup() {
+    const conn = reactive({ baseUrl: 'https://label.example.com/', apiKey: 'lbl_test_9fK2mQ7vX1pL', showKey: false, timeout: 30, retries: 2, useMock: true, flaky: false });
+    const tplList = TEMPLATES.map(t => ({ code: t.code, name: t.name + (t.versions.length ? '' : '（未发布）') }));
+    const tplCode = ref('BOX_LABEL');
+    const schema = ref(null);
+    const rows = reactive([]);
+    const curRow = ref(0);
+    const opt = reactive({ format: 'png', dpi: '', copies: 1, batchCount: 10, incKey: '' });
+    const tab = ref('preview'), zoom = ref('fit'), curImg = ref(0), codeBatch = ref(false);
+    const busy = ref(false), status = ref('正在加载字体…'), statusKind = ref('');
+    const result = ref(null), error = ref(null);
+    const logs = reactive([]), selLog = ref(-1);
+    const menu = ref(null), dialog = ref(null), msgBox = ref(null), toastText = ref('');
+    const print = reactive({ mode: 'net', host: '192.168.1.50', port: 9100, printer: 'ZDesigner ZT411-203dpi ZPL' });
+    const printers = ['ZDesigner ZT411-203dpi ZPL', 'TSC TTP-244 Pro', 'HP LaserJet Pro M404（办公室）', 'Microsoft Print to PDF'];
+    const savePath = ref('');
+    let toastTimer = null;
+    function toast(t) { toastText.value = t; clearTimeout(toastTimer); toastTimer = setTimeout(() => { toastText.value = ''; }, 3200); }
+
+    /* ---------- 内置模拟服务 ---------- */
+    function authCheck() {
+      if (!conn.apiKey) throw new ApiError(401, 'UNAUTHORIZED', '请求头缺少 X-Api-Key');
+      if (!/^lbl_(live|test)_\w{8,}$/.test(conn.apiKey)) throw new ApiError(401, 'UNAUTHORIZED', 'API Key 无效或已停用，请联系标签服务管理员重新发放');
+    }
+    function findTemplate(code) {
+      const t = TPL[code];
+      if (!t) throw new ApiError(404, 'TEMPLATE_NOT_FOUND', `找不到模板 ${code}`);
+      if (!t.versions.length) throw new ApiError(404, 'TEMPLATE_NOT_FOUND', `模板 ${code} 还没有发布过，请先在设计器里发布`);
+      return { t, content: t.versions[t.versions.length - 1].content, version: t.versions.length };
+    }
+    function hostOf(url) { try { return new URL(url).host; } catch (e) { return url || '（空）'; } }
+    async function invoke(op, tpl, exec, note) {
+      busy.value = true; status.value = `正在调用 ${op}…`; statusKind.value = '';
+      const requestId = newGuid(), t0 = performance.now(), max = Math.max(0, Math.min(5, conn.retries | 0));
+      let attempts = 0, out = null, err = null;
+      for (let i = 0; i <= max; i++) {
+        attempts++;
+        await sleep(140 + Math.random() * 140);
+        if (!conn.useMock) err = new ApiError(0, 'NETWORK_ERROR', `无法连接到 ${hostOf(conn.baseUrl)}。原型里没有真实服务，勾选“使用内置模拟服务”后再试。`);
+        else if (conn.flaky && attempts === 1) err = new ApiError(503, 'SERVICE_UNAVAILABLE', '服务暂时不可用（模拟的网络抖动）');
+        else {
+          try { out = await exec(); err = null; }
+          catch (e) { err = e instanceof ApiError ? e : new ApiError(500, 'RENDER_FAILED', '渲染时出错：' + e.message); }
+        }
+        if (!err || !err.transient || i === max) break;
+        status.value = `${op} 第 ${attempts} 次失败（${err.code}），${500 * 2 ** i} ms 后重试…`;
+        await sleep(Math.min(2000, 500 * 2 ** i));
+      }
+      const ms = Math.round(performance.now() - t0);
+      busy.value = false;
+      const traceId = err ? (err.status ? newTrace() : '') : out.traceId;
+      logs.unshift({ id: requestId, time: clock(), op, tpl, ok: !err, result: err ? `${err.status || '—'} ${err.code}` : '200 OK', ms, retries: attempts - 1, requestId, traceId, note: err ? err.message : (note ? note(out) : '') });
+      if (err) {
+        error.value = { status: err.status, code: err.code, message: err.message, errors: err.errors, traceId, transient: err.transient, attempts };
+        status.value = `调用失败：${err.status ? err.status + ' ' : ''}${err.code}`; statusKind.value = 'bad';
+        return null;
+      }
+      error.value = null;
+      status.value = `${op} 完成，${ms} ms` + (attempts > 1 ? `，自动重试 ${attempts - 1} 次后成功` : '');
+      statusKind.value = 'ok';
+      return Object.assign(out, { ms, attempts });
+    }
+    function clientError(exType, param, message, op) {
+      error.value = { clientSide: true, exType, code: param, message };
+      result.value = null;
+      logs.unshift({ id: newGuid(), time: clock(), op, tpl: tplCode.value || '（空）', ok: false, result: '未发送', ms: 0, retries: 0, requestId: '—', traceId: '', note: `${exType}：${message}` });
+      status.value = '参数校验失败：' + message; statusKind.value = 'bad';
+      tab.value = 'resp';
+    }
+
+    /* ---------- GetSchemaAsync ---------- */
+    function varyingKey() {
+      const s = rows.filter(r => r.type === 'string'), no = s.filter(r => /no$/i.test(r.key));
+      return (no[no.length - 1] || s[s.length - 1] || rows[0] || {}).key || '';
+    }
+    async function readSchema(silent) {
+      const code = tplCode.value;
+      if (!code) { clientError('ArgumentException', 'templateCode', '模板编码不能为空', 'GetSchemaAsync'); return false; }
+      const out = await invoke('GetSchemaAsync', code, async () => { authCheck(); const r = findTemplate(code); return Object.assign(r, { traceId: newTrace() }); }, o => `${o.content.fields.length} 个字段，v${o.version}`);
+      if (!out) { if (!silent) tab.value = 'resp'; return false; }
+      schema.value = { code, name: out.t.name, version: out.version, size: sizeOf(out.content.page), page: out.content.page };
+      rows.splice(0, rows.length, ...out.content.fields.map(f => ({ key: f.key, name: f.name, type: f.type, required: f.required, def: f.default || '', value: f.type === 'image' ? '' : String(f.sample ?? '') })));
+      opt.incKey = varyingKey();
+      curRow.value = 0;
+      return true;
+    }
+    async function testConnection() {
+      const code = tplCode.value || 'BOX_LABEL';
+      const out = await invoke('GetSchemaAsync', code, async () => { authCheck(); const r = findTemplate(code); return Object.assign(r, { traceId: newTrace() }); }, () => '测试连接');
+      if (out) msgBox.value = { title: '测试连接', text: `连接成功。\n服务地址：${conn.useMock ? '内置模拟服务' : conn.baseUrl}\n模板 ${code}：${out.t.name} v${out.version}，${out.content.fields.length} 个字段\n耗时 ${out.ms} ms${out.attempts > 1 ? `，重试 ${out.attempts - 1} 次` : ''}` };
+      else msgBox.value = { title: '测试连接', err: true, text: `连接失败：${error.value.status ? error.value.status + ' ' : ''}${error.value.code}\n${error.value.message}` };
+    }
+
+    /* ---------- RenderAsync / RenderBatchAsync ---------- */
+    function buildData() {
+      const d = {};
+      rows.forEach(r => { if (r.value === '') return; d[r.key] = r.type === 'number' && r.value.trim() !== '' && isFinite(Number(r.value)) ? Number(r.value) : r.value; });
+      return d;
+    }
+    function packResult(code, version, fmt, dpi, canvases, count, labels, batch, elementCount) {
+      const images = canvases.map(c => downscale(c, 1400).toDataURL('image/png'));
+      let bytes, zpl = '';
+      if (fmt === 'zpl') { zpl = canvases.map(canvasToZPL).join(''); bytes = Math.round(zpl.length / canvases.length * count); }
+      else if (fmt === 'png') bytes = Math.round(canvases.reduce((a, c) => a + c.width * c.height * 0.12, 0) / canvases.length * count);
+      else bytes = (14000 + 600 * elementCount) * count;
+      const ext = fmt === 'png' && batch ? 'zip' : fmt;
+      const fileName = `${code}_${fmtDate(new Date(), 'yyyyMMdd')}${batch ? '_' + count : ''}.${ext}`;
+      const contentType = { pdf: 'application/pdf', png: batch ? 'application/zip' : 'image/png', zpl: 'text/plain; charset=utf-8' }[fmt];
+      const traceId = newTrace();
+      return {
+        fileName, contentType, format: fmt, version, count, dpi, traceId, images, labels, bytes, sizeText: fmtBytes(bytes), warnings: [],
+        zplPreview: zpl.length > 2400 ? zpl.slice(0, 2400) + `\n…（共 ${fmtBytes(zpl.length)}）` : zpl,
+        headers: { 'Content-Type': contentType, 'Content-Disposition': `attachment; filename="${fileName}"`, 'X-Template-Version': String(version), 'X-Label-Count': String(count), 'X-Label-Dpi': String(dpi), 'X-Trace-Id': traceId },
+      };
+    }
+    async function ensureSchema() {
+      if (schema.value && schema.value.code === tplCode.value) return true;
+      return readSchema(true);
+    }
+    async function renderSingle() {
+      if (!(await ensureSchema())) { result.value = null; tab.value = 'resp'; return; }
+      const copies = opt.copies;
+      if (!(Number.isInteger(copies) && copies >= 1 && copies <= 100)) { clientError('ArgumentOutOfRangeException', 'Copies', '份数要在 1–100 之间', 'RenderAsync'); return; }
+      const data = buildData(), fmt = opt.format, code = tplCode.value;
+      const out = await invoke('RenderAsync', code, async () => {
+        authCheck();
+        const { content, version } = findTemplate(code);
+        const errs = validateData(content.fields, data, 0, false);
+        if (errs.length) throw new ApiError(400, errs[0].code, errs[0].message + (errs.length > 1 ? `（共 ${errs.length} 个错误）` : ''), errs);
+        const dpi = opt.dpi ? +opt.dpi : content.page.dpi;
+        const r = renderLabel(content, data, { dpi, mono: fmt === 'zpl', mode: 'data', assets: BUILTIN_ASSETS });
+        if (r.errors.length) throw new ApiError(400, r.errors[0].code, r.errors[0].msg, r.errors.map(e => ({ code: e.code, message: e.msg })));
+        return packResult(code, version, fmt, dpi, [r.canvas], copies, [copies > 1 ? `× ${copies} 份` : ''], false, content.elements.length);
+      }, o => `${o.fileName}，${o.sizeText}`);
+      curImg.value = 0;
+      result.value = out;
+      tab.value = out ? 'preview' : 'resp';
+    }
+    async function renderBatch() {
+      if (!(await ensureSchema())) { result.value = null; tab.value = 'resp'; return; }
+      const n = opt.batchCount;
+      if (!(Number.isInteger(n) && n >= 1)) { clientError('ArgumentOutOfRangeException', 'Items', '批量条数至少 1 条', 'RenderBatchAsync'); return; }
+      if (n > 500) { clientError('ArgumentException', 'Items', `单次最多 500 张，这次是 ${n} 张。SDK 在发请求前就拦下了，请拆成多批调用`, 'RenderBatchAsync'); return; }
+      const fmt = opt.format, code = tplCode.value, base = buildData(), inc = opt.incKey;
+      const items = [];
+      let v = base[inc];
+      for (let i = 0; i < n; i++) {
+        items.push(Object.assign({}, base, inc ? { [inc]: v } : {}));
+        if (inc) v = typeof v === 'number' ? v + 1 : incrementCode(String(v ?? '0'));
+      }
+      const out = await invoke('RenderBatchAsync', code, async () => {
+        authCheck();
+        const { content, version } = findTemplate(code);
+        const errs = [];
+        items.forEach((d, i) => errs.push(...validateData(content.fields, d, i, true)));
+        if (errs.length) throw new ApiError(400, errs[0].code, errs[0].message + (errs.length > 1 ? `（共 ${errs.length} 个错误）` : ''), errs.slice(0, 20));
+        const dpi = opt.dpi ? +opt.dpi : content.page.dpi;
+        const canvases = [], labels = [];
+        for (let i = 0; i < Math.min(8, items.length); i++) {
+          const r = renderLabel(content, items[i], { dpi, mono: fmt === 'zpl', mode: 'data', assets: BUILTIN_ASSETS });
+          if (r.errors.length) throw new ApiError(400, r.errors[0].code, `第 ${i + 1} 条：${r.errors[0].msg}`, r.errors.map(e => ({ index: i, code: e.code, message: e.msg })));
+          canvases.push(r.canvas);
+          labels.push(inc ? String(items[i][inc]) : `第 ${i + 1} 张`);
+        }
+        return packResult(code, version, fmt, dpi, canvases, n, labels, true, content.elements.length);
+      }, o => `${o.fileName}，${o.count} 张`);
+      curImg.value = 0;
+      result.value = out;
+      tab.value = out ? 'preview' : 'resp';
+    }
+
+    /* ---------- 保存、打开、打印 ---------- */
+    function openSave() { menu.value = null; if (!result.value) return; savePath.value = 'D:\\Labels\\' + result.value.fileName; dialog.value = 'save'; }
+    function doSave() { dialog.value = null; toast(`已保存到 ${savePath.value}（原型不会真正写文件）`); }
+    function openWithShell() { menu.value = null; if (!result.value) return; toast(`已用默认程序打开 ${result.value.fileName}（原型中模拟 Process.Start）`); }
+    function openPrint() {
+      menu.value = null;
+      if (!result.value) return;
+      print.mode = result.value.format === 'zpl' ? 'net' : 'win';
+      if (result.value.format === 'png' && print.printer === 'ZDesigner ZT411-203dpi ZPL') print.printer = printers[2];
+      dialog.value = 'print';
+    }
+    async function doPrint() {
+      const r = result.value;
+      if (!r) return;
+      if (print.mode === 'net' && !/^[\w.-]+$/.test(print.host)) { msgBox.value = { title: '发送到打印机', err: true, text: '打印机地址不正确，请填 IP 或主机名。' }; return; }
+      dialog.value = null;
+      const op = print.mode === 'net' ? 'NetworkPrinter.SendAsync' : r.format === 'zpl' ? 'WindowsRawPrinter.Send' : 'PrintDocument.Print';
+      busy.value = true; status.value = `正在发送到 ${print.mode === 'net' ? print.host + ':' + print.port : print.printer}…`;
+      const t0 = performance.now();
+      await sleep(260 + Math.random() * 200);
+      busy.value = false;
+      const ms = Math.round(performance.now() - t0);
+      const target = print.mode === 'net' ? `${print.host}:${print.port}` : print.printer;
+      logs.unshift({ id: newGuid(), time: clock(), op, tpl: tplCode.value, ok: true, result: '已发送', ms, retries: 0, requestId: '—', traceId: '', note: `${r.sizeText} → ${target}` });
+      status.value = `已发送 ${r.count} 张到 ${target}`; statusKind.value = 'ok';
+      toast(`已把 ${r.sizeText} 发送到 ${target}（原型中模拟）`);
+    }
+
+    /* ---------- 调用代码 ---------- */
+    function csValue(r) {
+      if (r.type === 'number' && r.value !== '' && isFinite(Number(r.value))) return String(Number(r.value)) + (String(r.value).includes('.') ? 'm' : '');
+      if (r.type === 'date') { const d = parseDate(r.value); if (d) return `new DateTime(${d.getFullYear()}, ${d.getMonth() + 1}, ${d.getDate()})`; }
+      if (r.type === 'image') return `File.ReadAllBytes(@"D:\\Images\\${r.key}.png")`;
+      return csStr(r.value);
+    }
+    const codeText = computed(() => {
+      const F = { png: 'Png', pdf: 'Pdf', zpl: 'Zpl' }[opt.format];
+      const L = [];
+      L.push('// 引用 LabelService.Client.dll（或 NuGet 包 LabelService.Client）');
+      L.push('using LabelService.Client;');
+      if (opt.format === 'zpl') L.push('using LabelService.Client.Printing;');
+      L.push('');
+      L.push('// 整个程序共用一个客户端实例：线程安全，内部复用连接');
+      L.push('private static readonly LabelServiceClient Client = new LabelServiceClient(new LabelServiceClientOptions');
+      L.push('{');
+      L.push(`    BaseAddress = new Uri(${csStr(conn.baseUrl)}),`);
+      L.push('    ApiKey = ConfigurationManager.AppSettings["LabelApiKey"],   // Key 放配置文件，不要写死在代码里');
+      L.push(`    Timeout = TimeSpan.FromSeconds(${conn.timeout || 30}),`);
+      L.push(`    MaxRetries = ${conn.retries},                                     // 网络错误、超时、502/503/504 自动重试`);
+      L.push('});');
+      L.push('');
+      const set = rows.filter(r => r.value !== '' || r.type === 'image');
+      const tail = [];
+      if (opt.format === 'png' && !codeBatch.value) tail.push('        pictureBox1.Image = Image.FromStream(file.OpenRead());');
+      if (opt.format === 'zpl') tail.push(`        await NetworkPrinter.SendAsync(${csStr(print.host)}, ${print.port}, file.Content);   // 直接发给斑马打印机`);
+      else if (opt.format === 'pdf') { tail.push('        string path = Path.Combine(@"D:\\Labels", file.FileName);'); tail.push('        file.Save(path);'); tail.push('        Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });   // 用默认程序打开后打印'); }
+      else tail.push('        file.Save(Path.Combine(@"D:\\Labels", file.FileName));');
+      if (!codeBatch.value) {
+        L.push('private async void btnRender_Click(object sender, EventArgs e)');
+        L.push('{');
+        L.push(`    var request = new RenderRequest(${csStr(tplCode.value)}, LabelFormat.${F})`);
+        L.push('    {');
+        if (opt.dpi) L.push(`        Dpi = ${opt.dpi},`);
+        L.push(`        Copies = ${opt.copies},`);
+        L.push('    }');
+        set.forEach((r, i) => L.push(`    .Set(${csStr(r.key)}, ${csValue(r)})${i === set.length - 1 ? ';' : ''}`));
+        if (!set.length) L[L.length - 1] += ';';
+        L.push('');
+        L.push('    try');
+        L.push('    {');
+        L.push('        LabelFile file = await Client.RenderAsync(request);');
+      } else {
+        const inc = rows.find(r => r.key === opt.incKey);
+        const common = set.filter(r => r.key !== opt.incKey);
+        L.push('private async void btnBatch_Click(object sender, EventArgs e)');
+        L.push('{');
+        L.push(`    var batch = new BatchRenderRequest(${csStr(tplCode.value)}, LabelFormat.${F})`);
+        L.push('    {');
+        if (opt.dpi) L.push(`        Dpi = ${opt.dpi},`);
+        L.push(`        Output = BatchOutput.${opt.format === 'png' ? 'Zip' : 'Merge'},${opt.format === 'png' ? '          // PNG 只能打包成 ZIP' : '        // 合并成一个文件'}`);
+        L.push('    }');
+        common.forEach((r, i) => L.push(`    .SetCommon(${csStr(r.key)}, ${csValue(r)})${i === common.length - 1 ? ';' : ''}`));
+        if (!common.length) L[L.length - 1] += ';';
+        L.push('');
+        if (inc) {
+          const first = inc.value || '1', last = (() => { let v = inc.type === 'number' ? Number(first) : first; for (let i = 1; i < opt.batchCount; i++) v = typeof v === 'number' ? v + 1 : incrementCode(v); return v; })();
+          L.push(`    // 每条只传不同的字段，例：${first} … ${last}`);
+          L.push(`    foreach (var ${inc.key} in ${inc.key}List)`);
+          L.push(`        batch.AddItem().Set(${csStr(inc.key)}, ${inc.key});`);
+        }
+        L.push('');
+        L.push('    try');
+        L.push('    {');
+        L.push(`        LabelFile file = await Client.RenderBatchAsync(batch);   // 一个文件，共 ${opt.batchCount} 张`);
+      }
+      L.push(...tail);
+      L.push('    }');
+      L.push('    catch (LabelServiceException ex)');
+      L.push('    {');
+      L.push('        // ex.ErrorCode：FIELD_REQUIRED、TEMPLATE_NOT_FOUND 等；ex.Errors 是逐条错误；ex.TraceId 用来和服务端对账');
+      L.push('        MessageBox.Show($"{ex.ErrorCode}：{ex.Message}\\ntraceId：{ex.TraceId}", "生成失败");');
+      L.push('    }');
+      L.push('}');
+      return L.join('\n');
+    });
+    function copyCode() {
+      const text = codeText.value;
+      const fallback = () => { const el = document.getElementById('w-code'); if (el) { el.focus(); el.select(); } toast('已选中代码，按 Ctrl+C 复制'); };
+      try { navigator.clipboard.writeText(text).then(() => toast('代码已复制到剪贴板'), fallback); } catch (e) { fallback(); }
+    }
+    const imgStyle = computed(() => (zoom.value === 'fit' ? { maxWidth: '100%', maxHeight: result.value && result.value.images.length > 1 ? '400px' : '470px' } : { width: 'auto', transform: 'none', zoom: zoom.value }));
+
+    /* ---------- 启动：读字段并生成一张，界面一打开就是工作状态 ---------- */
+    async function boot() {
+      try {
+        const text = [...new Set(TEMPLATES.flatMap(t => [t.name, ...t.elements.map(e => e.content || e.value || ''), ...t.fields.map(f => String(f.sample ?? ''))]).join(''))].join('') + 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789:-|';
+        const ps = [];
+        for (const fam of ['Noto Sans SC', 'Noto Serif SC']) for (const w of ['400', '700']) ps.push(document.fonts.load(`${w} 16px "${fam}"`, text).catch(() => null));
+        ps.push(document.fonts.load('400 16px "JetBrains Mono"', 'ABC0123456789').catch(() => null));
+        await Promise.race([Promise.all(ps), sleep(4000)]);
+      } catch (e) { /* 字体加载失败时用系统字体 */ }
+      await Promise.all(BUILTIN_ASSETS.map(a => new Promise(res => { if (getImage(a.src, false, res)) res(); setTimeout(res, 1500); })));
+      status.value = '就绪';
+      if (await readSchema(true)) await renderSingle();
+    }
+    window.addEventListener('keydown', e => {
+      if (!(e.ctrlKey || e.metaKey)) return;
+      if (e.key === 's' || e.key === 'S') { e.preventDefault(); openSave(); }
+      if (e.key === 'p' || e.key === 'P') { e.preventDefault(); openPrint(); }
+    });
+    document.addEventListener("click", () => { menu.value = null; });
+    nextTick(boot);
+
+    return { conn, tplList, tplCode, schema, rows, curRow, opt, tab, zoom, curImg, codeBatch, busy, status, statusKind, result, error, logs, selLog,
+      menu, dialog, msgBox, toastText, print, printers, savePath, toast, readSchema, testConnection, renderSingle, renderBatch,
+      openSave, doSave, openWithShell, openPrint, doPrint, codeText, copyCode, imgStyle };
+  },
+});
+app.config.compilerOptions.delimiters = ['[[', ']]'];
+app.component('ui-icon', {
+  props: { name: String },
+  computed: { d() { return UI_ICONS[this.name] || ''; } },
+  template: '<svg class="svgi" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" focusable="false" v-html="d"></svg>',
+});
+app.mount('#app');
+</script>

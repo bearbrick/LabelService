@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- 后端检查程序：契约、渲染、服务端，以及跨前端和调用端的契约一致性（按文本读取，不引用项目）。运行命令见根目录 AGENTS.md。 -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\LabelService.Contracts\LabelService.Contracts.csproj" />
+    <ProjectReference Include="..\..\src\LabelService.Rendering\LabelService.Rendering.csproj" />
+    <ProjectReference Include="..\..\src\LabelService.Server\LabelService.Server.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+  </ItemGroup>
+
+</Project>

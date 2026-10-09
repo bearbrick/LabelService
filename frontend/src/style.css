@@ -1,0 +1,125 @@
+/* 配色沿用公司 DB Studio：浅灰底、白色面板、蓝色强调。 */
+:root {
+  --bg: #f3f5f8;
+  --panel: #ffffff;
+  --line: #dde3ea;
+  --text: #1f2937;
+  --muted: #6b7280;
+  --accent: #2f6fe4;
+  font-family: "Microsoft YaHei UI", "PingFang SC", "Noto Sans SC", sans-serif;
+  font-size: 13px;
+  color: var(--text);
+  background: var(--bg);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+}
+
+.shell {
+  display: grid;
+  grid-template-columns: 220px 1fr 240px;
+  grid-template-rows: 44px 1fr;
+  height: 100vh;
+}
+
+.topbar {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 16px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+}
+
+.spacer {
+  flex: 1;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.panel {
+  overflow: auto;
+  padding: 12px 14px;
+  background: var(--panel);
+}
+
+.panel.left {
+  border-right: 1px solid var(--line);
+}
+
+.panel.right {
+  border-left: 1px solid var(--line);
+}
+
+.panel h3 {
+  margin: 4px 0 8px;
+  font-size: 13px;
+}
+
+.palette,
+.fields {
+  margin: 0 0 16px;
+  padding: 0;
+  list-style: none;
+}
+
+.palette {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.palette li {
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  cursor: not-allowed;
+}
+
+.fields li {
+  display: flex;
+  flex-direction: column;
+  padding: 5px 0;
+  border-bottom: 1px dashed var(--line);
+}
+
+.fields code {
+  color: var(--accent);
+}
+
+.canvas {
+  overflow: auto;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 24px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--muted);
+}
+
+.grid input {
+  padding: 4px 6px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  font: inherit;
+}
