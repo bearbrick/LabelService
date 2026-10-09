@@ -58,6 +58,7 @@ dotnet run -c Release --project backend/tests/LabelService.Benchmarks -- --filte
 - **开放接口**只读 `Templates/DbTemplateStore.cs` 的内存缓存（启动时整体加载，发布时追加），不访问数据库。
 - **调用方**：数据库 `api_client` 表（Key 只存 SHA-256）加上配置文件 `LabelService:Auth:Clients`，启动时加载进内存；`Auth/ApiClientRepository.cs` 新建、改权限、启停、重置 Key 后立即生效。新 Key 正式环境前缀 `lbl_live_`，其他环境 `lbl_test_`。
 - **调用日志**：独立的 `label-log.db`（配置 `LabelService:RenderLog`：队列上限、每批条数、保留天数，默认 180 天）。请求结束时投递到队列，后台服务按批写入，队列满丢弃并计入指标 `label_log_dropped_total`，写入失败只记警告。
+- **管理接口**：`/api/admin`，接口清单见 `docs/admin-api.md`，登录和权限见 ADR 0006。首次启动建 `admin` 账号（开发环境密码 `admin123`，首次登录必须改）。配置 `LabelService:Admin:SigningKey`（Base64，≥ 32 字节）指定 JWT 签名密钥，不配置时生成在数据目录的 `admin-signing.key`。
 - **改表结构**：改 `Server/Data/Records.cs`、`LabelDbContext.cs` 后生成迁移，不要手改迁移文件和快照。检查程序会发现漏生成的迁移。
 
 ```powershell
