@@ -71,8 +71,8 @@
 | `text` | `content`；`style`（见下） | 已实现 |
 | `barcode` | `symbology`（默认 code128）、`value`、`align`（默认 left）、`showText`（默认 true）、`textPosition`（bottom / top）、`textStyle`、`minModuleDots`（默认 2）、`quietZone` | 已实现 |
 | `qrcode` | `symbology`（qr / datamatrix / pdf417，默认 qr）、`value`、`ecLevel`（L / M / Q / H，默认 M，仅 QR）、`quietZone` | 已实现 |
-| `image` | `src`（`asset:素材ID` 或 `{{字段}}`）、`fit`（contain / cover / stretch，默认 contain）、`mono` | T-004 |
-| `icon` | `icon`（图标库路径，如 `gb191/fragile`）、`color` | T-004 |
+| `image` | `src`（`asset:素材ID` 或 `{{字段}}`）、`fit`（contain / cover / stretch，默认 contain）、`mono` | 已实现 |
+| `icon` | `icon`（图标库路径，如 `gb191/fragile`）、`color` | 已实现 |
 | `line` | `stroke`；height 为 0 是横线，width 为 0 是竖线，都不为 0 画左上到右下的斜线；线宽以线为中心 | 已实现 |
 | `rect` | `stroke`、`fill`、`radius`；边框画在框**内侧**，外沿和元素框对齐 | 已实现 |
 
@@ -100,6 +100,13 @@
 - 模块大小 = floor(min(框宽, 框高) 减去两侧 `quietZone` 后的打印点数 ÷ 模块数)，在框里居中；小于 2 点返回 `BARCODE_TOO_DENSE`，内容超出容量返回 `BARCODE_INVALID`。
 - 内容含中文等非 ASCII 字符时按 UTF-8 编码并带 ECI 标识；纯 ASCII 不加 ECI。`ecLevel` 只对 QR 生效。
 - DataMatrix 固定为正方形；PDF417 每行高 3 个模块。
+
+图片和图标：
+
+- `image.src` 写 `asset:素材ID` 时取素材库（内置素材在 `backend/assets/images`，上传的素材在数据目录的 `assets/`，文件名就是 ID），写 `{{字段}}` 时取 image 字段；素材不存在、图片解码失败返回 `IMAGE_INVALID`；可选的图片字段没传时不画。
+- `fit`：contain 等比缩放后居中，cover 等比放大后居中裁掉多余部分，stretch 拉伸填满。`mono: true` 时用 Floyd–Steinberg 抖动成黑白。
+- `icon.icon` 是图标库路径（如 `gb191/fragile`），图标拉伸画满元素框，`color` 着色（默认黑色，单色着色）；图标不存在返回 `IMAGE_INVALID`。
+- SVG（图标、素材）加载前会清洗：禁止 DTD，去掉脚本、样式表、foreignObject、动画和 on* 事件属性，链接只保留文档内引用和 `data:image/` 内嵌图片，不会访问外部地址。
 
 `stroke`：`width`（mm，默认 0.3）、`dash`（实段、空段长度 mm，如 `[1, 0.5]`；不设为实线）、`color`。
 
