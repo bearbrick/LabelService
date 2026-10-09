@@ -3,9 +3,6 @@ using System.Text;
 using LabelService.Contracts;
 using LabelService.Contracts.Protocol;
 using LabelService.Rendering;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.Extensions.Configuration;
 
 namespace LabelService.Backend.Checks;
 
@@ -17,7 +14,20 @@ internal static class ServerChecks
 {
     public static async Task RunAsync(string backendRoot, Action<string, bool> check)
     {
-        await using var factory = new ServerFactory(Path.Combine(backendRoot, "src", "LabelService.Server"));
+        var dataDirectory = TempDataDirectory.Create();
+        try
+        {
+            await RunAsync(backendRoot, dataDirectory, check);
+        }
+        finally
+        {
+            TempDataDirectory.Delete(dataDirectory);
+        }
+    }
+
+    private static async Task RunAsync(string backendRoot, string dataDirectory, Action<string, bool> check)
+    {
+        await using var factory = new ServerFactory(backendRoot, dataDirectory);
         using var http = factory.CreateClient();
 
         var health = await http.GetAsync("/health");
@@ -58,7 +68,7 @@ internal static class ServerChecks
 
     }
 
-    private static async Task<HttpResponseMessage> Post(HttpClient http, string json, string? apiKey = Fixtures.DevApiKey)
+    internal static async Task<HttpResponseMessage> Post(HttpClient http, string json, string? apiKey = Fixtures.DevApiKey)
     {
         using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/render") { Content = new StringContent(json, Encoding.UTF8, "application/json") };
         if (apiKey is not null)
@@ -75,16 +85,6 @@ internal static class ServerChecks
         return ((int)response.StatusCode, body?.Code);
     }
 
-    private static string? Header(HttpResponseMessage response, string name) =>
+    internal static string? Header(HttpResponseMessage response, string name) =>
         response.Headers.TryGetValues(name, out var values) ? string.Join(",", values) : null;
-
-    /// <summary>
-    /// 指定内容根目录（WebApplicationFactory 默认按 .sln 推断，不认识 .slnx），并只输出警告以上的日志。
-    /// </summary>
-    private sealed class ServerFactory(string contentRoot) : WebApplicationFactory<global::Program>
-    {
-        protected override void ConfigureWebHost(IWebHostBuilder builder) =>
-            builder.UseContentRoot(contentRoot).ConfigureAppConfiguration((_, configuration) => configuration.AddInMemoryCollection(
-                new Dictionary<string, string?> { ["Logging:LogLevel:Default"] = "Warning", ["Logging:LogLevel:Microsoft.Hosting.Lifetime"] = "Warning" }));
-    }
 }

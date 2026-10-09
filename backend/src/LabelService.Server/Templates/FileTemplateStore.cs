@@ -7,10 +7,11 @@ using Microsoft.Extensions.Options;
 namespace LabelService.Server.Templates;
 
 /// <summary>
-/// 临时的模板存储：启动时把目录里的模板 JSON 全部读进内存，每个文件算作版本 1 的已发布模板。
+/// 文件模板存储：启动时把目录里的模板 JSON 全部读进内存，每个文件算作版本 1 的已发布模板。
 /// </summary>
 /// <remarks>
-/// 模板数据库、草稿和版本发布完成后（T-008）由数据库实现替换，接口不变。
+/// 默认用数据库（<see cref="DbTemplateStore"/>）；配置 LabelService:Templates:Source = Files 时用它，
+/// 适合没有数据目录的场合，如只读演示环境。开发环境首次建库时也用 <see cref="ReadDirectory"/> 导入示例模板。
 /// </remarks>
 internal sealed class FileTemplateStore : ITemplateStore
 {
@@ -21,22 +22,29 @@ internal sealed class FileTemplateStore : ITemplateStore
     /// </summary>
     public FileTemplateStore(IOptions<TemplateStoreOptions> options, ILogger<FileTemplateStore> logger)
     {
-        var directory = Path.Combine(AppContext.BaseDirectory, options.Value.SeedDirectory);
+        var directory = options.Value.ResolveSeedDirectory();
         if (!Directory.Exists(directory))
         {
             logger.LogWarning("模板目录 {Directory} 不存在，没有可用模板", directory);
             return;
         }
 
-        foreach (var path in Directory.EnumerateFiles(directory, "*.json"))
+        foreach (var template in ReadDirectory(directory))
         {
-            var template = JsonSerializer.Deserialize<LabelTemplate>(File.ReadAllText(path), LabelJson.Options)
-                ?? throw new InvalidDataException($"模板文件为空：{path}");
             templates.Add(template.Code, new PublishedTemplate(template, 1));
         }
 
         logger.LogInformation("已加载 {Count} 个模板：{Codes}", templates.Count, string.Join(", ", templates.Keys));
     }
+
+    /// <summary>
+    /// 读取目录里的全部模板 JSON，按文件名排序。
+    /// </summary>
+    public static IEnumerable<LabelTemplate> ReadDirectory(string directory) =>
+        Directory.EnumerateFiles(directory, "*.json")
+            .Order(StringComparer.Ordinal)
+            .Select(path => JsonSerializer.Deserialize<LabelTemplate>(File.ReadAllText(path), LabelJson.Options)
+                ?? throw new InvalidDataException($"模板文件为空：{path}"));
 
     /// <inheritdoc />
     public bool TryGetPublished(string templateCode, int? version, [NotNullWhen(true)] out PublishedTemplate? template)
@@ -62,7 +70,33 @@ internal sealed class TemplateStoreOptions
     public const string SectionName = "LabelService:Templates";
 
     /// <summary>
-    /// 模板 JSON 目录，相对于程序输出目录。
+    /// 模板来源，默认数据库。
+    /// </summary>
+    public TemplateSource Source { get; set; } = TemplateSource.Database;
+
+    /// <summary>
+    /// 模板 JSON 目录，相对于程序输出目录。来源是 Files 时从这里加载；开发环境首次建库时从这里导入示例模板。
     /// </summary>
     public string SeedDirectory { get; set; } = "SeedTemplates";
+
+    /// <summary>
+    /// 模板 JSON 目录的绝对路径。
+    /// </summary>
+    public string ResolveSeedDirectory() => Path.Combine(AppContext.BaseDirectory, SeedDirectory);
+}
+
+/// <summary>
+/// 模板来源。
+/// </summary>
+internal enum TemplateSource
+{
+    /// <summary>
+    /// 数据库（SQLite），支持草稿、版本发布。
+    /// </summary>
+    Database,
+
+    /// <summary>
+    /// 模板 JSON 目录，只读，版本号固定为 1。
+    /// </summary>
+    Files,
 }

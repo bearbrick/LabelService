@@ -18,7 +18,17 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- 模板数据库（T-008）完成前，服务启动时从这里加载示例模板，版本号固定为 1。 -->
+    <InternalsVisibleTo Include="LabelService.Backend.Checks" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- 模板数据库：SQLite（ADR 0003）。Design 只在生成迁移时用，不随程序发布。 -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- 示例模板：开发环境首次建库时导入为已发布版本；模板来源配置为 Files 时直接从这里加载。 -->
     <Content Include="..\..\samples\templates\*.json" LinkBase="SeedTemplates" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 

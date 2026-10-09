@@ -64,7 +64,8 @@
 | `src/LabelService.Rendering/Diagnostics/` | 分阶段计时、Server-Timing 生成 |
 | `src/LabelService.Server/Endpoints/` | 开放接口路由、请求收尾（计时、指标、日志）、错误响应 |
 | `src/LabelService.Server/Auth/` | API Key 识别 |
-| `src/LabelService.Server/Templates/` | 已发布模板的读取；目前从 `samples/templates` 加载 |
+| `src/LabelService.Server/Data/` | SQLite 主库 `label.db`：表对应的实体、DbContext、迁移、连接 PRAGMA（ADR 0003） |
+| `src/LabelService.Server/Templates/` | 模板存储：已发布版本的内存缓存（开放接口只读它）、草稿和发布、发布前检查；`Source=Files` 时改从 `samples/templates` 加载 |
 | `src/LabelService.Server/Diagnostics/` | 指标（System.Diagnostics.Metrics） |
 | `samples/` | 示例模板、示例请求体 |
 | `tests/LabelService.Backend.Checks/` | 后端检查程序，含跨部分的契约一致性和仓库规范检查 |
@@ -95,7 +96,7 @@
 
 **新增一种输出格式**：在 `backend/src/LabelService.Rendering/Output/` 新建 `XxxOutputDocument.cs` 继承 `OutputDocument`，在 `OutputDocuments.cs` 登记。画布坐标必须保持“1 单位 = 1 打印点”，矢量格式自己做缩放。
 
-**替换模板存储**：实现 `ITemplateStore`，在 `Program.cs` 换掉 `FileTemplateStore`。请求路径上只能查内存，数据库读写放在启动预热和发布时。
+**模板存储**：开放接口只通过 `ITemplateStore` 取模板，请求路径上只能查内存。默认实现 `DbTemplateStore` 是内存缓存：启动时由 `TemplateRepository.LoadPublishedAsync` 从数据库整体加载，发布时追加。以后换 SQL Server 只换 EF Core Provider、重新生成迁移（ADR 0003），这个接口不用动。
 
 ## 状态与部署
 

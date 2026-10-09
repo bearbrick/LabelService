@@ -21,7 +21,7 @@
 
 核心指标：**单张标签服务端处理 P95 ≤ 100 ms**（见 `docs/performance.md`）。
 
-当前阶段：骨架已完成（T-000）。数据库用 SQLite、单实例部署（ADR 0003）。单张 PNG 链路可用，但只实现了线和矩形；文本、条码、图片、PDF、ZPL、批量、数据库、管理后台都在任务列表里（`docs/tasks/README.md`）。
+当前阶段：骨架已完成（T-000）。数据库用 SQLite、单实例部署（ADR 0003）。单张 PNG 链路可用，但只实现了线和矩形；模板数据库和版本发布已完成（T-008）；文本、条码、图片、PDF、ZPL、批量、管理后台都在任务列表里（`docs/tasks/README.md`）。
 
 ## 2. 仓库地图
 
@@ -226,5 +226,6 @@ cd frontend; npm run build              # 类型检查 + 打包
 - **WebApplicationFactory 不认识 .slnx**：后端检查程序里已经显式指定内容根目录，新增服务端检查时沿用 `ServerChecks` 里的 `ServerFactory`。
 - **SkiaSharp 在 Linux** 需要 `SkiaSharp.NativeAssets.Linux.NoDependencies`（Server 已引用）。
 - **条码模块宽度必须是整数个打印点**，否则看着正常、扫不出来。
-- **SQLite**：数据目录不能放网络共享盘，同一数据目录只能有一个服务进程；时间列存 UTC `DateTime`，不用 `DateTimeOffset`；检查程序用临时数据目录。
+- **SQLite**：数据目录不能放网络共享盘，同一数据目录只能有一个服务进程；时间列存 UTC `DateTime`，不用 `DateTimeOffset`；检查程序用临时数据目录（`ServerFactory`、`TempDataDirectory`），删除前要 `SqliteConnection.ClearAllPools()`，否则 Windows 上库文件被占用删不掉。
+- **EF Core 迁移**：改了 `Server/Data` 的实体要用 `dotnet ef migrations add` 生成迁移（命令见 `backend/README.md`），不要手改迁移和快照。
 - **开发 Key** `lbl_test_local_dev` 只在 Development 环境有效；后端检查程序用 `WebApplicationFactory` 启动服务，默认就是 Development；`verify.ps1` 启动服务时也会设置 Development。

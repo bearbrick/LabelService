@@ -15,7 +15,7 @@ backend/
 │  ├─ LabelService.Backend.Checks/  检查程序（含跨前端、调用端的契约一致性检查）
 │  └─ LabelService.Benchmarks/      渲染基准
 └─ samples/
-   ├─ templates/                  示例模板，开发期服务启动时加载
+   ├─ templates/                  示例模板，开发环境首次建库时导入为已发布版本
    └─ requests/                   示例请求体（UTF-8）
 ```
 
@@ -44,3 +44,18 @@ dotnet run -c Release --project backend/tests/LabelService.Benchmarks -- --filte
 - 渲染是热路径：不访问数据库、磁盘、网络，单张 P95 ≤ 100 ms，见 `docs/performance.md`。
 - 数据库用 SQLite，单实例部署（`docs/adr/0003-sqlite-single-instance.md`）。
 - 后端检查程序会按文本读取 `client/` 和 `frontend/` 的源码，核对错误码、HTTP 头、元素类型、示例模板是否一致。改了契约，三个部分要一起改。
+
+## 模板存储
+
+- **数据目录**：配置 `LabelService:Data:Directory`，默认程序目录下的 `data/`（本地 `dotnet run` 时在 `backend/src/LabelService.Server/bin/Debug/net10.0/data/`），库文件 `label.db`。启动时自动建库、执行迁移。
+- **示例模板**：开发环境首次建库（库里没有模板）时，把 `samples/templates` 导入为已发布版本 1，走正常的保存草稿和发布流程。改了示例模板想重新导入，停掉服务、删掉数据目录再启动。
+- **模板来源**：配置 `LabelService:Templates:Source`，默认 `Database`；设成 `Files` 时直接读示例目录、不建库，只适合只读演示。
+- **草稿和发布**：`Templates/TemplateRepository.cs`（保存草稿、发布、放弃草稿、回滚到旧版本），管理接口（T-014）调它。同一模板最多一个草稿，草稿的版本号是“最新发布版本 + 1”；发布前做静态检查并用样例值试渲染计时，通过后立即生效；已发布版本不能修改、不能删除。
+- **开放接口**只读 `Templates/DbTemplateStore.cs` 的内存缓存（启动时整体加载，发布时追加），不访问数据库。
+- **改表结构**：改 `Server/Data/Records.cs`、`LabelDbContext.cs` 后生成迁移，不要手改迁移文件和快照。检查程序会发现漏生成的迁移。
+
+```powershell
+dotnet tool install --global dotnet-ef        # 第一次用
+dotnet ef migrations add 迁移名 --project backend/src/LabelService.Server --output-dir Data/Migrations
+dotnet format backend/LabelService.Backend.slnx
+```

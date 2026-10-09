@@ -11,14 +11,14 @@ var builder = WebApplication.CreateBuilder(args);
 builder.WebHost.ConfigureKestrel(options => options.Limits.MaxRequestBodySize = RenderLimits.MaxRequestBodyBytes);
 builder.Services.ConfigureHttpJsonOptions(options => LabelJson.Apply(options.SerializerOptions));
 builder.Services.Configure<ApiClientOptions>(builder.Configuration.GetSection(ApiClientOptions.SectionName));
-builder.Services.Configure<TemplateStoreOptions>(builder.Configuration.GetSection(TemplateStoreOptions.SectionName));
 builder.Services.AddSingleton<ApiKeyAuthenticator>();
-builder.Services.AddSingleton<ITemplateStore, FileTemplateStore>();
+builder.Services.AddTemplateStorage(builder.Configuration);
 builder.Services.AddSingleton<ILabelRenderer, LabelRenderer>();
 builder.Services.AddSingleton<LabelMetrics>();
 builder.Services.AddHealthChecks();
 
 var app = builder.Build();
+await app.InitializeTemplateStorageAsync();
 
 // 未处理的异常统一返回 RENDER_FAILED，异常本身由中间件写日志。
 app.UseExceptionHandler(errorApp => errorApp.Run(async http =>
