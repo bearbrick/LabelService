@@ -125,7 +125,7 @@ PDF：矢量输出，一张标签每份一页；页面尺寸是模板的 mm 尺�
 | 方法 | 路径 | 说明 | 状态 |
 | --- | --- | --- | --- |
 | POST | `/api/v1/render` | 单张生成，成功时返回文件流 | PNG 可用；PDF、ZPL 见 T-005、T-006 |
-| POST | `/api/v1/render/batch` | 批量生成，返回合并文件或 ZIP | T-007 |
+| POST | `/api/v1/render/batch` | 批量生成，返回合并文件或 ZIP | 可用 |
 | GET | `/api/v1/templates/{code}/schema` | 最新发布版本的字段定义和样例 | 可用 |
 | POST | `/api/v1/preview` | 设计器用：未保存的模板 + 样例数据 → PNG（需要登录） | T-016 |
 | GET | `/health` | 存活检查 | 可用；就绪检查见 T-017 |
@@ -145,6 +145,8 @@ PDF：矢量输出，一张标签每份一页；页面尺寸是模板的 mm 尺�
 > 规划中（T-018，ADR 0005）：单张和批量请求增加可选参数 `layout`（拼版版式编码）、`startSlot`（起始格子），响应头增加 `X-Page-Count`，错误码增加 `LAYOUT_NOT_FOUND`、`LAYOUT_SIZE_MISMATCH`。实现时把正式规范写进本文，并删除这段说明。
 
 批量请求多出 `output`（`merge` / `zip`，默认 merge；PNG 只能 zip）、`common`（公共字段，条目里同名字段覆盖它）、`items[]`（`data`、`copies`）。单次总张数（含份数）上限 500。
+
+批量的输出：merge 是一个文件（PDF 每张每份一页，ZPL 每张一个 `^XA…^XZ`），顺序和 `items` 一致；zip 里每个条目一个文件，文件名 `模板编码_序号.扩展名`（序号从 001 开始），PDF、ZPL 的份数在文件里，PNG 一个文件只能放一张，所以每份一个文件。先校验全部条目，任何一条不通过整批返回；渲染时出错（如条码内容不符合码制）也带条目序号。`Server-Timing` 各阶段是全部张数的累计值，`X-Label-Count` 是总张数（含份数）。
 
 ### HTTP 头
 

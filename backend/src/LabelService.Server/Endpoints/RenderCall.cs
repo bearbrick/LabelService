@@ -80,23 +80,36 @@ internal sealed class RenderCall : IDisposable
     }
 
     /// <summary>
-    /// 成功结束：写响应头，直接返回文件内容。
+    /// 成功：返回渲染出的文件，写响应头（版本、张数、DPI、警告、链路 ID）。
     /// </summary>
-    public IResult Succeed(RenderResult result, int templateVersion)
+    public IResult Succeed(RenderResult result, int templateVersion) =>
+        SucceedFile(result.Content, result.ContentType, LabelFormats.Extension(result.Format), result.LabelCount, result.Dpi, result.Warnings, templateVersion);
+
+    /// <summary>
+    /// 成功：返回任意文件（批量 zip 用），响应头和单张相同。
+    /// </summary>
+    /// <param name="content">文件内容。</param>
+    /// <param name="contentType">Content-Type。</param>
+    /// <param name="extension">下载文件名的扩展名。</param>
+    /// <param name="labelCount">张数（含份数）。</param>
+    /// <param name="dpi">分辨率。</param>
+    /// <param name="warnings">渲染警告。</param>
+    /// <param name="templateVersion">模板版本。</param>
+    public IResult SucceedFile(ReadOnlyMemory<byte> content, string contentType, string extension, int labelCount, int dpi, IReadOnlyCollection<string> warnings, int templateVersion)
     {
-        Finish("ok", result.LabelCount);
+        Finish("ok", labelCount);
         var headers = http.Response.Headers;
         headers[HeaderNames.TemplateVersion] = templateVersion.ToString(CultureInfo.InvariantCulture);
-        headers[HeaderNames.LabelCount] = result.LabelCount.ToString(CultureInfo.InvariantCulture);
-        headers[HeaderNames.LabelDpi] = result.Dpi.ToString(CultureInfo.InvariantCulture);
+        headers[HeaderNames.LabelCount] = labelCount.ToString(CultureInfo.InvariantCulture);
+        headers[HeaderNames.LabelDpi] = dpi.ToString(CultureInfo.InvariantCulture);
         headers[HeaderNames.TraceId] = ApiErrors.TraceId(http);
-        if (result.Warnings.Count > 0)
+        if (warnings.Count > 0)
         {
-            headers[HeaderNames.LabelWarnings] = string.Join(",", result.Warnings);
+            headers[HeaderNames.LabelWarnings] = string.Join(",", warnings);
         }
 
-        var fileName = $"{TemplateCode}_{DateTime.Now:yyyyMMdd}.{LabelFormats.Extension(result.Format)}";
-        return Results.Bytes(result.Content, result.ContentType, fileName);
+        var fileName = $"{TemplateCode}_{DateTime.Now:yyyyMMdd}.{extension}";
+        return Results.Bytes(content, contentType, fileName);
     }
 
     /// <summary>

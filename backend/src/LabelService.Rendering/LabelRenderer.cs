@@ -67,11 +67,22 @@ public sealed class LabelRenderer : ILabelRenderer
         var mono = job.Mono || job.Format == LabelFormat.Zpl;
         using var document = OutputDocuments.Create(job.Format, width, height, job.Dpi, job.Mono, template.Page);
         var labelCount = 0;
-        foreach (var label in job.Labels)
+        for (var index = 0; index < job.Labels.Count; index++)
         {
+            var label = job.Labels[index];
             var start = Stopwatch.GetTimestamp();
             var context = new RenderContext(job.Dpi, mono, label.Values, fields, fonts, assets, warnings);
-            var layouts = Layout(template, context);
+            List<(IElementPainter Painter, ElementLayout Layout)> layouts;
+            try
+            {
+                layouts = Layout(template, context);
+            }
+            catch (LabelRenderException ex) when (job.Labels.Count > 1 && ex.LabelIndex is null)
+            {
+                // 批量合并时告诉调用方是哪一条的数据有问题。
+                throw ex.ForLabel(index);
+            }
+
             start = timings.Mark(TimingStages.Layout, start);
 
             var canvas = document.BeginLabel();

@@ -75,4 +75,6 @@ dotnet run -c Release --project backend/tests/LabelService.Benchmarks -- --filte
 
 | 2026-10-09 | BenchmarkDotNet（`--job short`），`BoxLabelZpl`（T-006） | 203dpi 1.09 ms、300dpi 2.28 ms；每次分配 153–255 KB | 黑白位图 + ZPL ASCII 压缩，203dpi 示例箱标约 10.8 KB；同一轮 PNG 6.07 ms、12.70 ms，PDF 3.75 ms、3.63 ms |
 
+| 2026-10-09 | 批量接口（T-007），100 张示例箱标合并 PDF，进程内服务（检查程序），热请求 | 约 50 ms（layout 5.5、draw 6.0、encode 37.2 ms） | 要求 ≤ 3 s；批量 zip 时 PNG 按 CPU 核数并行渲染 |
+
 实现新元素或格式后在这里追加一行，写明机器和条件。

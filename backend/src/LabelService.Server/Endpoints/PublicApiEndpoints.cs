@@ -23,8 +23,7 @@ internal static class PublicApiEndpoints
         var api = app.MapGroup("/api/v1");
         api.MapPost("/render", RenderAsync);
         api.MapGet("/templates/{code}/schema", GetSchema);
-        api.MapPost("/render/batch", (HttpContext http) =>
-            ApiErrors.Create(http, ApiErrors.NotImplemented, "批量生成尚未实现（T-007）", statusCode: 501));
+        api.MapPost("/render/batch", BatchRenderEndpoint.RenderBatchAsync);
         api.MapPost("/preview", (HttpContext http) =>
             ApiErrors.Create(http, ApiErrors.NotImplemented, "服务端预览尚未实现（T-016）", statusCode: 501));
         return app;
@@ -180,7 +179,10 @@ internal static class PublicApiEndpoints
         return Results.Json(response, LabelJson.Options);
     }
 
-    private static async Task<(T? Body, (string Code, string Message, int StatusCode)? Error)> ReadJsonAsync<T>(HttpContext http)
+    /// <summary>
+    /// 读取 JSON 请求体。格式错误、超过大小上限时返回错误码，单张和批量共用。
+    /// </summary>
+    internal static async Task<(T? Body, (string Code, string Message, int StatusCode)? Error)> ReadJsonAsync<T>(HttpContext http)
         where T : class
     {
         try

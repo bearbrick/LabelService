@@ -35,7 +35,8 @@ LabelService/
 | 模板 JSON 规范、错误码、协议 | 已定稿（`backend/src/LabelService.Contracts`） |
 | 单张生成接口 `POST /api/v1/render` | PNG、PDF、ZPL 都可用，PNG 支持黑白；7 种元素全部实现（T-001～T-006，待验收） |
 | 字段定义接口 `GET /api/v1/templates/{code}/schema` | 可用 |
-| 批量生成、服务端预览 | 未开始，返回 501 |
+| 批量生成 `POST /api/v1/render/batch` | 可用（T-007，待验收）：合并成一个 PDF / ZPL，或打包 ZIP |
+| 服务端预览 | 未开始，返回 501（T-016） |
 | 模板数据库、版本发布 | 已完成，待验收（T-008）：SQLite，草稿和发布分开，发布前试渲染，开放接口只读内存缓存；还没有管理接口 |
 | 管理后台 | 未开始（T-014） |
 | 客户端 SDK | 公开 API 完整，对真实服务端到端检查通过 |
