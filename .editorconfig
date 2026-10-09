@@ -29,5 +29,9 @@ indent_size = 2
 [*.ps1]
 charset = utf-8-bom
 
+# 在 Linux 上执行的文件保持 LF（和 .gitattributes 一致）。
+[{Dockerfile,*.dockerignore,*.sh}]
+end_of_line = lf
+
 [*.md]
 trim_trailing_whitespace = false
