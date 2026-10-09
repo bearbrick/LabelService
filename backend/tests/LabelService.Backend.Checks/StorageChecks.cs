@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using LabelService.Contracts.Protocol;
 using LabelService.Contracts.Templates;
+using LabelService.Server;
 using LabelService.Server.Data;
 using LabelService.Server.Templates;
 using Microsoft.EntityFrameworkCore;
@@ -205,14 +206,14 @@ internal static class StorageChecks
         return await db.TemplateVersions.CountAsync(item => item.Template!.Code == code && item.Status == TemplateStatuses.Draft);
     }
 
-    private static async Task<TemplateStoreException?> CatchAsync(Func<Task> action)
+    private static async Task<ManagementException?> CatchAsync(Func<Task> action)
     {
         try
         {
             await action();
             return null;
         }
-        catch (TemplateStoreException ex)
+        catch (ManagementException ex)
         {
             return ex;
         }
@@ -257,7 +258,8 @@ internal static class StorageChecks
 
         public void OnNext(KeyValuePair<string, object?> value)
         {
-            if (value.Key == RelationalEventId.CommandExecuting.Name)
+            // 只数主库（模板）的命令：调用日志由后台服务写进 label-log.db，不在请求路径上。
+            if (value.Key == RelationalEventId.CommandExecuting.Name && value.Value is CommandEventData { Context: LabelDbContext })
             {
                 Interlocked.Increment(ref count);
             }

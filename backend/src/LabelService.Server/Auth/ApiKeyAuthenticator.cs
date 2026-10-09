@@ -1,31 +1,37 @@
+using System.Collections.Frozen;
 using System.Security.Cryptography;
 using System.Text;
+using LabelService.Server.Data;
 using Microsoft.Extensions.Options;
 
 namespace LabelService.Server.Auth;
 
 /// <summary>
-/// 按 X-Api-Key 识别调用方。只保存 Key 的 SHA-256，查表在内存里完成，不访问数据库。
+/// 按 X-Api-Key 识别调用方。只保存 Key 的 SHA-256，查表在内存里完成，不访问数据库（R3）。
 /// </summary>
 /// <remarks>
-/// 目前从配置读取调用方；api_client 表和管理界面完成后（T-009）改为启动时从数据库加载、变更时刷新。
+/// 调用方来自两处：配置文件（开发环境的测试 Key 等）和数据库 api_client 表。启动时加载，调用方变更（新建、改权限、
+/// 停用、重置 Key）后由 <see cref="ApiClientRepository"/> 调 <see cref="Load"/> 整体替换快照，旧 Key 立即失效。
+/// 读不加锁。同一个 Key 在两处都有时以数据库为准。
 /// </remarks>
 internal sealed class ApiKeyAuthenticator
 {
-    private readonly Dictionary<string, ApiClient> clientsByHash;
+    private readonly IReadOnlyList<ApiClientEntry> configured;
+    private volatile FrozenDictionary<string, ApiClient> clientsByHash = FrozenDictionary<string, ApiClient>.Empty;
 
     /// <summary>
-    /// 从配置加载调用方；禁用的调用方不加载。
+    /// 先加载配置里的调用方；数据库里的由启动初始化调用 <see cref="Load"/> 补上。
     /// </summary>
     public ApiKeyAuthenticator(IOptions<ApiClientOptions> options)
     {
-        clientsByHash = options.Value.Clients
-            .Where(client => client.Enabled && !string.IsNullOrWhiteSpace(client.KeySha256))
-            .ToDictionary(
-                client => client.KeySha256.Trim().ToLowerInvariant(),
-                client => new ApiClient(client.Name, client.AllowedTemplates.ToHashSet(StringComparer.Ordinal)),
-                StringComparer.Ordinal);
+        configured = options.Value.Clients;
+        Load([]);
     }
+
+    /// <summary>
+    /// 当前可用的调用方数（含配置文件里的）。
+    /// </summary>
+    public int Count => clientsByHash.Count;
 
     /// <summary>
     /// 识别调用方。
@@ -43,18 +49,44 @@ internal sealed class ApiKeyAuthenticator
     }
 
     /// <summary>
+    /// 用配置文件和数据库里的调用方重建快照。停用的不加载。
+    /// </summary>
+    public void Load(IEnumerable<ApiClientRecord> records)
+    {
+        var next = new Dictionary<string, ApiClient>(StringComparer.Ordinal);
+        foreach (var client in configured.Where(client => client.Enabled && !string.IsNullOrWhiteSpace(client.KeySha256)))
+        {
+            next[client.KeySha256.Trim().ToLowerInvariant()] = new ApiClient(null, client.Name, client.AllowedTemplates.ToHashSet(StringComparer.Ordinal));
+        }
+
+        foreach (var record in records.Where(record => record.Enabled))
+        {
+            next[record.ApiKeyHash] = new ApiClient(record.Id, record.Name, ParseTemplates(record.AllowedTemplates));
+        }
+
+        clientsByHash = next.ToFrozenDictionary(StringComparer.Ordinal);
+    }
+
+    /// <summary>
     /// 计算 Key 的 SHA-256（小写十六进制），配置和数据库里只存这个值。
     /// </summary>
     public static string Hash(string apiKey) =>
         Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(apiKey)));
+
+    /// <summary>
+    /// 解析逗号分隔的模板编码列表。
+    /// </summary>
+    public static IReadOnlySet<string> ParseTemplates(string value) =>
+        value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToHashSet(StringComparer.Ordinal);
 }
 
 /// <summary>
 /// 已识别的调用方。
 /// </summary>
+/// <param name="Id">数据库里的调用方 ID；配置文件里的调用方为 null。</param>
 /// <param name="Name">调用方名称，写进调用日志和指标。</param>
 /// <param name="AllowedTemplates">允许使用的模板编码；包含 * 表示全部。</param>
-internal sealed record ApiClient(string Name, IReadOnlySet<string> AllowedTemplates)
+internal sealed record ApiClient(int? Id, string Name, IReadOnlySet<string> AllowedTemplates)
 {
     /// <summary>
     /// 是否允许使用某个模板。
@@ -74,7 +106,7 @@ internal sealed class ApiClientOptions
     public const string SectionName = "LabelService:Auth";
 
     /// <summary>
-    /// 调用方列表。
+    /// 配置文件里的调用方。正式环境建议只用数据库里的调用方（管理后台维护），这里留空。
     /// </summary>
     public List<ApiClientEntry> Clients { get; set; } = [];
 }

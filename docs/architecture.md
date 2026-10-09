@@ -69,7 +69,8 @@
 | `src/LabelService.Rendering/Output/` | 每种格式一个输出文档，`OutputDocuments.cs` 登记 |
 | `src/LabelService.Rendering/Diagnostics/` | 分阶段计时、Server-Timing 生成 |
 | `src/LabelService.Server/Endpoints/` | 开放接口路由、请求收尾（计时、指标、日志）、错误响应 |
-| `src/LabelService.Server/Auth/` | API Key 识别 |
+| `src/LabelService.Server/Auth/` | API Key 识别（内存快照，配置文件 + 数据库 api_client 表）；调用方管理：新建、改权限、启停、重置 Key（`ApiClientRepository`） |
+| `src/LabelService.Server/Logging/` | 调用日志：请求结束时投递到有界队列，后台服务按批写入 label-log.db，每天清理过期日志；后台查询（`RenderLogQuery`） |
 | `src/LabelService.Server/Data/` | SQLite 主库 `label.db`：表对应的实体、DbContext、迁移、连接 PRAGMA（ADR 0003） |
 | `src/LabelService.Server/Templates/` | 模板存储：已发布版本的内存缓存（开放接口只读它）、草稿和发布、发布前检查；`Source=Files` 时改从 `samples/templates` 加载 |
 | `src/LabelService.Server/Diagnostics/` | 指标（System.Diagnostics.Metrics） |

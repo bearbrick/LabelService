@@ -63,7 +63,7 @@ internal sealed class TemplateRepository(
     {
         if (!TemplatePublishValidator.IsValidCode(content.Code))
         {
-            throw new TemplateStoreException($"模板编码“{content.Code}”不合法：要以字母开头，只含字母、数字、下划线、连字符，最长 64 个字符");
+            throw new ManagementException($"模板编码“{content.Code}”不合法：要以字母开头，只含字母、数字、下划线、连字符，最长 64 个字符");
         }
 
         await using var db = await contexts.CreateDbContextAsync(cancellationToken);
@@ -117,34 +117,34 @@ internal sealed class TemplateRepository(
     public async Task<int> RestoreToDraftAsync(string code, int versionNo, string user, CancellationToken cancellationToken = default)
     {
         var content = await GetVersionAsync(code, versionNo, cancellationToken)
-            ?? throw new TemplateStoreException($"模板 {code} 没有已发布的版本 {versionNo}");
+            ?? throw new ManagementException($"模板 {code} 没有已发布的版本 {versionNo}");
         return await SaveDraftAsync(content, user, null, cancellationToken);
     }
 
     /// <summary>
     /// 发布草稿：检查、试渲染，通过后生成新版本并立即对开放接口生效。
     /// </summary>
-    /// <exception cref="TemplateStoreException">没有草稿、检查不通过或并发冲突。检查不通过时 <see cref="TemplateStoreException.Details"/> 列出全部问题。</exception>
+    /// <exception cref="ManagementException">没有草稿、检查不通过或并发冲突。检查不通过时 <see cref="ManagementException.Details"/> 列出全部问题。</exception>
     public async Task<PublishResult> PublishAsync(string code, string user, CancellationToken cancellationToken = default)
     {
         await using var db = await contexts.CreateDbContextAsync(cancellationToken);
         var template = await db.Templates
             .Include(item => item.Versions.Where(version => version.Status == TemplateStatuses.Draft))
             .SingleOrDefaultAsync(item => item.Code == code, cancellationToken)
-            ?? throw new TemplateStoreException($"模板 {code} 不存在");
+            ?? throw new ManagementException($"模板 {code} 不存在");
         var draft = template.Versions.SingleOrDefault()
-            ?? throw new TemplateStoreException($"模板 {code} 没有草稿，没有可发布的内容");
+            ?? throw new ManagementException($"模板 {code} 没有草稿，没有可发布的内容");
 
         var content = Deserialize(draft.ContentJson);
         if (content.Code != code)
         {
-            throw new TemplateStoreException($"草稿里的模板编码“{content.Code}”和模板 {code} 不一致");
+            throw new ManagementException($"草稿里的模板编码“{content.Code}”和模板 {code} 不一致");
         }
 
         var check = validator.Check(content);
         if (!check.CanPublish)
         {
-            throw new TemplateStoreException($"模板 {code} 有 {check.Errors.Count} 个问题，不能发布", check.Errors);
+            throw new ManagementException($"模板 {code} 有 {check.Errors.Count} 个问题，不能发布", check.Errors);
         }
 
         var now = clock.GetUtcNow().UtcDateTime;
@@ -216,7 +216,7 @@ internal sealed class TemplateRepository(
         catch (DbUpdateException ex)
         {
             // 状态是并发令牌；(template_id, version_no) 唯一。两种冲突都是别人同时操作了同一个模板。
-            throw new TemplateStoreException(conflictMessage, innerException: ex);
+            throw new ManagementException(conflictMessage, innerException: ex);
         }
     }
 }
@@ -240,15 +240,3 @@ internal sealed record TemplateSummary(string Code, string Name, string? Categor
 /// <param name="Warnings">提示，不影响发布，如试渲染偏慢、字段没有样例值。</param>
 /// <param name="RenderMs">试渲染耗时，毫秒。</param>
 internal sealed record PublishResult(int Version, IReadOnlyList<string> Warnings, double RenderMs);
-
-/// <summary>
-/// 模板操作失败：调用方能修正的问题（编码不合法、没有草稿、检查不通过、并发冲突）。管理接口转成 400 / 409。
-/// </summary>
-internal sealed class TemplateStoreException(string message, IReadOnlyList<string>? details = null, Exception? innerException = null)
-    : Exception(message, innerException)
-{
-    /// <summary>
-    /// 全部问题，检查不通过时逐条列出。
-    /// </summary>
-    public IReadOnlyList<string> Details { get; } = details ?? [];
-}

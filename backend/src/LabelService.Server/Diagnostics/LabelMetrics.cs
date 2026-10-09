@@ -22,6 +22,7 @@ internal sealed class LabelMetrics
     private readonly Counter<long> requests;
     private readonly Counter<long> labelsGenerated;
     private readonly UpDownCounter<long> inflight;
+    private readonly Counter<long> logDropped;
 
     /// <summary>
     /// 创建全部指标。
@@ -34,12 +35,18 @@ internal sealed class LabelMetrics
         requests = meter.CreateCounter<long>("label_requests_total", description: "生成请求数");
         labelsGenerated = meter.CreateCounter<long>("labels_generated_total", description: "生成的标签张数（含份数）");
         inflight = meter.CreateUpDownCounter<long>("label_inflight_requests", description: "正在处理的生成请求数");
+        logDropped = meter.CreateCounter<long>("label_log_dropped_total", description: "调用日志队列满被丢弃的条数");
     }
 
     /// <summary>
     /// 请求开始处理。
     /// </summary>
     public void RequestStarted() => inflight.Add(1);
+
+    /// <summary>
+    /// 调用日志队列满，丢弃了一条。
+    /// </summary>
+    public void RenderLogDropped() => logDropped.Add(1);
 
     /// <summary>
     /// 请求处理结束，记录耗时和结果。

@@ -85,7 +85,7 @@ internal static class TemplateStorage
                 await repository.PublishAsync(template.Code, "system");
                 logger.LogInformation("已导入示例模板 {Code}", template.Code);
             }
-            catch (TemplateStoreException ex)
+            catch (ManagementException ex)
             {
                 logger.LogWarning("示例模板 {Code} 没有发布：{Message} {Details}", template.Code, ex.Message, string.Join("；", ex.Details));
             }

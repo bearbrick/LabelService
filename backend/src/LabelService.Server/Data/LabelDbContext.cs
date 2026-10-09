@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace LabelService.Server.Data;
 
 /// <summary>
-/// 主库 label.db：画布预设、模板、版本、素材元数据。表结构见设计书第 3 节，用迁移管理（Data/Migrations）。
+/// 主库 label.db：画布预设、模板、版本、素材元数据、调用方。表结构见设计书第 3 节，用迁移管理（Data/Migrations）。
 /// </summary>
 /// <remarks>
 /// 只给管理操作和启动加载用。开放接口从 <see cref="Templates.DbTemplateStore"/> 的内存缓存取模板，不访问数据库（R3）。
@@ -25,6 +25,9 @@ internal sealed class LabelDbContext(DbContextOptions<LabelDbContext> options) :
     /// <summary>素材元数据。</summary>
     public DbSet<AssetRecord> Assets => Set<AssetRecord>();
 
+    /// <summary>调用方。</summary>
+    public DbSet<ApiClientRecord> ApiClients => Set<ApiClientRecord>();
+
     /// <inheritdoc />
     public override int SaveChanges(bool acceptAllChangesOnSuccess)
     {
@@ -40,10 +43,23 @@ internal sealed class LabelDbContext(DbContextOptions<LabelDbContext> options) :
     }
 
     /// <inheritdoc />
-    protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
-    {
-        // 时间一律存 UTC 的 DateTime（ADR 0003）。SQLite 读回来的 Kind 是 Unspecified，这里标回 Utc。
+    protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder) => UseUtcDateTimes(configurationBuilder);
+
+    /// <summary>
+    /// 时间一律存 UTC 的 DateTime（ADR 0003）。SQLite 读回来的 Kind 是 Unspecified，这里标回 Utc。主库和日志库共用。
+    /// </summary>
+    internal static void UseUtcDateTimes(ModelConfigurationBuilder configurationBuilder) =>
         configurationBuilder.Properties<DateTime>().HaveConversion<UtcDateTimeConverter>();
+
+    /// <summary>
+    /// 列名按设计书用下划线风格：WidthMm → width_mm。主库和日志库共用，放在 OnModelCreating 最后调用。
+    /// </summary>
+    internal static void UseSnakeCaseColumns(ModelBuilder modelBuilder)
+    {
+        foreach (var property in modelBuilder.Model.GetEntityTypes().SelectMany(entity => entity.GetProperties()))
+        {
+            property.SetColumnName(SnakeCase(property.Name));
+        }
     }
 
     /// <inheritdoc />
@@ -89,11 +105,18 @@ internal sealed class LabelDbContext(DbContextOptions<LabelDbContext> options) :
             asset.HasIndex(item => item.Sha256);
         });
 
-        // 列名按设计书用下划线风格：WidthMm → width_mm。
-        foreach (var property in modelBuilder.Model.GetEntityTypes().SelectMany(entity => entity.GetProperties()))
+        modelBuilder.Entity<ApiClientRecord>(client =>
         {
-            property.SetColumnName(SnakeCase(property.Name));
-        }
+            client.ToTable("api_client");
+            client.Property(item => item.Name).HasMaxLength(64);
+            client.Property(item => item.ApiKeyHash).HasMaxLength(64);
+            client.Property(item => item.KeyPrefix).HasMaxLength(16);
+            client.Property(item => item.AllowedTemplates).HasMaxLength(4000);
+            client.HasIndex(item => item.Name).IsUnique();
+            client.HasIndex(item => item.ApiKeyHash).IsUnique();
+        });
+
+        UseSnakeCaseColumns(modelBuilder);
     }
 
     /// <summary>

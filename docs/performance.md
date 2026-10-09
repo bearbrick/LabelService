@@ -77,4 +77,6 @@ dotnet run -c Release --project backend/tests/LabelService.Benchmarks -- --filte
 
 | 2026-10-09 | 批量接口（T-007），100 张示例箱标合并 PDF，进程内服务（检查程序），热请求 | 约 50 ms（layout 5.5、draw 6.0、encode 37.2 ms） | 要求 ≤ 3 s；批量 zip 时 PNG 按 CPU 核数并行渲染 |
 
+| 2026-10-09 | 调用日志查询（T-009），label-log.db 100 万行，按模板、调用方、结果、时间筛选取一页 50 条 | 最慢 1.1 ms | 要求 < 200 ms；每种筛选条件和时间组成复合索引，翻页用 keyset；检查程序默认灌 20 万行，`LABEL_LOG_PERF_ROWS=1000000` 测 100 万行 |
+
 实现新元素或格式后在这里追加一行，写明机器和条件。
