@@ -6,6 +6,7 @@ using LabelService.Server.Auth;
 using LabelService.Server.Diagnostics;
 using LabelService.Server.Endpoints;
 using LabelService.Server.Fonts;
+using LabelService.Server.Logging;
 using LabelService.Server.Templates;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -20,9 +21,13 @@ builder.Services.AddSingleton<LabelMetrics>();
 builder.Services.AddHealthChecks();
 builder.Services.AddLabelFonts(builder.Configuration);
 builder.Services.AddLabelAssets(builder.Configuration);
+builder.Services.AddApiClients();
+builder.Services.AddRenderLog(builder.Configuration);
 
 var app = builder.Build();
 await app.InitializeTemplateStorageAsync();
+await app.InitializeApiClientsAsync();
+await app.InitializeRenderLogAsync();
 
 // 未处理的异常统一返回 RENDER_FAILED，异常本身由中间件写日志。
 app.UseExceptionHandler(errorApp => errorApp.Run(async http =>

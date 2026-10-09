@@ -6,6 +6,7 @@ using LabelService.Rendering;
 using LabelService.Rendering.Validation;
 using LabelService.Server.Auth;
 using LabelService.Server.Diagnostics;
+using LabelService.Server.Logging;
 using LabelService.Server.Templates;
 
 namespace LabelService.Server.Endpoints;
@@ -38,9 +39,10 @@ internal static class PublicApiEndpoints
         ITemplateStore store,
         ILabelRenderer renderer,
         LabelMetrics metrics,
+        RenderLogWriter renderLog,
         ILogger<RenderCall> logger)
     {
-        using var call = new RenderCall(http, metrics, logger, "render");
+        using var call = new RenderCall(http, metrics, logger, "render", renderLog);
         var client = authenticator.Authenticate(http.Request.Headers[HeaderNames.ApiKey]);
         var stage = call.Timings.Mark(TimingStages.Auth, call.Started);
         if (client is null)
@@ -49,6 +51,7 @@ internal static class PublicApiEndpoints
         }
 
         call.Client = client.Name;
+        call.ClientId = client.Id;
         var (body, readError) = await ReadJsonAsync<RenderApiRequest>(http);
         if (readError is not null)
         {
@@ -93,6 +96,8 @@ internal static class PublicApiEndpoints
         {
             return call.Fail(ErrorCodes.TemplateNotFound, $"模板 {body.TemplateCode} 不存在、版本不存在或还没有发布");
         }
+
+        call.TemplateVersion = published.Version;
 
         if (!client.CanUse(body.TemplateCode))
         {
