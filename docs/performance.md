@@ -83,4 +83,8 @@ dotnet run -c Release --project backend/tests/LabelService.Benchmarks -- --filte
 
 | 2026-10-09 | 服务端预览（T-016），`POST /api/admin/preview` 示例箱标 300dpi，本机开发服务，热请求 | 服务端约 20–55 ms（含 PNG 编码），往返 36–94 ms | 只给设计器用，不在开放接口的 100 ms 预算里；设计器画布和服务端 PNG 的元素位置最大偏差 0.085 mm（1 个点），要求 ≤ 0.2 mm |
 
+| 2026-10-10 | 启动预热（T-017），Release 进程冷启动，已有数据库（不导入示例），示例箱标 PNG 300dpi，Server-Timing total | 预热后第一个请求 18.3 ms，之后 11.3–12.4 ms（约 1.6 倍）；进程启动到 /health/ready 约 1.45 s | 关掉预热时第一个请求 64 ms（约 5.6 倍）；要求不超过 2 倍、30 秒内就绪 |
+
+| 2026-10-10 | 渲染并发限制（T-017），检查程序占满名额后发请求 | 排队 2.0 s 后返回 503 SERVICE_UNAVAILABLE，带 Retry-After: 1 | 名额 = CPU 核数；排队时间进 label_queue_wait_ms |
+
 实现新元素或格式后在这里追加一行，写明机器和条件。

@@ -57,6 +57,9 @@ internal sealed class FileTemplateStore : ITemplateStore
         template = null;
         return false;
     }
+
+    /// <inheritdoc />
+    public IReadOnlyList<PublishedTemplate> LatestPublished() => templates.Values.ToArray();
 }
 
 /// <summary>

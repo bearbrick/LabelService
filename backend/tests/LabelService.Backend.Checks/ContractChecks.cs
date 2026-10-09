@@ -52,7 +52,7 @@ internal static partial class ContractChecks
         var clientCodes = SourceConstants(Path.Combine(clientSource, "LabelErrorCodes.cs"));
         check("调用端 SDK 的 LabelErrorCodes 覆盖全部服务端错误码", contractCodes.IsSubsetOf(clientCodes));
         check("调用端 SDK 独有的错误码只有客户端错误",
-            clientCodes.Except(contractCodes).Order().SequenceEqual(["NETWORK_ERROR", "SERVICE_UNAVAILABLE", "TIMEOUT", "UNEXPECTED_RESPONSE"]));
+            clientCodes.Except(contractCodes).Order().SequenceEqual(["NETWORK_ERROR", "TIMEOUT", "UNEXPECTED_RESPONSE"]));
         check("调用端 SDK 的 HTTP 头和服务端一致", contractHeaders.SetEquals(SourceConstants(Path.Combine(clientSource, "Internal", "Protocol.cs"))));
 
         var contractsDoc = File.ReadAllText(Path.Combine(repositoryRoot, "docs", "contracts.md"));

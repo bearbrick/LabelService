@@ -8,6 +8,7 @@ using LabelService.Rendering.Diagnostics;
 using LabelService.Rendering.Validation;
 using LabelService.Server.Auth;
 using LabelService.Server.Diagnostics;
+using LabelService.Server.Hosting;
 using LabelService.Server.Logging;
 using LabelService.Server.Templates;
 
@@ -35,6 +36,7 @@ internal static class BatchRenderEndpoint
         ApiKeyAuthenticator authenticator,
         ITemplateStore store,
         ILabelRenderer renderer,
+        RenderGate gate,
         LabelMetrics metrics,
         RenderLogWriter renderLog,
         ILogger<RenderCall> logger)
@@ -144,6 +146,12 @@ internal static class BatchRenderEndpoint
         }
 
         call.Dpi = body.Dpi ?? (template.Page.Dpi > 0 ? template.Page.Dpi : RenderLimits.DefaultDpi);
+        using var slot = await gate.EnterAsync(http.RequestAborted);
+        if (slot is null)
+        {
+            return ApiErrors.Busy(call, http, gate.TimeoutSeconds);
+        }
+
         try
         {
             if (output == BatchOutput.Merge)

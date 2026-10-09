@@ -7,10 +7,14 @@ using LabelService.Server.Auth;
 using LabelService.Server.Diagnostics;
 using LabelService.Server.Endpoints;
 using LabelService.Server.Fonts;
+using LabelService.Server.Hosting;
 using LabelService.Server.Logging;
 using LabelService.Server.Templates;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// 作为 Windows 服务运行时接入服务控制管理器；控制台、Docker 里运行时不起作用（ADR 0008）。
+builder.Host.UseWindowsService(options => options.ServiceName = "LabelService");
 
 builder.WebHost.ConfigureKestrel(options => options.Limits.MaxRequestBodySize = RenderLimits.MaxRequestBodyBytes);
 builder.Services.ConfigureHttpJsonOptions(options => LabelJson.Apply(options.SerializerOptions));
@@ -25,6 +29,7 @@ builder.Services.AddLabelAssets(builder.Configuration);
 builder.Services.AddApiClients();
 builder.Services.AddRenderLog(builder.Configuration);
 builder.Services.AddAdmin(builder.Configuration);
+builder.Services.AddLabelHosting(builder.Configuration);
 
 var app = builder.Build();
 await app.InitializeTemplateStorageAsync();
@@ -39,7 +44,7 @@ app.UseExceptionHandler(errorApp => errorApp.Run(async http =>
     await result.ExecuteAsync(http);
 }));
 
-app.MapHealthChecks("/health");
+app.MapLabelHealth();
 app.MapPublicApi();
 app.MapAdminApi();
 app.MapFontFiles();

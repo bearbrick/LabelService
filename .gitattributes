@@ -3,6 +3,9 @@
 * text=auto eol=crlf
 
 *.sh text eol=lf
+# Dockerfile 里的 RUN 用反斜杠续行，在 Linux 上构建，保持 LF。
+Dockerfile text eol=lf
+*.dockerignore text eol=lf
 
 *.png binary
 *.jpg binary

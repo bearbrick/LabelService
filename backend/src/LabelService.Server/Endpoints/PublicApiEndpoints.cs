@@ -6,6 +6,7 @@ using LabelService.Rendering;
 using LabelService.Rendering.Validation;
 using LabelService.Server.Auth;
 using LabelService.Server.Diagnostics;
+using LabelService.Server.Hosting;
 using LabelService.Server.Logging;
 using LabelService.Server.Templates;
 
@@ -38,6 +39,7 @@ internal static class PublicApiEndpoints
         ApiKeyAuthenticator authenticator,
         ITemplateStore store,
         ILabelRenderer renderer,
+        RenderGate gate,
         LabelMetrics metrics,
         RenderLogWriter renderLog,
         ILogger<RenderCall> logger)
@@ -127,6 +129,12 @@ internal static class PublicApiEndpoints
             Mono = body.Mono ?? false,
             Timings = call.Timings,
         };
+
+        using var slot = await gate.EnterAsync(http.RequestAborted);
+        if (slot is null)
+        {
+            return ApiErrors.Busy(call, http, gate.TimeoutSeconds);
+        }
 
         try
         {
