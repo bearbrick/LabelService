@@ -1,0 +1,26 @@
+# PDF 中文 ToUnicode（T-021）
+
+检查：backend/tests/LabelService.Backend.Checks/PdfChecks.cs 的 CheckToUnicode；修复：Rendering/Fonts/RadicalCmap.cs（加载字体时从 cmap 去掉和汉字共用字形的康熙部首、部首补充码位，FontRegistry.LoadData）。
+独立核对：本地开发服务（临时数据目录）用开发 Key 生成示例请求的 PDF，scratch 脚本解开 PDF 里的 ToUnicode CMap（FlateDecode），列出映射目标码位。
+
+## 去掉过滤（FontRegistry.LoadData 直接返回 null，等于修复前）
+后端检查：
+PASS: 文字是矢量、可选中：ToUnicode 里有“成”“品”和数字（数字是区间映射，从 0030 开始）
+FAIL: 箱标 PDF 的 ToUnicode：“日期”的“日”映射到 U+65E5，没有任何字形映射到部首区（U+2E80–U+2FDF）
+独立核对：
+box-label.pdf：ToUnicode 22 个，映射 36 个码位；日 U+65E5 没有，寸 U+5BF8 没有，毛 U+6BDB 没有；部首区 1 个：U+2F47（⽇）
+a4-shipping-mark.pdf：ToUnicode 19 个，映射 58 个码位；日 U+65E5 没有，寸 U+5BF8 没有，毛 U+6BDB 没有；部首区 2 个：U+2F28（⼨）、U+2F51（⽑）
+（和验收报告的 日→U+2F47、寸→U+2F28、毛→U+2F51 一致）
+
+## 修复后
+后端检查：
+PASS: 箱标 PDF 的 ToUnicode：“日期”的“日”映射到 U+65E5，没有任何字形映射到部首区（U+2E80–U+2FDF）
+PASS: 唛头 PDF 的 ToUnicode：“尺寸”的“寸” U+5BF8、“毛重”的“毛” U+6BDB 正确，没有部首
+PASS: 文本里的康熙部首“⽇”照常显示（和“日”画出来一样），PDF 里提取成“日”
+独立核对：
+box-label.pdf：ToUnicode 22 个，映射 36 个码位；日 U+65E5 有，寸 U+5BF8 没有，毛 U+6BDB 没有；部首区 0 个
+a4-shipping-mark.pdf：ToUnicode 19 个，映射 58 个码位；日 U+65E5 没有，寸 U+5BF8 有，毛 U+6BDB 有；部首区 0 个
+（箱标里没有“寸”“毛”，唛头里没有“日”，所以各自显示“没有”是对的）
+
+## 范围说明
+过滤只在内存里改字体：去掉 cmap 里和非部首码位共用字形的部首码位（独有字形的部首保留），PDF 的文字提取和搜索按汉字走；文本里真的写了部首字符时，排版前按 NFKC 换成对应汉字，显示和原来一样。字体文件和给设计器的 /fonts 不变。基准门禁里 PDF 各项和基线比 +7%～+10%（见 gate-full-pngwriter.txt），同机 A/B（过滤开、关）差别在 ±5% 内。
