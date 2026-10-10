@@ -1,0 +1,62 @@
+# 完整门禁，不改基线（开始 2026-10-10T06:43:55Z，exit 0）
+Run time: 00:01:44 (104.29 sec), executed benchmarks: 8
+Run time: 00:00:58 (58.26 sec), executed benchmarks: 4
+Run time: 00:01:17 (77.18 sec), executed benchmarks: 6
+RenderBenchmarks.BoxLabelPng: gate(IterationCount=10, LaunchCount=1, WarmupCount=3) [Dpi=203]
+RenderBenchmarks.BoxLabelPngUniqueBox: gate(IterationCount=10, LaunchCount=1, WarmupCount=3) [Dpi=203]
+RenderBenchmarks.BoxLabelPdf: gate(IterationCount=10, LaunchCount=1, WarmupCount=3) [Dpi=203]
+RenderBenchmarks.BoxLabelZpl: gate(IterationCount=10, LaunchCount=1, WarmupCount=3) [Dpi=203]
+RenderBenchmarks.BoxLabelPng: gate(IterationCount=10, LaunchCount=1, WarmupCount=3) [Dpi=300]
+RenderBenchmarks.BoxLabelPngUniqueBox: gate(IterationCount=10, LaunchCount=1, WarmupCount=3) [Dpi=300]
+RenderBenchmarks.BoxLabelPdf: gate(IterationCount=10, LaunchCount=1, WarmupCount=3) [Dpi=300]
+RenderBenchmarks.BoxLabelZpl: gate(IterationCount=10, LaunchCount=1, WarmupCount=3) [Dpi=300]
+SheetBenchmarks.A4Sheet24: gate(IterationCount=10, LaunchCount=1, WarmupCount=3) [Format=Pdf, ShareStatic=False]
+SheetBenchmarks.A4Sheet24: gate(IterationCount=10, LaunchCount=1, WarmupCount=3) [Format=Pdf, ShareStatic=True]
+SheetBenchmarks.A4Sheet24: gate(IterationCount=10, LaunchCount=1, WarmupCount=3) [Format=Png, ShareStatic=False]
+SheetBenchmarks.A4Sheet24: gate(IterationCount=10, LaunchCount=1, WarmupCount=3) [Format=Png, ShareStatic=True]
+TemplateBenchmarks.Render: gate(IterationCount=10, LaunchCount=1, WarmupCount=3) [Template=a4-shipping-mark, Format=Pdf]
+TemplateBenchmarks.Render: gate(IterationCount=10, LaunchCount=1, WarmupCount=3) [Template=a4-shipping-mark, Format=Png]
+TemplateBenchmarks.Render: gate(IterationCount=10, LaunchCount=1, WarmupCount=3) [Template=a4-shipping-mark, Format=Zpl]
+TemplateBenchmarks.Render: gate(IterationCount=10, LaunchCount=1, WarmupCount=3) [Template=box-label, Format=Pdf]
+TemplateBenchmarks.Render: gate(IterationCount=10, LaunchCount=1, WarmupCount=3) [Template=box-label, Format=Png]
+TemplateBenchmarks.Render: gate(IterationCount=10, LaunchCount=1, WarmupCount=3) [Template=box-label, Format=Zpl]
+Global total time: 00:04:10 (250.95 sec), executed benchmarks: 18
+发现 18 项基准，跑出结果 18 项
+统计 RenderBenchmarks.BoxLabelPdf(Dpi=203)：中位数 3.221 ms，P95 3.499 ms，样本 10
+统计 RenderBenchmarks.BoxLabelPdf(Dpi=300)：中位数 3.285 ms，P95 3.362 ms，样本 10
+统计 RenderBenchmarks.BoxLabelPng(Dpi=203)：中位数 5.683 ms，P95 5.735 ms，样本 9
+统计 RenderBenchmarks.BoxLabelPng(Dpi=300)：中位数 11.759 ms，P95 12.104 ms，样本 10
+统计 RenderBenchmarks.BoxLabelPngUniqueBox(Dpi=203)：中位数 6.002 ms，P95 6.093 ms，样本 9
+统计 RenderBenchmarks.BoxLabelPngUniqueBox(Dpi=300)：中位数 12.152 ms，P95 12.707 ms，样本 10
+统计 RenderBenchmarks.BoxLabelZpl(Dpi=203)：中位数 1.041 ms，P95 1.054 ms，样本 9
+统计 RenderBenchmarks.BoxLabelZpl(Dpi=300)：中位数 2.115 ms，P95 2.157 ms，样本 9
+统计 SheetBenchmarks.A4Sheet24(Format=Pdf, ShareStatic=False)：中位数 7.917 ms，P95 8.642 ms，样本 10
+统计 SheetBenchmarks.A4Sheet24(Format=Pdf, ShareStatic=True)：中位数 7.549 ms，P95 7.737 ms，样本 10
+统计 SheetBenchmarks.A4Sheet24(Format=Png, ShareStatic=False)：中位数 124.770 ms，P95 128.147 ms，样本 10
+统计 SheetBenchmarks.A4Sheet24(Format=Png, ShareStatic=True)：中位数 127.506 ms，P95 130.122 ms，样本 10
+统计 TemplateBenchmarks.Render(Template=a4-shipping-mark, Format=Pdf)：中位数 6.668 ms，P95 6.985 ms，样本 10
+统计 TemplateBenchmarks.Render(Template=a4-shipping-mark, Format=Png)：中位数 119.956 ms，P95 124.250 ms，样本 10
+统计 TemplateBenchmarks.Render(Template=a4-shipping-mark, Format=Zpl)：中位数 20.197 ms，P95 20.671 ms，样本 10
+统计 TemplateBenchmarks.Render(Template=box-label, Format=Pdf)：中位数 3.104 ms，P95 3.224 ms，样本 9
+统计 TemplateBenchmarks.Render(Template=box-label, Format=Png)：中位数 11.992 ms，P95 12.380 ms，样本 9
+统计 TemplateBenchmarks.Render(Template=box-label, Format=Zpl)：中位数 2.061 ms，P95 2.124 ms，样本 10
+RenderBenchmarks.BoxLabelPdf(Dpi=203)                                       3.104      3.221      +4%
+RenderBenchmarks.BoxLabelPdf(Dpi=300)                                       2.967      3.285     +11%
+RenderBenchmarks.BoxLabelPng(Dpi=203)                                       5.491      5.683      +3%
+RenderBenchmarks.BoxLabelPng(Dpi=300)                                      11.655     11.759      +1%
+RenderBenchmarks.BoxLabelPngUniqueBox(Dpi=203)                              5.750      6.002      +4%
+RenderBenchmarks.BoxLabelPngUniqueBox(Dpi=300)                             11.598     12.152      +5%
+RenderBenchmarks.BoxLabelZpl(Dpi=203)                                       0.988      1.041      +5%
+RenderBenchmarks.BoxLabelZpl(Dpi=300)                                       2.013      2.115      +5%
+SheetBenchmarks.A4Sheet24(Format=Pdf, ShareStatic=False)                    7.306      7.917      +8%
+SheetBenchmarks.A4Sheet24(Format=Pdf, ShareStatic=True)                     7.314      7.549      +3%
+SheetBenchmarks.A4Sheet24(Format=Png, ShareStatic=False)                        —    124.770       新增
+SheetBenchmarks.A4Sheet24(Format=Png, ShareStatic=True)                         —    127.506       新增
+TemplateBenchmarks.Render(Template=a4-shipping-mark, Format=Pdf)            6.258      6.668      +7%
+TemplateBenchmarks.Render(Template=a4-shipping-mark, Format=Png)          115.309    119.956      +4%
+TemplateBenchmarks.Render(Template=a4-shipping-mark, Format=Zpl)           19.833     20.197      +2%
+TemplateBenchmarks.Render(Template=box-label, Format=Pdf)                   2.976      3.104      +4%
+TemplateBenchmarks.Render(Template=box-label, Format=Png)                  11.656     11.992      +3%
+TemplateBenchmarks.Render(Template=box-label, Format=Zpl)                   2.016      2.061      +2%
+另有 2 项基线里没有（新增基准），只打印不比较；要纳入门禁须在同规格机器上补基线
+基准门禁通过：16 项和基线比较
