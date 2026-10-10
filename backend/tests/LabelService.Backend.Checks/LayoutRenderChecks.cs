@@ -5,9 +5,10 @@ using LabelService.Contracts;
 using LabelService.Contracts.Layouts;
 using LabelService.Contracts.Protocol;
 using LabelService.Contracts.Templates;
+using LabelService.Domain.Layouts;
+using LabelService.Infrastructure.Storage;
 using LabelService.Rendering;
 using LabelService.Rendering.Sheets;
-using LabelService.Server.Layouts;
 using SkiaSharp;
 
 namespace LabelService.Backend.Checks;
@@ -23,7 +24,7 @@ internal static partial class LayoutRenderChecks
     {
         var renderer = Fixtures.Renderer(backendRoot);
         var layout = TestLayout();
-        check("检查用的版式（含 90°、180°、270° 的格子）本身合法", LayoutValidator.Validate(layout).Count == 0);
+        check("检查用的版式（含 90°、180°、270° 的格子）本身合法", SheetLayoutRules.Validate(layout).Count == 0);
 
         CheckPositions(renderer, layout, check);
         CheckPaging(backendRoot, renderer, check);
@@ -56,11 +57,11 @@ internal static partial class LayoutRenderChecks
 
     private static void CheckPaging(string backendRoot, LabelRenderer renderer, Action<string, bool> check)
     {
-        var sample = LayoutStorage.ReadDirectory(Path.Combine(backendRoot, "samples", "layouts")).Single(item => item.Code == "A4_100x60_2x4");
+        var sample = SeedFiles.ReadLayouts(Path.Combine(backendRoot, "samples", "layouts")).Single(item => item.Code == "A4_100x60_2x4");
         var box = Fixtures.LoadTemplate(backendRoot);
         var values = BoxValues(backendRoot, box);
         check("示例版式 A4_100x60_2x4 合法，格子尺寸和示例模板（100×60）一致",
-            LayoutValidator.Validate(sample).Count == 0 && LayoutValidator.Fits(sample, box.Page.Width, box.Page.Height));
+            SheetLayoutRules.Validate(sample).Count == 0 && SheetLayoutRules.Fits(sample, box.Page.Width, box.Page.Height));
 
         var single = renderer.Render(Job(box, sample, LabelFormat.Pdf, [new LabelInstance(values, 8)]));
         check("单张 8 份 + 8 格版式：PDF 1 页 8 张", single.PageCount == 1 && single.LabelCount == 8 && PdfPages(single) == 1);
@@ -121,7 +122,7 @@ internal static partial class LayoutRenderChecks
 
         var values = BoxValues(backendRoot, box);
         var labels = Enumerable.Range(0, 3).Select(_ => new LabelInstance(values)).ToList();
-        var layout = LayoutStorage.ReadDirectory(Path.Combine(backendRoot, "samples", "layouts")).Single();
+        var layout = SeedFiles.ReadLayouts(Path.Combine(backendRoot, "samples", "layouts")).Single();
         var shared = renderer.Render(Job(box, layout, LabelFormat.Png, labels));
         var separate = renderer.Render(Job(box, layout, LabelFormat.Png, labels, share: false));
         check("固定元素只排版一次、各格子回放，和逐格重新排版画出来的像素完全一样", shared.Content.Span.SequenceEqual(separate.Content.Span));
@@ -138,11 +139,11 @@ internal static partial class LayoutRenderChecks
         var touching = TestLayout();
         touching.Slots[1].X = 105.04;
         check("版式检查：格子重叠、超出纸张、旋转不是 90 的倍数都报出来并带格子序号；贴边（0.05 mm 以内）不算重叠",
-            LayoutValidator.Validate(overlap).Any(item => item.Contains("第 2 个格子和第 1 个格子重叠"))
-            && LayoutValidator.Validate(outside).Any(item => item.Contains("第 5 个格子超出了纸张"))
-            && LayoutValidator.Validate(rotation).Any(item => item.Contains("第 1 个格子的旋转"))
-            && LayoutValidator.Validate(touching).Count == 0
-            && LayoutValidator.Validate(new SheetLayout { Code = "1A", Name = "x", Slots = [new SheetSlot()] }).Any(item => item.Contains("编码")));
+            SheetLayoutRules.Validate(overlap).Any(item => item.Contains("第 2 个格子和第 1 个格子重叠"))
+            && SheetLayoutRules.Validate(outside).Any(item => item.Contains("第 5 个格子超出了纸张"))
+            && SheetLayoutRules.Validate(rotation).Any(item => item.Contains("第 1 个格子的旋转"))
+            && SheetLayoutRules.Validate(touching).Count == 0
+            && SheetLayoutRules.Validate(new SheetLayout { Code = "1A", Name = "x", Slots = [new SheetSlot()] }).Any(item => item.Contains("编码")));
     }
 
     /// <summary>

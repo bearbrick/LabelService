@@ -1,8 +1,9 @@
 using System.Net;
 using System.Text;
 using System.Text.Json;
+using LabelService.Application.ApiClients;
 using LabelService.Contracts.Protocol;
-using LabelService.Server.Auth;
+using LabelService.Domain.ApiClients;
 using SkiaSharp;
 
 namespace LabelService.Backend.Checks;
@@ -172,8 +173,8 @@ internal static class AdminResourceChecks
                 allBusinesses = true,
                 ipAllowlist = "10.20.1.0/99"
             })) == "INVALID");
-        var networks = ApiKeyAuthenticator.ParseNetworks("10.20.1.0/24, 192.168.1.5");
-        var client = new ApiClient(1, "x", true, new HashSet<int>(), new HashSet<string>(), networks);
+        var networks = IpAllowlist.Parse("10.20.1.0/24, 192.168.1.5");
+        var client = new AuthenticatedClient(1, "x", true, new HashSet<int>(), new HashSet<string>(), networks);
         check("IP 白名单匹配网段、单个地址、IPv4 映射的 IPv6 地址",
             client.AllowsIp(IPAddress.Parse("10.20.1.15")) && client.AllowsIp(IPAddress.Parse("192.168.1.5")) && client.AllowsIp(IPAddress.Parse("::ffff:10.20.1.9"))
             && !client.AllowsIp(IPAddress.Parse("10.20.2.1")) && !client.AllowsIp(null));

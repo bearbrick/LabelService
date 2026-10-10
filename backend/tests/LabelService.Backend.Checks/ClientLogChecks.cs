@@ -1,5 +1,8 @@
 using System.Diagnostics;
 using System.Text;
+using LabelService.Application.ApiClients;
+using LabelService.Application.ApiClients.Dtos;
+using LabelService.Application.Logs;
 using LabelService.Contracts.Protocol;
 using LabelService.Domain.ApiClients;
 using LabelService.Domain.Businesses;
@@ -9,11 +12,10 @@ using LabelService.Domain.Logs;
 using LabelService.Domain.Resources;
 using LabelService.Domain.Shared;
 using LabelService.Domain.Templates;
+using LabelService.Infrastructure.Logging;
 using LabelService.Infrastructure.Persistence;
 using LabelService.Infrastructure.Persistence.Sqlite;
-using LabelService.Server;
-using LabelService.Server.Auth;
-using LabelService.Server.Logging;
+using LabelService.Infrastructure.Repositories;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
@@ -52,24 +54,24 @@ internal static class ClientLogChecks
 
     private static async Task<(int ClientId, string Key)> CheckClientsAsync(IServiceProvider services, HttpClient http, Action<string, bool> check)
     {
-        var repository = services.GetRequiredService<ApiClientRepository>();
-        var (mes, key) = await repository.CreateAsync(new ApiClientInput("MES", "", "", AllBusinesses: true, [], ""));
+        Task<T> Clients<T>(Func<IApiClientAppService, Task<T>> action) => AdminScope.RunAsync(services, action);
+        var (mes, key) = await Clients(clients => clients.CreateAsync(new SaveApiClientDto("MES", "", "", AllBusinesses: true, [], "")));
         check("新建调用方返回 Key 原文（开发环境 lbl_test_ 前缀），可以直接调用", key.StartsWith("lbl_test_", StringComparison.Ordinal) && key.Length == 41 && await Status(http, key) == 200);
         await using (var db = await services.GetRequiredService<IDbContextFactory<LabelDbContext>>().CreateDbContextAsync())
         {
             var row = await db.ApiClients.SingleAsync(item => item.Id == mes.Id);
             check("库里只存 Key 的 SHA-256 和前缀，不存原文",
-                row.ApiKeyHash == ApiKeyAuthenticator.Hash(key) && row.KeyPrefix == key[..13] && !row.ApiKeyHash.Contains(key[9..], StringComparison.Ordinal));
+                row.ApiKeyHash == ApiKeys.Hash(key) && row.KeyPrefix == key[..13] && !row.ApiKeyHash.Contains(key[9..], StringComparison.Ordinal));
         }
 
-        var (_, limitedKey) = await repository.CreateAsync(new ApiClientInput("WMS", "", "", AllBusinesses: false, [], ""));
+        var (_, limitedKey) = await Clients(clients => clients.CreateAsync(new SaveApiClientDto("WMS", "", "", AllBusinesses: false, [], "")));
         check("没有授权这个业务分组的调用方返回 403 TEMPLATE_FORBIDDEN", await Status(http, limitedKey) == 403);
-        check("调用方名称不能重复", await Throws(() => repository.CreateAsync(new ApiClientInput("MES", "", "", AllBusinesses: true, [], ""))));
+        check("调用方名称不能重复", await Throws(() => Clients(clients => clients.CreateAsync(new SaveApiClientDto("MES", "", "", AllBusinesses: true, [], "")))));
 
-        await repository.UpdateAsync(mes.Id, null, enabled: false);
+        await Clients(clients => clients.SetStatusAsync(mes.Id, enabled: false));
         check("停用后立即不能调用（401）", await Status(http, key) == 401);
-        await repository.UpdateAsync(mes.Id, null, enabled: true);
-        var (_, newKey) = await repository.ResetKeyAsync(mes.Id);
+        await Clients(clients => clients.SetStatusAsync(mes.Id, enabled: true));
+        var (_, newKey) = await Clients(clients => clients.ResetKeyAsync(mes.Id));
         check("重置 Key 后旧 Key 立即失效、新 Key 可用", await Status(http, key) == 401 && await Status(http, newKey) == 200);
         check("配置文件里的开发 Key 仍然可用", await Status(http, Fixtures.DevApiKey) == 200);
 
@@ -79,8 +81,8 @@ internal static class ClientLogChecks
 
     private static async Task CheckLogsAsync(IServiceProvider services, HttpClient http, int clientId, string key, Action<string, bool> check)
     {
-        var service = services.GetRequiredService<RenderLogService>();
-        var query = services.GetRequiredService<RenderLogQuery>();
+        var service = services.GetRequiredService<RenderLogWriterService>();
+        var query = services.GetRequiredService<IRenderLogRepository>();
         var started = DateTime.UtcNow;
         await Status(http, key, requestId: "REQ-OK-1");
         await Status(http, key, requestId: "REQ-BAD-1", data: """{"partName":"电源适配器"}""");
@@ -147,7 +149,7 @@ internal static class ClientLogChecks
             await transaction.CommitAsync();
         }
 
-        var query = services.GetRequiredService<RenderLogQuery>();
+        var query = services.GetRequiredService<IRenderLogRepository>();
         RenderLogFilter[] filters =
         [
             new(TemplateCode: "TPL_7"),
@@ -177,7 +179,7 @@ internal static class ClientLogChecks
     /// </summary>
     private static void CheckQueue(Action<string, bool> check)
     {
-        var writer = new RenderLogWriter(Options.Create(new RenderLogOptions { QueueCapacity = 2 }));
+        var writer = new RenderLogQueue(Options.Create(new RenderLogOptions { QueueCapacity = 2 }));
         var results = Enumerable.Range(0, 5).Select(i => writer.TryWrite(new RenderLogEntity { RequestId = "Q" + i })).ToArray();
         check("日志队列满时直接丢弃并计数，不阻塞请求", results.SequenceEqual([true, true, false, false, false]) && writer.Dropped == 3 && writer.Pending == 2);
     }
@@ -190,8 +192,9 @@ internal static class ClientLogChecks
         var options = new DbContextOptionsBuilder<SqliteLogDbContext>()
             .UseSqlite(new SqliteConnectionStringBuilder { DataSource = Path.Combine(Path.GetTempPath(), "label-no-such-dir-" + Guid.NewGuid().ToString("N"), "x.db") }.ToString())
             .Options;
-        var writer = new RenderLogWriter(Options.Create(new RenderLogOptions()));
-        using var service = new RenderLogService(writer, new DbContextFactoryAdapter<LogDbContext, SqliteLogDbContext>(new PooledDbContextFactory<SqliteLogDbContext>(options)), Options.Create(new RenderLogOptions()), TimeProvider.System, NullLogger<RenderLogService>.Instance);
+        var writer = new RenderLogQueue(Options.Create(new RenderLogOptions()));
+        var repository = new RenderLogRepository(new DbContextFactoryAdapter<LogDbContext, SqliteLogDbContext>(new PooledDbContextFactory<SqliteLogDbContext>(options)));
+        using var service = new RenderLogWriterService(writer, repository, Options.Create(new RenderLogOptions()), TimeProvider.System, NullLogger<RenderLogWriterService>.Instance);
         await service.StartAsync(CancellationToken.None);
         writer.TryWrite(new RenderLogEntity { RequestId = "FAIL", Endpoint = "render", Status = "ok", CreatedAt = DateTime.UtcNow });
         for (var i = 0; i < 50 && writer.Pending > 0; i++)
@@ -204,7 +207,7 @@ internal static class ClientLogChecks
         await service.StopAsync(CancellationToken.None);
     }
 
-    private static async Task<IReadOnlyList<RenderLogEntity>> WaitForLogsAsync(RenderLogQuery query, Func<IReadOnlyList<RenderLogEntity>, bool> ready)
+    private static async Task<IReadOnlyList<RenderLogEntity>> WaitForLogsAsync(IRenderLogRepository query, Func<IReadOnlyList<RenderLogEntity>, bool> ready)
     {
         IReadOnlyList<RenderLogEntity> logs = [];
         for (var i = 0; i < 100; i++)

@@ -2,8 +2,9 @@ using System.Diagnostics.Metrics;
 using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
+using LabelService.Api.Diagnostics;
+using LabelService.Application.Diagnostics;
 using LabelService.Contracts.Protocol;
-using LabelService.Server.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace LabelService.Backend.Checks;
