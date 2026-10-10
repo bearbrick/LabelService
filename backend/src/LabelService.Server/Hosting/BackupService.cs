@@ -1,5 +1,14 @@
 using System.Globalization;
-using LabelService.Server.Data;
+using LabelService.Domain.ApiClients;
+using LabelService.Domain.Businesses;
+using LabelService.Domain.Identity;
+using LabelService.Domain.Layouts;
+using LabelService.Domain.Logs;
+using LabelService.Domain.Resources;
+using LabelService.Domain.Shared;
+using LabelService.Domain.Templates;
+using LabelService.Infrastructure.Persistence;
+using LabelService.Infrastructure.Persistence.Sqlite;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Options;
 
@@ -72,10 +81,10 @@ internal sealed class BackupService(IOptions<BackupOptions> options, IOptions<Da
         var stamp = TimeZoneInfo.ConvertTime(clock.GetUtcNow(), TimeZoneInfo.Local).ToString(StampFormat, CultureInfo.InvariantCulture);
         var target = Path.Combine(Directory, stamp);
         System.IO.Directory.CreateDirectory(target);
-        await SnapshotAsync(Path.Combine(source, DataOptions.DatabaseFileName), Path.Combine(target, DataOptions.DatabaseFileName), cancellationToken);
+        await SqliteSnapshot.CreateAsync(Path.Combine(source, DataOptions.DatabaseFileName), Path.Combine(target, DataOptions.DatabaseFileName), cancellationToken);
         if (options.Value.IncludeLogs)
         {
-            await SnapshotAsync(Path.Combine(source, DataOptions.LogDatabaseFileName), Path.Combine(target, DataOptions.LogDatabaseFileName), cancellationToken);
+            await SqliteSnapshot.CreateAsync(Path.Combine(source, DataOptions.LogDatabaseFileName), Path.Combine(target, DataOptions.LogDatabaseFileName), cancellationToken);
         }
 
         var assets = Path.Combine(source, "assets");
@@ -91,33 +100,6 @@ internal sealed class BackupService(IOptions<BackupOptions> options, IOptions<Da
         Prune();
         logger.LogInformation("已备份到 {Target}", target);
         return target;
-    }
-
-    /// <summary>
-    /// 用 VACUUM INTO 给库做一份一致的快照，并改成 WAL 模式（恢复时直接替换就能用）。升级数据库前的备份也用它（<see cref="Data.DatabaseUpgrade"/>）。
-    /// </summary>
-    internal static async Task SnapshotAsync(string database, string snapshot, CancellationToken cancellationToken)
-    {
-        if (!File.Exists(database))
-        {
-            return;
-        }
-
-        File.Delete(snapshot);
-        // 不能用只读连接：VACUUM INTO 生成的文件会沿用只读打开方式的标记，恢复后服务打不开（设不了 WAL）。VACUUM INTO 不改原库。
-        await using var connection = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = database, Pooling = false }.ToString());
-        await connection.OpenAsync(cancellationToken);
-        await using var command = connection.CreateCommand();
-        command.CommandText = "VACUUM INTO $path";
-        command.Parameters.AddWithValue("$path", snapshot);
-        await command.ExecuteNonQueryAsync(cancellationToken);
-
-        // VACUUM INTO 生成的库是回滚日志模式，改成和线上一样的 WAL，恢复时直接替换就能用。
-        await using var copy = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = snapshot, Pooling = false }.ToString());
-        await copy.OpenAsync(cancellationToken);
-        await using var wal = copy.CreateCommand();
-        wal.CommandText = "PRAGMA journal_mode=WAL";
-        await wal.ExecuteNonQueryAsync(cancellationToken);
     }
 
     /// <summary>

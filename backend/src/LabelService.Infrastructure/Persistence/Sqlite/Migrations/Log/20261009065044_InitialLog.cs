@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace LabelService.Server.Data.LogMigrations
+namespace LabelService.Infrastructure.Persistence.Sqlite.Migrations.Log
 {
     /// <inheritdoc />
     public partial class InitialLog : Migration

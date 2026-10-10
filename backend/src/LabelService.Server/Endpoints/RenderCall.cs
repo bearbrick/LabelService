@@ -1,9 +1,17 @@
 using System.Diagnostics;
 using System.Globalization;
 using LabelService.Contracts.Protocol;
+using LabelService.Domain.ApiClients;
+using LabelService.Domain.Businesses;
+using LabelService.Domain.Identity;
+using LabelService.Domain.Layouts;
+using LabelService.Domain.Logs;
+using LabelService.Domain.Resources;
+using LabelService.Domain.Shared;
+using LabelService.Domain.Templates;
+using LabelService.Infrastructure.Persistence;
 using LabelService.Rendering;
 using LabelService.Rendering.Diagnostics;
-using LabelService.Server.Data;
 using LabelService.Server.Diagnostics;
 using LabelService.Server.Logging;
 
@@ -225,7 +233,7 @@ internal sealed class RenderCall : IDisposable
             slow,
             RequestId,
             Timings.ToServerTimingHeader());
-        renderLog?.TryWrite(new RenderLogRecord
+        renderLog?.TryWrite(new RenderLogEntity
         {
             RequestId = RequestId,
             TraceId = ApiErrors.TraceId(http),

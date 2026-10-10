@@ -1,7 +1,15 @@
 using System.Text.Json;
 using LabelService.Contracts;
 using LabelService.Contracts.Layouts;
-using LabelService.Server.Data;
+using LabelService.Domain.ApiClients;
+using LabelService.Domain.Businesses;
+using LabelService.Domain.Identity;
+using LabelService.Domain.Layouts;
+using LabelService.Domain.Logs;
+using LabelService.Domain.Resources;
+using LabelService.Domain.Shared;
+using LabelService.Domain.Templates;
+using LabelService.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
 namespace LabelService.Server.Layouts;
@@ -25,7 +33,7 @@ internal sealed class LayoutRepository(IDbContextFactory<LabelDbContext> context
     /// <summary>
     /// 全部版式（含停用的），按编码排序。
     /// </summary>
-    public async Task<List<SheetLayoutRecord>> ListAsync()
+    public async Task<List<SheetLayoutEntity>> ListAsync()
     {
         await using var db = await contexts.CreateDbContextAsync();
         return await db.SheetLayouts.AsNoTracking().OrderBy(item => item.Code).ToListAsync();
@@ -34,33 +42,33 @@ internal sealed class LayoutRepository(IDbContextFactory<LabelDbContext> context
     /// <summary>
     /// 按编码取版式记录，不存在时返回 null。
     /// </summary>
-    public async Task<SheetLayoutRecord?> FindAsync(string code)
+    public async Task<SheetLayoutEntity?> FindAsync(string code)
     {
         await using var db = await contexts.CreateDbContextAsync();
         return await db.SheetLayouts.AsNoTracking().SingleOrDefaultAsync(item => item.Code == code);
     }
 
     /// <summary>
-    /// 新建或修改版式。长度按 0.1 mm 取整后再检查；检查不通过抛 <see cref="ManagementException"/>。
+    /// 新建或修改版式。长度按 0.1 mm 取整后再检查；检查不通过抛 <see cref="UserFriendlyException"/>。
     /// </summary>
     /// <param name="layout">版式内容。修改时编码不能变。</param>
     /// <param name="enabled">是否启用。</param>
     /// <param name="account">操作人账号。</param>
     /// <param name="create">true 新建（编码已存在时报错），false 修改（不存在时返回 null）。</param>
-    public async Task<SheetLayoutRecord?> SaveAsync(SheetLayout layout, bool enabled, string account, bool create)
+    public async Task<SheetLayoutEntity?> SaveAsync(SheetLayout layout, bool enabled, string account, bool create)
     {
         var normalized = Normalize(layout);
         var problems = LayoutValidator.Validate(normalized);
         if (problems.Count > 0)
         {
-            throw new ManagementException("版式检查不通过", problems);
+            throw new UserFriendlyException("版式检查不通过", problems);
         }
 
         await using var db = await contexts.CreateDbContextAsync();
         var record = await db.SheetLayouts.SingleOrDefaultAsync(item => item.Code == normalized.Code);
         if (create && record is not null)
         {
-            throw new ManagementException($"版式编码 {normalized.Code} 已存在");
+            throw new UserFriendlyException($"版式编码 {normalized.Code} 已存在");
         }
 
         if (!create && record is null)
@@ -70,7 +78,7 @@ internal sealed class LayoutRepository(IDbContextFactory<LabelDbContext> context
 
         if (record is null)
         {
-            record = new SheetLayoutRecord { Code = normalized.Code };
+            record = new SheetLayoutEntity { Code = normalized.Code };
             db.SheetLayouts.Add(record);
         }
 
@@ -104,7 +112,7 @@ internal sealed class LayoutRepository(IDbContextFactory<LabelDbContext> context
     /// <summary>
     /// 表记录转成版式 JSON 模型。
     /// </summary>
-    public static SheetLayout ToModel(SheetLayoutRecord record) => new()
+    public static SheetLayout ToModel(SheetLayoutEntity record) => new()
     {
         Code = record.Code,
         Name = record.Name,
@@ -129,7 +137,7 @@ internal sealed class LayoutRepository(IDbContextFactory<LabelDbContext> context
         CutLines = layout.CutLines,
     };
 
-    private static void Apply(SheetLayoutRecord record, SheetLayout layout)
+    private static void Apply(SheetLayoutEntity record, SheetLayout layout)
     {
         record.Name = layout.Name;
         record.PaperWidthMm = layout.Paper.Width;

@@ -1,5 +1,14 @@
 using System.Collections.Concurrent;
 using LabelService.Contracts.Templates;
+using LabelService.Domain.ApiClients;
+using LabelService.Domain.Businesses;
+using LabelService.Domain.Identity;
+using LabelService.Domain.Layouts;
+using LabelService.Domain.Logs;
+using LabelService.Domain.Resources;
+using LabelService.Domain.Shared;
+using LabelService.Domain.Templates;
+using LabelService.Infrastructure.Persistence;
 using LabelService.Server.Templates;
 
 namespace LabelService.Server.Admin;
@@ -20,19 +29,19 @@ internal static class TemplateEndpoints
     /// </summary>
     public static void Map(RouteGroupBuilder api)
     {
-        api.MapGet("/templates", ListAsync).RequireAdmin(Permissions.TemplateView);
-        api.MapPost("/templates", CreateAsync).RequireAdmin(Permissions.TemplateEdit);
-        api.MapPost("/templates/check", Check).RequireAdmin(Permissions.TemplateView);
-        api.MapGet("/templates/{code}", GetAsync).RequireAdmin(Permissions.TemplateView);
-        api.MapGet("/templates/{code}/thumbnail", ThumbnailAsync).RequireAdmin(Permissions.TemplateView);
-        api.MapDelete("/templates/{code}", DeleteAsync).RequireAdmin(Permissions.TemplateDelete);
-        api.MapPut("/templates/{code}/draft", SaveDraftAsync).RequireAdmin(Permissions.TemplateEdit);
-        api.MapDelete("/templates/{code}/draft", DiscardDraftAsync).RequireAdmin(Permissions.TemplateEdit);
-        api.MapPost("/templates/{code}/publish", PublishAsync).RequireAdmin(Permissions.TemplatePublish);
-        api.MapGet("/templates/{code}/versions", ListVersionsAsync).RequireAdmin(Permissions.TemplateView);
-        api.MapGet("/templates/{code}/versions/{version:int}", GetVersionAsync).RequireAdmin(Permissions.TemplateView);
-        api.MapPost("/templates/{code}/versions/{version:int}/restore", RestoreAsync).RequireAdmin(Permissions.TemplateEdit);
-        api.MapPut("/templates/{code}/business", MoveAsync).RequireAdmin(Permissions.TemplateEdit);
+        api.MapGet("/templates", ListAsync).RequireAdmin(PermissionNames.TemplateView);
+        api.MapPost("/templates", CreateAsync).RequireAdmin(PermissionNames.TemplateEdit);
+        api.MapPost("/templates/check", Check).RequireAdmin(PermissionNames.TemplateView);
+        api.MapGet("/templates/{code}", GetAsync).RequireAdmin(PermissionNames.TemplateView);
+        api.MapGet("/templates/{code}/thumbnail", ThumbnailAsync).RequireAdmin(PermissionNames.TemplateView);
+        api.MapDelete("/templates/{code}", DeleteAsync).RequireAdmin(PermissionNames.TemplateDelete);
+        api.MapPut("/templates/{code}/draft", SaveDraftAsync).RequireAdmin(PermissionNames.TemplateEdit);
+        api.MapDelete("/templates/{code}/draft", DiscardDraftAsync).RequireAdmin(PermissionNames.TemplateEdit);
+        api.MapPost("/templates/{code}/publish", PublishAsync).RequireAdmin(PermissionNames.TemplatePublish);
+        api.MapGet("/templates/{code}/versions", ListVersionsAsync).RequireAdmin(PermissionNames.TemplateView);
+        api.MapGet("/templates/{code}/versions/{version:int}", GetVersionAsync).RequireAdmin(PermissionNames.TemplateView);
+        api.MapPost("/templates/{code}/versions/{version:int}/restore", RestoreAsync).RequireAdmin(PermissionNames.TemplateEdit);
+        api.MapPut("/templates/{code}/business", MoveAsync).RequireAdmin(PermissionNames.TemplateEdit);
     }
 
     /// <summary>
@@ -132,7 +141,7 @@ internal static class TemplateEndpoints
         {
             await repository.SaveDraftAsync(content, admin.DisplayName, body.BusinessId);
         }
-        catch (ManagementException ex)
+        catch (UserFriendlyException ex)
         {
             return AdminResults.From(ex);
         }
@@ -162,7 +171,7 @@ internal static class TemplateEndpoints
         {
             version = await repository.SaveDraftAsync(body, http.CurrentAdmin().DisplayName);
         }
-        catch (ManagementException ex)
+        catch (UserFriendlyException ex)
         {
             return AdminResults.From(ex);
         }
@@ -197,7 +206,7 @@ internal static class TemplateEndpoints
                 return AdminResults.Invalid("没有未发布的草稿");
             }
         }
-        catch (ManagementException ex)
+        catch (UserFriendlyException ex)
         {
             return AdminResults.From(ex);
         }
@@ -219,7 +228,7 @@ internal static class TemplateEndpoints
         {
             result = await repository.PublishAsync(code, http.CurrentAdmin().DisplayName, body?.Note ?? "");
         }
-        catch (ManagementException ex)
+        catch (UserFriendlyException ex)
         {
             return AdminResults.From(ex);
         }
@@ -262,7 +271,7 @@ internal static class TemplateEndpoints
                 draftVersion = draft
             });
         }
-        catch (ManagementException ex)
+        catch (UserFriendlyException ex)
         {
             return AdminResults.From(ex);
         }
@@ -285,7 +294,7 @@ internal static class TemplateEndpoints
         {
             await repository.MoveAsync(code, body.BusinessId, http.CurrentAdmin().DisplayName);
         }
-        catch (ManagementException ex)
+        catch (UserFriendlyException ex)
         {
             return AdminResults.From(ex);
         }
@@ -306,7 +315,7 @@ internal static class TemplateEndpoints
         {
             await repository.DeleteAsync(code, http.CurrentAdmin().DisplayName);
         }
-        catch (ManagementException ex)
+        catch (UserFriendlyException ex)
         {
             return AdminResults.From(ex);
         }
@@ -320,7 +329,7 @@ internal static class TemplateEndpoints
     /// </summary>
     private static IResult Check(LabelTemplate body, TemplatePublishValidator validator) => Results.Json(validator.Check(body));
 
-    private static async Task<Data.TemplateRecord?> FindInScopeAsync(string code, HttpContext http, TemplateRepository repository)
+    private static async Task<TemplateEntity?> FindInScopeAsync(string code, HttpContext http, TemplateRepository repository)
     {
         var template = await repository.FindAsync(code);
         return template is not null && http.CurrentAdmin().InScope(template.BusinessId) ? template : null;

@@ -1,4 +1,12 @@
-using LabelService.Server.Data;
+using LabelService.Domain.ApiClients;
+using LabelService.Domain.Businesses;
+using LabelService.Domain.Identity;
+using LabelService.Domain.Layouts;
+using LabelService.Domain.Logs;
+using LabelService.Domain.Resources;
+using LabelService.Domain.Shared;
+using LabelService.Domain.Templates;
+using LabelService.Infrastructure.Persistence;
 using LabelService.Server.Templates;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -50,9 +58,9 @@ internal static class AdminSetup
         var now = DateTime.UtcNow;
         if (!await db.Roles.AnyAsync())
         {
-            foreach (var (name, description, all, permissions) in Permissions.BuiltinRoles)
+            foreach (var (name, description, all, permissions) in BuiltinRoles.All)
             {
-                db.Roles.Add(new RoleRecord { Name = name, Description = description, AllPermissions = all, Permissions = string.Join(",", permissions), Builtin = true, CreatedAt = now });
+                db.Roles.Add(new RoleEntity { Name = name, Description = description, AllPermissions = all, Permissions = string.Join(",", permissions), Builtin = true, CreatedAt = now });
             }
 
             await db.SaveChangesAsync();
@@ -67,7 +75,7 @@ internal static class AdminSetup
         var password = !string.IsNullOrEmpty(options.InitialPassword) ? options.InitialPassword
             : app.Environment.IsDevelopment() ? "admin123" : PasswordHasher.Temporary();
         var adminRole = await db.Roles.Where(role => role.AllPermissions).OrderBy(role => role.Id).FirstAsync();
-        db.Users.Add(new UserRecord
+        db.Users.Add(new UserEntity
         {
             Account = "admin",
             Name = "系统管理员",

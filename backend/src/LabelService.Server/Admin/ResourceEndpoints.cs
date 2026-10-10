@@ -1,9 +1,17 @@
 using System.Security.Cryptography;
 using LabelService.Contracts.Protocol;
+using LabelService.Domain.ApiClients;
+using LabelService.Domain.Businesses;
+using LabelService.Domain.Identity;
+using LabelService.Domain.Layouts;
+using LabelService.Domain.Logs;
+using LabelService.Domain.Resources;
+using LabelService.Domain.Shared;
+using LabelService.Domain.Templates;
+using LabelService.Infrastructure.Persistence;
 using LabelService.Rendering.Assets;
 using LabelService.Rendering.Fonts;
 using LabelService.Server.Assets;
-using LabelService.Server.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
@@ -24,15 +32,15 @@ internal static class ResourceEndpoints
     public static void Map(RouteGroupBuilder api)
     {
         api.MapGet("/presets", ListPresetsAsync).RequireAdmin();
-        api.MapPost("/presets", CreatePresetAsync).RequireAdmin(Permissions.ResourceManage);
-        api.MapPut("/presets/{id:int}", UpdatePresetAsync).RequireAdmin(Permissions.ResourceManage);
-        api.MapDelete("/presets/{id:int}", DeletePresetAsync).RequireAdmin(Permissions.ResourceManage);
+        api.MapPost("/presets", CreatePresetAsync).RequireAdmin(PermissionNames.ResourceManage);
+        api.MapPut("/presets/{id:int}", UpdatePresetAsync).RequireAdmin(PermissionNames.ResourceManage);
+        api.MapDelete("/presets/{id:int}", DeletePresetAsync).RequireAdmin(PermissionNames.ResourceManage);
 
         api.MapGet("/assets", ListAssetsAsync).RequireAdmin();
         api.MapGet("/assets/{key}/file", GetAssetFile).RequireAdmin();
-        api.MapPost("/assets", UploadAssetAsync).RequireAdmin(Permissions.ResourceManage).DisableAntiforgery();
-        api.MapPut("/assets/{key}", RenameAssetAsync).RequireAdmin(Permissions.ResourceManage);
-        api.MapDelete("/assets/{key}", DeleteAssetAsync).RequireAdmin(Permissions.ResourceManage);
+        api.MapPost("/assets", UploadAssetAsync).RequireAdmin(PermissionNames.ResourceManage).DisableAntiforgery();
+        api.MapPut("/assets/{key}", RenameAssetAsync).RequireAdmin(PermissionNames.ResourceManage);
+        api.MapDelete("/assets/{key}", DeleteAssetAsync).RequireAdmin(PermissionNames.ResourceManage);
 
         api.MapGet("/fonts", (FontRegistry fonts) => Results.Json(new
         {
@@ -50,7 +58,7 @@ internal static class ResourceEndpoints
     private static async Task<IResult> CreatePresetAsync(PresetRequest body, HttpContext http, IDbContextFactory<LabelDbContext> contexts, OperationLog log)
     {
         await using var db = await contexts.CreateDbContextAsync();
-        var preset = new CanvasPresetRecord { Sort = (await db.CanvasPresets.MaxAsync(item => (int?)item.Sort) ?? 0) + 10 };
+        var preset = new CanvasPresetEntity { Sort = (await db.CanvasPresets.MaxAsync(item => (int?)item.Sort) ?? 0) + 10 };
         if (Apply(preset, body) is { } problem)
         {
             return AdminResults.Invalid(problem);
@@ -97,7 +105,7 @@ internal static class ResourceEndpoints
         return Results.NoContent();
     }
 
-    private static string? Apply(CanvasPresetRecord preset, PresetRequest body)
+    private static string? Apply(CanvasPresetEntity preset, PresetRequest body)
     {
         var name = (body.Name ?? "").Trim();
         if (name.Length is 0 or > 64)
@@ -209,7 +217,7 @@ internal static class ResourceEndpoints
         Directory.CreateDirectory(directory);
         await File.WriteAllBytesAsync(Path.Combine(directory, key + extension), bytes);
         var name = Path.GetFileNameWithoutExtension(file.FileName);
-        var record = new AssetRecord
+        var record = new AssetEntity
         {
             Key = key,
             Kind = "image",

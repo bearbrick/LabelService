@@ -1,4 +1,12 @@
-using LabelService.Server.Data;
+using LabelService.Domain.ApiClients;
+using LabelService.Domain.Businesses;
+using LabelService.Domain.Identity;
+using LabelService.Domain.Layouts;
+using LabelService.Domain.Logs;
+using LabelService.Domain.Resources;
+using LabelService.Domain.Shared;
+using LabelService.Domain.Templates;
+using LabelService.Infrastructure.Persistence;
 using LabelService.Server.Layouts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -21,12 +29,7 @@ internal static class TemplateStorage
     public static IServiceCollection AddTemplateStorage(this IServiceCollection services, IConfiguration configuration)
     {
         services.Configure<TemplateStoreOptions>(configuration.GetSection(TemplateStoreOptions.SectionName));
-        services.Configure<DataOptions>(configuration.GetSection(DataOptions.SectionName));
-        services.AddSingleton(TimeProvider.System);
-        services.AddSingleton<SqlitePragmaInterceptor>();
-        services.AddDbContextFactory<LabelDbContext>((provider, options) => options
-            .UseSqlite(provider.GetRequiredService<IOptions<DataOptions>>().Value.ConnectionString())
-            .AddInterceptors(provider.GetRequiredService<SqlitePragmaInterceptor>()));
+        services.AddLabelPersistence(configuration);
         services.AddSingleton<DbTemplateStore>();
         services.AddSingleton<FileTemplateStore>();
         services.AddSingleton<TemplatePublishValidator>();
@@ -93,7 +96,7 @@ internal static class TemplateStorage
             var business = await db.Businesses.SingleOrDefaultAsync(item => item.Code == SampleBusinessCode);
             if (business is null)
             {
-                business = new BusinessRecord { Code = SampleBusinessCode, Name = "示例", Description = "开发环境自动导入的示例模板", CreatedAt = DateTime.UtcNow };
+                business = new BusinessEntity { Code = SampleBusinessCode, Name = "示例", Description = "开发环境自动导入的示例模板", CreatedAt = DateTime.UtcNow };
                 db.Businesses.Add(business);
                 await db.SaveChangesAsync();
             }
@@ -109,7 +112,7 @@ internal static class TemplateStorage
                 await repository.PublishAsync(template.Code, "system");
                 logger.LogInformation("已导入示例模板 {Code}", template.Code);
             }
-            catch (ManagementException ex)
+            catch (UserFriendlyException ex)
             {
                 logger.LogWarning("示例模板 {Code} 没有发布：{Message} {Details}", template.Code, ex.Message, string.Join("；", ex.Details));
             }

@@ -1,9 +1,18 @@
 using System.Diagnostics;
 using System.Text;
 using LabelService.Contracts.Protocol;
+using LabelService.Domain.ApiClients;
+using LabelService.Domain.Businesses;
+using LabelService.Domain.Identity;
+using LabelService.Domain.Layouts;
+using LabelService.Domain.Logs;
+using LabelService.Domain.Resources;
+using LabelService.Domain.Shared;
+using LabelService.Domain.Templates;
+using LabelService.Infrastructure.Persistence;
+using LabelService.Infrastructure.Persistence.Sqlite;
 using LabelService.Server;
 using LabelService.Server.Auth;
-using LabelService.Server.Data;
 using LabelService.Server.Logging;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
@@ -95,7 +104,7 @@ internal static class ClientLogChecks
         var contexts = services.GetRequiredService<IDbContextFactory<LogDbContext>>();
         await using (var db = await contexts.CreateDbContextAsync())
         {
-            db.RenderLogs.Add(new RenderLogRecord { RequestId = "OLD", Endpoint = "render", ClientName = "MES", Status = "ok", CreatedAt = DateTime.UtcNow.AddDays(-200) });
+            db.RenderLogs.Add(new RenderLogEntity { RequestId = "OLD", Endpoint = "render", ClientName = "MES", Status = "ok", CreatedAt = DateTime.UtcNow.AddDays(-200) });
             await db.SaveChangesAsync();
         }
 
@@ -169,7 +178,7 @@ internal static class ClientLogChecks
     private static void CheckQueue(Action<string, bool> check)
     {
         var writer = new RenderLogWriter(Options.Create(new RenderLogOptions { QueueCapacity = 2 }));
-        var results = Enumerable.Range(0, 5).Select(i => writer.TryWrite(new RenderLogRecord { RequestId = "Q" + i })).ToArray();
+        var results = Enumerable.Range(0, 5).Select(i => writer.TryWrite(new RenderLogEntity { RequestId = "Q" + i })).ToArray();
         check("日志队列满时直接丢弃并计数，不阻塞请求", results.SequenceEqual([true, true, false, false, false]) && writer.Dropped == 3 && writer.Pending == 2);
     }
 
@@ -178,13 +187,13 @@ internal static class ClientLogChecks
     /// </summary>
     private static async Task CheckWriteFailureAsync(Action<string, bool> check)
     {
-        var options = new DbContextOptionsBuilder<LogDbContext>()
+        var options = new DbContextOptionsBuilder<SqliteLogDbContext>()
             .UseSqlite(new SqliteConnectionStringBuilder { DataSource = Path.Combine(Path.GetTempPath(), "label-no-such-dir-" + Guid.NewGuid().ToString("N"), "x.db") }.ToString())
             .Options;
         var writer = new RenderLogWriter(Options.Create(new RenderLogOptions()));
-        using var service = new RenderLogService(writer, new PooledDbContextFactory<LogDbContext>(options), Options.Create(new RenderLogOptions()), TimeProvider.System, NullLogger<RenderLogService>.Instance);
+        using var service = new RenderLogService(writer, new DbContextFactoryAdapter<LogDbContext, SqliteLogDbContext>(new PooledDbContextFactory<SqliteLogDbContext>(options)), Options.Create(new RenderLogOptions()), TimeProvider.System, NullLogger<RenderLogService>.Instance);
         await service.StartAsync(CancellationToken.None);
-        writer.TryWrite(new RenderLogRecord { RequestId = "FAIL", Endpoint = "render", Status = "ok", CreatedAt = DateTime.UtcNow });
+        writer.TryWrite(new RenderLogEntity { RequestId = "FAIL", Endpoint = "render", Status = "ok", CreatedAt = DateTime.UtcNow });
         for (var i = 0; i < 50 && writer.Pending > 0; i++)
         {
             await Task.Delay(20);
@@ -195,9 +204,9 @@ internal static class ClientLogChecks
         await service.StopAsync(CancellationToken.None);
     }
 
-    private static async Task<IReadOnlyList<RenderLogRecord>> WaitForLogsAsync(RenderLogQuery query, Func<IReadOnlyList<RenderLogRecord>, bool> ready)
+    private static async Task<IReadOnlyList<RenderLogEntity>> WaitForLogsAsync(RenderLogQuery query, Func<IReadOnlyList<RenderLogEntity>, bool> ready)
     {
-        IReadOnlyList<RenderLogRecord> logs = [];
+        IReadOnlyList<RenderLogEntity> logs = [];
         for (var i = 0; i < 100; i++)
         {
             logs = await query.SearchAsync(new RenderLogFilter(PageSize: 200));
@@ -234,7 +243,7 @@ internal static class ClientLogChecks
             await action();
             return false;
         }
-        catch (ManagementException)
+        catch (UserFriendlyException)
         {
             return true;
         }

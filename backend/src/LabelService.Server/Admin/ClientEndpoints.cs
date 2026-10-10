@@ -1,5 +1,13 @@
+using LabelService.Domain.ApiClients;
+using LabelService.Domain.Businesses;
+using LabelService.Domain.Identity;
+using LabelService.Domain.Layouts;
+using LabelService.Domain.Logs;
+using LabelService.Domain.Resources;
+using LabelService.Domain.Shared;
+using LabelService.Domain.Templates;
+using LabelService.Infrastructure.Persistence;
 using LabelService.Server.Auth;
-using LabelService.Server.Data;
 
 namespace LabelService.Server.Admin;
 
@@ -19,11 +27,11 @@ internal static class ClientEndpoints
     /// </summary>
     public static void Map(RouteGroupBuilder api)
     {
-        api.MapGet("/clients", ListAsync).RequireAdmin(Permissions.ApiManage);
-        api.MapPost("/clients", CreateAsync).RequireAdmin(Permissions.ApiManage);
-        api.MapPut("/clients/{id:int}", UpdateAsync).RequireAdmin(Permissions.ApiManage);
-        api.MapPost("/clients/{id:int}/status", SetStatusAsync).RequireAdmin(Permissions.ApiManage);
-        api.MapPost("/clients/{id:int}/reset-key", ResetKeyAsync).RequireAdmin(Permissions.ApiManage);
+        api.MapGet("/clients", ListAsync).RequireAdmin(PermissionNames.ApiManage);
+        api.MapPost("/clients", CreateAsync).RequireAdmin(PermissionNames.ApiManage);
+        api.MapPut("/clients/{id:int}", UpdateAsync).RequireAdmin(PermissionNames.ApiManage);
+        api.MapPost("/clients/{id:int}/status", SetStatusAsync).RequireAdmin(PermissionNames.ApiManage);
+        api.MapPost("/clients/{id:int}/reset-key", ResetKeyAsync).RequireAdmin(PermissionNames.ApiManage);
     }
 
     private static async Task<IResult> ListAsync(HttpContext http, ApiClientRepository repository)
@@ -49,7 +57,7 @@ internal static class ClientEndpoints
                 apiKey = key
             });
         }
-        catch (ManagementException ex)
+        catch (UserFriendlyException ex)
         {
             return AdminResults.From(ex);
         }
@@ -73,7 +81,7 @@ internal static class ClientEndpoints
             await log.WriteAsync(http, "调用方", client.Name, "修改了名称、业务范围或 IP 白名单");
             return Results.Json(View(client));
         }
-        catch (ManagementException ex)
+        catch (UserFriendlyException ex)
         {
             return AdminResults.From(ex);
         }
@@ -92,7 +100,7 @@ internal static class ClientEndpoints
             await log.WriteAsync(http, "调用方", client.Name, body.Enabled ? "启用" : "停用（立即不能调用）");
             return Results.Json(View(client));
         }
-        catch (ManagementException ex)
+        catch (UserFriendlyException ex)
         {
             return AdminResults.From(ex);
         }
@@ -115,7 +123,7 @@ internal static class ClientEndpoints
                 apiKey = key
             });
         }
-        catch (ManagementException ex)
+        catch (UserFriendlyException ex)
         {
             return AdminResults.From(ex);
         }
@@ -130,7 +138,7 @@ internal static class ClientEndpoints
     /// <summary>
     /// 调用方的授权是否完全在用户的业务范围里。没有授权任何分组的调用方谁都能管。
     /// </summary>
-    private static bool Manages(AdminUser admin, ApiClientRecord client) =>
+    private static bool Manages(AdminUser admin, ApiClientEntity client) =>
         admin.AllBusinesses || (!client.AllBusinesses && ApiKeyAuthenticator.ParseIds(client.BusinessIds).All(id => admin.InScope(id)));
 
     /// <summary>
@@ -142,7 +150,7 @@ internal static class ClientEndpoints
     /// <summary>
     /// 调用方的信息。不含 Key 哈希。
     /// </summary>
-    private static object View(ApiClientRecord client) => new
+    private static object View(ApiClientEntity client) => new
     {
         id = client.Id,
         name = client.Name,

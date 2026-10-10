@@ -1,5 +1,6 @@
 using System.Globalization;
 using LabelService.Contracts.Protocol;
+using LabelService.Domain.Identity;
 using LabelService.Rendering;
 using LabelService.Rendering.Validation;
 using LabelService.Server.Templates;
@@ -18,7 +19,7 @@ internal static class ApiTestEndpoints
     /// 注册路由。
     /// </summary>
     public static void Map(RouteGroupBuilder api) =>
-        api.MapPost("/api-test/render", RenderAsync).RequireAdmin(Permissions.ApiTest);
+        api.MapPost("/api-test/render", RenderAsync).RequireAdmin(PermissionNames.ApiTest);
 
     private static async Task<IResult> RenderAsync(RenderApiRequest body, HttpContext http, ITemplateStore store, ILabelRenderer renderer)
     {

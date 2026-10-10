@@ -1,7 +1,15 @@
 using System.Text.Json;
 using LabelService.Contracts;
 using LabelService.Contracts.Templates;
-using LabelService.Server.Data;
+using LabelService.Domain.ApiClients;
+using LabelService.Domain.Businesses;
+using LabelService.Domain.Identity;
+using LabelService.Domain.Layouts;
+using LabelService.Domain.Logs;
+using LabelService.Domain.Resources;
+using LabelService.Domain.Shared;
+using LabelService.Domain.Templates;
+using LabelService.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
 namespace LabelService.Server.Templates;
@@ -99,7 +107,7 @@ internal sealed class TemplateRepository(
     /// <summary>
     /// 按编码找模板（不含已删除的），管理接口用来核对业务范围。
     /// </summary>
-    public async Task<TemplateRecord?> FindAsync(string code, CancellationToken cancellationToken = default)
+    public async Task<TemplateEntity?> FindAsync(string code, CancellationToken cancellationToken = default)
     {
         await using var db = await contexts.CreateDbContextAsync(cancellationToken);
         return await db.Templates.AsNoTracking().SingleOrDefaultAsync(item => item.Code == code && item.Status != TemplateStatuses.Deleted, cancellationToken);
@@ -142,7 +150,7 @@ internal sealed class TemplateRepository(
     {
         if (!TemplatePublishValidator.IsValidCode(content.Code))
         {
-            throw new ManagementException($"模板编码“{content.Code}”不合法：要以字母开头，只含字母、数字、下划线、连字符，最长 64 个字符");
+            throw new UserFriendlyException($"模板编码“{content.Code}”不合法：要以字母开头，只含字母、数字、下划线、连字符，最长 64 个字符");
         }
 
         await using var db = await contexts.CreateDbContextAsync(cancellationToken);
@@ -152,12 +160,12 @@ internal sealed class TemplateRepository(
             .SingleOrDefaultAsync(item => item.Code == content.Code, cancellationToken);
         if (template is { Status: TemplateStatuses.Deleted })
         {
-            throw new ManagementException($"编码 {content.Code} 属于已删除的模板，请换一个编码");
+            throw new UserFriendlyException($"编码 {content.Code} 属于已删除的模板，请换一个编码");
         }
 
         if (template is null)
         {
-            template = new TemplateRecord { Code = content.Code, CreatedBy = user, Status = TemplateStatuses.Draft };
+            template = new TemplateEntity { Code = content.Code, CreatedBy = user, Status = TemplateStatuses.Draft };
             db.Templates.Add(template);
         }
 
@@ -168,7 +176,7 @@ internal sealed class TemplateRepository(
         var draft = template.Versions.SingleOrDefault();
         if (draft is null)
         {
-            draft = new TemplateVersionRecord { VersionNo = template.LatestVersion + 1, Status = TemplateStatuses.Draft };
+            draft = new TemplateVersionEntity { VersionNo = template.LatestVersion + 1, Status = TemplateStatuses.Draft };
             template.Versions.Add(draft);
         }
 
@@ -202,34 +210,34 @@ internal sealed class TemplateRepository(
     public async Task<int> RestoreToDraftAsync(string code, int versionNo, string user, CancellationToken cancellationToken = default)
     {
         var content = await GetVersionAsync(code, versionNo, cancellationToken)
-            ?? throw new ManagementException($"模板 {code} 没有已发布的版本 {versionNo}");
+            ?? throw new UserFriendlyException($"模板 {code} 没有已发布的版本 {versionNo}");
         return await SaveDraftAsync(content, user, null, cancellationToken);
     }
 
     /// <summary>
     /// 发布草稿：检查、试渲染，通过后生成新版本并立即对开放接口生效。
     /// </summary>
-    /// <exception cref="ManagementException">没有草稿、检查不通过或并发冲突。检查不通过时 <see cref="ManagementException.Details"/> 列出全部问题。</exception>
+    /// <exception cref="UserFriendlyException">没有草稿、检查不通过或并发冲突。检查不通过时 <see cref="UserFriendlyException.Details"/> 列出全部问题。</exception>
     public async Task<PublishResult> PublishAsync(string code, string user, string note = "", CancellationToken cancellationToken = default)
     {
         await using var db = await contexts.CreateDbContextAsync(cancellationToken);
         var template = await db.Templates
             .Include(item => item.Versions.Where(version => version.Status == TemplateStatuses.Draft))
             .SingleOrDefaultAsync(item => item.Code == code && item.Status != TemplateStatuses.Deleted, cancellationToken)
-            ?? throw new ManagementException($"模板 {code} 不存在");
+            ?? throw new UserFriendlyException($"模板 {code} 不存在");
         var draft = template.Versions.SingleOrDefault()
-            ?? throw new ManagementException($"模板 {code} 没有草稿，没有可发布的内容");
+            ?? throw new UserFriendlyException($"模板 {code} 没有草稿，没有可发布的内容");
 
         var content = Deserialize(draft.ContentJson);
         if (content.Code != code)
         {
-            throw new ManagementException($"草稿里的模板编码“{content.Code}”和模板 {code} 不一致");
+            throw new UserFriendlyException($"草稿里的模板编码“{content.Code}”和模板 {code} 不一致");
         }
 
         var check = validator.Check(content);
         if (!check.CanPublish)
         {
-            throw new ManagementException($"模板 {code} 有 {check.Errors.Count} 个问题，不能发布", check.Errors);
+            throw new UserFriendlyException($"模板 {code} 有 {check.Errors.Count} 个问题，不能发布", check.Errors);
         }
 
         var now = clock.GetUtcNow().UtcDateTime;
@@ -255,7 +263,7 @@ internal sealed class TemplateRepository(
     {
         await using var db = await contexts.CreateDbContextAsync(cancellationToken);
         var template = await db.Templates.SingleOrDefaultAsync(item => item.Code == code && item.Status != TemplateStatuses.Deleted, cancellationToken)
-            ?? throw new ManagementException($"模板 {code} 不存在");
+            ?? throw new UserFriendlyException($"模板 {code} 不存在");
         template.BusinessId = businessId;
         template.UpdatedBy = user;
         template.UpdatedAt = clock.GetUtcNow().UtcDateTime;
@@ -270,7 +278,7 @@ internal sealed class TemplateRepository(
     {
         await using var db = await contexts.CreateDbContextAsync(cancellationToken);
         var template = await db.Templates.SingleOrDefaultAsync(item => item.Code == code && item.Status != TemplateStatuses.Deleted, cancellationToken)
-            ?? throw new ManagementException($"模板 {code} 不存在");
+            ?? throw new UserFriendlyException($"模板 {code} 不存在");
         template.Status = TemplateStatuses.Deleted;
         template.UpdatedBy = user;
         template.UpdatedAt = clock.GetUtcNow().UtcDateTime;
@@ -309,7 +317,7 @@ internal sealed class TemplateRepository(
 
     private async Task<LabelTemplate?> GetContentAsync(
         string code,
-        System.Linq.Expressions.Expression<Func<TemplateVersionRecord, bool>> filter,
+        System.Linq.Expressions.Expression<Func<TemplateVersionEntity, bool>> filter,
         CancellationToken cancellationToken)
     {
         await using var db = await contexts.CreateDbContextAsync(cancellationToken);
@@ -333,7 +341,7 @@ internal sealed class TemplateRepository(
         catch (DbUpdateException ex)
         {
             // 状态是并发令牌；(template_id, version_no) 唯一。两种冲突都是别人同时操作了同一个模板。
-            throw new ManagementException(conflictMessage, innerException: ex);
+            throw new UserFriendlyException(conflictMessage, innerException: ex);
         }
     }
 }

@@ -1,9 +1,10 @@
 using System.Globalization;
-using LabelService.Server.Hosting;
+using LabelService.Infrastructure.Persistence.Sqlite;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
-namespace LabelService.Server.Data;
+namespace LabelService.Infrastructure.Persistence;
 
 /// <summary>
 /// 启动时升级数据库（执行迁移），保证失败可恢复：有待执行的迁移、库里已经有数据时，先用 VACUUM INTO 备份到数据目录的 backups/；
@@ -13,7 +14,7 @@ namespace LabelService.Server.Data;
 /// SQLite 上部分迁移（删列时重建表、<c>PRAGMA foreign_keys = 0</c>）不在事务里执行，中途失败会留下半套结构，重试也过不去
 /// （验收的故障注入：重试时 duplicate column）。所以靠升级前的完整快照恢复，不靠事务。
 /// </remarks>
-internal static class DatabaseUpgrade
+public static class DatabaseUpgrade
 {
     /// <summary>
     /// 升级主库 label.db：执行迁移；旧库（AddApiClients 版本）在删列之前读出分类和授权，迁移后换算成业务分组（见 <see cref="LegacyUpgrade"/>）。
@@ -96,7 +97,7 @@ internal static class DatabaseUpgrade
         var stamp = DateTime.Now.ToString("yyyyMMdd-HHmmss-fff", CultureInfo.InvariantCulture);
         var backup = Path.Combine(backups, $"{Path.GetFileNameWithoutExtension(database)}-before-upgrade-{stamp}.db");
         SqliteConnection.ClearAllPools();
-        await BackupService.SnapshotAsync(database, backup, CancellationToken.None);
+        await SqliteSnapshot.CreateAsync(database, backup, CancellationToken.None);
         logger.LogWarning("{Database} 有 {Count} 个待执行的迁移（{Pending}），升级前已备份到 {Backup}", Path.GetFileName(database), pending.Count, string.Join("、", pending), backup);
         try
         {

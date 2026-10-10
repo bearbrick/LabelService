@@ -12,6 +12,9 @@
   <ItemGroup>
     <ProjectReference Include="..\LabelService.Contracts\LabelService.Contracts.csproj" />
     <ProjectReference Include="..\LabelService.Rendering\LabelService.Rendering.csproj" />
+    <ProjectReference Include="..\LabelService.Domain\LabelService.Domain.csproj" />
+    <ProjectReference Include="..\LabelService.Application\LabelService.Application.csproj" />
+    <ProjectReference Include="..\LabelService.Infrastructure\LabelService.Infrastructure.csproj" />
   </ItemGroup>
 
   <ItemGroup>

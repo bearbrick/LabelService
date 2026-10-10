@@ -2,7 +2,15 @@ using System.Collections.Frozen;
 using System.Net;
 using System.Security.Cryptography;
 using System.Text;
-using LabelService.Server.Data;
+using LabelService.Domain.ApiClients;
+using LabelService.Domain.Businesses;
+using LabelService.Domain.Identity;
+using LabelService.Domain.Layouts;
+using LabelService.Domain.Logs;
+using LabelService.Domain.Resources;
+using LabelService.Domain.Shared;
+using LabelService.Domain.Templates;
+using LabelService.Infrastructure.Persistence;
 using LabelService.Server.Templates;
 using Microsoft.Extensions.Options;
 
@@ -53,7 +61,7 @@ internal sealed class ApiKeyAuthenticator
     /// <summary>
     /// 用配置文件和数据库里的调用方重建快照。停用的不加载。
     /// </summary>
-    public void Load(IEnumerable<ApiClientRecord> records)
+    public void Load(IEnumerable<ApiClientEntity> records)
     {
         var next = new Dictionary<string, ApiClient>(StringComparer.Ordinal);
         foreach (var client in configured.Where(client => client.Enabled && !string.IsNullOrWhiteSpace(client.KeySha256)))

@@ -1,4 +1,12 @@
-using LabelService.Server.Data;
+using LabelService.Domain.ApiClients;
+using LabelService.Domain.Businesses;
+using LabelService.Domain.Identity;
+using LabelService.Domain.Layouts;
+using LabelService.Domain.Logs;
+using LabelService.Domain.Resources;
+using LabelService.Domain.Shared;
+using LabelService.Domain.Templates;
+using LabelService.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
 namespace LabelService.Server.Admin;
@@ -28,7 +36,7 @@ internal static class AccountEndpoints
         api.MapGet("/me", (HttpContext http) => Results.Json(Me(http.CurrentAdmin()))).RequireAdmin();
         api.MapPut("/me", UpdateProfileAsync).RequireAdmin();
         api.MapPost("/me/password", ChangePasswordAsync).RequireAdmin();
-        api.MapGet("/permissions", () => Permissions.All.Select(item => new { key = item.Key, label = item.Label, group = item.Group })).RequireAdmin();
+        api.MapGet("/permissions", () => PermissionNames.All.Select(item => new { key = item.Key, label = item.Label, group = item.Group })).RequireAdmin();
     }
 
     private static async Task<IResult> LoginAsync(LoginRequest body, HttpContext http, IDbContextFactory<LabelDbContext> contexts, AdminTokens tokens, OperationLog log, TimeProvider clock)
@@ -154,7 +162,7 @@ internal static class AccountEndpoints
             id = admin.Role.Id,
             name = admin.Role.Name
         },
-        permissions = Permissions.All.Select(item => item.Key).Where(admin.Can).ToArray(),
+        permissions = PermissionNames.All.Select(item => item.Key).Where(admin.Can).ToArray(),
         allBusinesses = admin.AllBusinesses,
         businessIds = admin.Businesses.Order().ToArray(),
         mustChangePassword = admin.User.MustChangePassword,

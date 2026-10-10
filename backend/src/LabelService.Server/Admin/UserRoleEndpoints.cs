@@ -1,5 +1,13 @@
 using System.Text.RegularExpressions;
-using LabelService.Server.Data;
+using LabelService.Domain.ApiClients;
+using LabelService.Domain.Businesses;
+using LabelService.Domain.Identity;
+using LabelService.Domain.Layouts;
+using LabelService.Domain.Logs;
+using LabelService.Domain.Resources;
+using LabelService.Domain.Shared;
+using LabelService.Domain.Templates;
+using LabelService.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
 namespace LabelService.Server.Admin;
@@ -18,16 +26,16 @@ internal static partial class UserRoleEndpoints
     /// </summary>
     public static void Map(RouteGroupBuilder api)
     {
-        api.MapGet("/users", ListUsersAsync).RequireAdmin(Permissions.UserManage);
-        api.MapPost("/users", CreateUserAsync).RequireAdmin(Permissions.UserManage);
-        api.MapPut("/users/{id:int}", UpdateUserAsync).RequireAdmin(Permissions.UserManage);
-        api.MapPost("/users/{id:int}/status", SetUserStatusAsync).RequireAdmin(Permissions.UserManage);
-        api.MapPost("/users/{id:int}/reset-password", ResetPasswordAsync).RequireAdmin(Permissions.UserManage);
+        api.MapGet("/users", ListUsersAsync).RequireAdmin(PermissionNames.UserManage);
+        api.MapPost("/users", CreateUserAsync).RequireAdmin(PermissionNames.UserManage);
+        api.MapPut("/users/{id:int}", UpdateUserAsync).RequireAdmin(PermissionNames.UserManage);
+        api.MapPost("/users/{id:int}/status", SetUserStatusAsync).RequireAdmin(PermissionNames.UserManage);
+        api.MapPost("/users/{id:int}/reset-password", ResetPasswordAsync).RequireAdmin(PermissionNames.UserManage);
 
         api.MapGet("/roles", ListRolesAsync).RequireAdmin();
-        api.MapPost("/roles", CreateRoleAsync).RequireAdmin(Permissions.RoleManage);
-        api.MapPut("/roles/{id:int}", UpdateRoleAsync).RequireAdmin(Permissions.RoleManage);
-        api.MapDelete("/roles/{id:int}", DeleteRoleAsync).RequireAdmin(Permissions.RoleManage);
+        api.MapPost("/roles", CreateRoleAsync).RequireAdmin(PermissionNames.RoleManage);
+        api.MapPut("/roles/{id:int}", UpdateRoleAsync).RequireAdmin(PermissionNames.RoleManage);
+        api.MapDelete("/roles/{id:int}", DeleteRoleAsync).RequireAdmin(PermissionNames.RoleManage);
     }
 
     private static async Task<IResult> ListUsersAsync(IDbContextFactory<LabelDbContext> contexts)
@@ -51,7 +59,7 @@ internal static partial class UserRoleEndpoints
             return AdminResults.Invalid($"账号 {account} 已存在");
         }
 
-        var user = new UserRecord { Account = account, Status = UserStatuses.Active, MustChangePassword = true, CreatedAt = clock.GetUtcNow().UtcDateTime };
+        var user = new UserEntity { Account = account, Status = UserStatuses.Active, MustChangePassword = true, CreatedAt = clock.GetUtcNow().UtcDateTime };
         if (await ApplyAsync(db, user, body) is { } problem)
         {
             return AdminResults.Invalid(problem);
@@ -150,12 +158,12 @@ internal static partial class UserRoleEndpoints
     private static async Task<IResult> CreateRoleAsync(RoleRequest body, HttpContext http, IDbContextFactory<LabelDbContext> contexts, OperationLog log, TimeProvider clock)
     {
         await using var db = await contexts.CreateDbContextAsync();
-        var role = new RoleRecord { CreatedAt = clock.GetUtcNow().UtcDateTime };
+        var role = new RoleEntity { CreatedAt = clock.GetUtcNow().UtcDateTime };
         var permissions = body.Permissions ?? [];
         if (body.CopyFromRoleId is { } source)
         {
             var copy = await db.Roles.FindAsync(source);
-            permissions = copy is null ? [] : copy.AllPermissions ? Permissions.All.Select(item => item.Key).ToArray() : copy.Permissions.Split(',', StringSplitOptions.RemoveEmptyEntries);
+            permissions = copy is null ? [] : copy.AllPermissions ? PermissionNames.All.Select(item => item.Key).ToArray() : copy.Permissions.Split(',', StringSplitOptions.RemoveEmptyEntries);
         }
 
         if (await ApplyAsync(db, role, body with { Permissions = permissions }) is { } problem)
@@ -218,7 +226,7 @@ internal static partial class UserRoleEndpoints
         return Results.NoContent();
     }
 
-    private static async Task<string?> ApplyAsync(LabelDbContext db, UserRecord user, UserRequest body)
+    private static async Task<string?> ApplyAsync(LabelDbContext db, UserEntity user, UserRequest body)
     {
         var name = (body.Name ?? "").Trim();
         if (name.Length is 0 or > 64)
@@ -244,7 +252,7 @@ internal static partial class UserRoleEndpoints
         return null;
     }
 
-    private static async Task<string?> ApplyAsync(LabelDbContext db, RoleRecord role, RoleRequest body)
+    private static async Task<string?> ApplyAsync(LabelDbContext db, RoleEntity role, RoleRequest body)
     {
         var name = (body.Name ?? "").Trim();
         if (name.Length is 0 or > 64)
@@ -258,7 +266,7 @@ internal static partial class UserRoleEndpoints
         }
 
         var permissions = (body.Permissions ?? []).Distinct().ToList();
-        if (permissions.FirstOrDefault(item => !Permissions.IsKnown(item)) is { } unknown)
+        if (permissions.FirstOrDefault(item => !PermissionNames.IsKnown(item)) is { } unknown)
         {
             return $"不认识的权限点 {unknown}";
         }
@@ -269,7 +277,7 @@ internal static partial class UserRoleEndpoints
         return null;
     }
 
-    private static object View(UserRecord user) => new
+    private static object View(UserEntity user) => new
     {
         id = user.Id,
         account = user.Account,
@@ -284,13 +292,13 @@ internal static partial class UserRoleEndpoints
         createdAt = user.CreatedAt,
     };
 
-    private static object View(RoleRecord role, int users) => new
+    private static object View(RoleEntity role, int users) => new
     {
         id = role.Id,
         name = role.Name,
         description = role.Description,
         allPermissions = role.AllPermissions,
-        permissions = role.AllPermissions ? Permissions.All.Select(item => item.Key).ToArray() : role.Permissions.Split(',', StringSplitOptions.RemoveEmptyEntries),
+        permissions = role.AllPermissions ? PermissionNames.All.Select(item => item.Key).ToArray() : role.Permissions.Split(',', StringSplitOptions.RemoveEmptyEntries),
         builtin = role.Builtin,
         users,
     };

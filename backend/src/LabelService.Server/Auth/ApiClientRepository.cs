@@ -1,5 +1,13 @@
 using System.Security.Cryptography;
-using LabelService.Server.Data;
+using LabelService.Domain.ApiClients;
+using LabelService.Domain.Businesses;
+using LabelService.Domain.Identity;
+using LabelService.Domain.Layouts;
+using LabelService.Domain.Logs;
+using LabelService.Domain.Resources;
+using LabelService.Domain.Shared;
+using LabelService.Domain.Templates;
+using LabelService.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
 namespace LabelService.Server.Auth;
@@ -22,7 +30,7 @@ internal sealed class ApiClientRepository(
     /// <summary>
     /// 全部调用方，按名称排序。
     /// </summary>
-    public async Task<IReadOnlyList<ApiClientRecord>> ListAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<ApiClientEntity>> ListAsync(CancellationToken cancellationToken = default)
     {
         await using var db = await contexts.CreateDbContextAsync(cancellationToken);
         return await db.ApiClients.AsNoTracking().OrderBy(client => client.Name).ToListAsync(cancellationToken);
@@ -31,7 +39,7 @@ internal sealed class ApiClientRepository(
     /// <summary>
     /// 按 ID 找调用方，没有时返回 null。
     /// </summary>
-    public async Task<ApiClientRecord?> FindAsync(int id, CancellationToken cancellationToken = default)
+    public async Task<ApiClientEntity?> FindAsync(int id, CancellationToken cancellationToken = default)
     {
         await using var db = await contexts.CreateDbContextAsync(cancellationToken);
         return await db.ApiClients.AsNoTracking().SingleOrDefaultAsync(client => client.Id == id, cancellationToken);
@@ -40,11 +48,11 @@ internal sealed class ApiClientRepository(
     /// <summary>
     /// 新建调用方。返回记录和 Key 原文（只返回这一次）。
     /// </summary>
-    public async Task<(ApiClientRecord Client, string ApiKey)> CreateAsync(ApiClientInput input, CancellationToken cancellationToken = default)
+    public async Task<(ApiClientEntity Client, string ApiKey)> CreateAsync(ApiClientInput input, CancellationToken cancellationToken = default)
     {
         var key = NewKey();
         var now = clock.GetUtcNow().UtcDateTime;
-        var client = new ApiClientRecord { ApiKeyHash = ApiKeyAuthenticator.Hash(key), KeyPrefix = key[..13], Enabled = true, CreatedAt = now, UpdatedAt = now };
+        var client = new ApiClientEntity { ApiKeyHash = ApiKeyAuthenticator.Hash(key), KeyPrefix = key[..13], Enabled = true, CreatedAt = now, UpdatedAt = now };
         await using (var db = await contexts.CreateDbContextAsync(cancellationToken))
         {
             await ApplyAsync(db, client, input, cancellationToken);
@@ -59,13 +67,13 @@ internal sealed class ApiClientRepository(
     /// <summary>
     /// 修改调用方：名称、AppId、说明、业务范围、IP 白名单；<paramref name="enabled"/> 为 null 时不改启停。
     /// </summary>
-    public async Task<ApiClientRecord> UpdateAsync(int id, ApiClientInput? input, bool? enabled, CancellationToken cancellationToken = default)
+    public async Task<ApiClientEntity> UpdateAsync(int id, ApiClientInput? input, bool? enabled, CancellationToken cancellationToken = default)
     {
-        ApiClientRecord client;
+        ApiClientEntity client;
         await using (var db = await contexts.CreateDbContextAsync(cancellationToken))
         {
             client = await db.ApiClients.SingleOrDefaultAsync(item => item.Id == id, cancellationToken)
-                ?? throw new ManagementException($"调用方 {id} 不存在");
+                ?? throw new UserFriendlyException($"调用方 {id} 不存在");
             if (input is not null)
             {
                 await ApplyAsync(db, client, input, cancellationToken);
@@ -83,14 +91,14 @@ internal sealed class ApiClientRepository(
     /// <summary>
     /// 重置 Key：生成新 Key，旧 Key 立即失效。返回新 Key 原文（只返回这一次）。
     /// </summary>
-    public async Task<(ApiClientRecord Client, string ApiKey)> ResetKeyAsync(int id, CancellationToken cancellationToken = default)
+    public async Task<(ApiClientEntity Client, string ApiKey)> ResetKeyAsync(int id, CancellationToken cancellationToken = default)
     {
         var key = NewKey();
-        ApiClientRecord client;
+        ApiClientEntity client;
         await using (var db = await contexts.CreateDbContextAsync(cancellationToken))
         {
             client = await db.ApiClients.SingleOrDefaultAsync(item => item.Id == id, cancellationToken)
-                ?? throw new ManagementException($"调用方 {id} 不存在");
+                ?? throw new UserFriendlyException($"调用方 {id} 不存在");
             client.ApiKeyHash = ApiKeyAuthenticator.Hash(key);
             client.KeyPrefix = key[..13];
             client.UpdatedAt = clock.GetUtcNow().UtcDateTime;
@@ -110,23 +118,23 @@ internal sealed class ApiClientRepository(
         authenticator.Load(await db.ApiClients.AsNoTracking().ToListAsync(cancellationToken));
     }
 
-    private static async Task ApplyAsync(LabelDbContext db, ApiClientRecord client, ApiClientInput input, CancellationToken cancellationToken)
+    private static async Task ApplyAsync(LabelDbContext db, ApiClientEntity client, ApiClientInput input, CancellationToken cancellationToken)
     {
         var name = input.Name.Trim();
         if (name.Length is 0 or > 64)
         {
-            throw new ManagementException("调用方名称不能为空，最长 64 个字符");
+            throw new UserFriendlyException("调用方名称不能为空，最长 64 个字符");
         }
 
         if (await db.ApiClients.AnyAsync(item => item.Name == name && item.Id != client.Id, cancellationToken))
         {
-            throw new ManagementException($"调用方 {name} 已存在");
+            throw new UserFriendlyException($"调用方 {name} 已存在");
         }
 
         var appId = input.AppId.Trim();
         if (appId.Length > 0 && await db.ApiClients.AnyAsync(item => item.AppId == appId && item.Id != client.Id, cancellationToken))
         {
-            throw new ManagementException($"AppId {appId} 已被别的调用方使用");
+            throw new UserFriendlyException($"AppId {appId} 已被别的调用方使用");
         }
 
         try
@@ -135,14 +143,14 @@ internal sealed class ApiClientRepository(
         }
         catch (FormatException ex)
         {
-            throw new ManagementException("IP 白名单格式不对：" + ex.Message);
+            throw new UserFriendlyException("IP 白名单格式不对：" + ex.Message);
         }
 
         var businesses = input.BusinessIds.Distinct().ToList();
         if (!input.AllBusinesses && businesses.Count > 0
             && await db.Businesses.CountAsync(item => businesses.Contains(item.Id), cancellationToken) != businesses.Count)
         {
-            throw new ManagementException("选择的业务分组有的不存在");
+            throw new UserFriendlyException("选择的业务分组有的不存在");
         }
 
         client.Name = name;

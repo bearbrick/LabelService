@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #pragma warning disable CA1814 // Prefer jagged arrays over multidimensional
 
-namespace LabelService.Server.Data.Migrations
+namespace LabelService.Infrastructure.Persistence.Sqlite.Migrations.Main
 {
     /// <inheritdoc />
     public partial class InitialCreate : Migration

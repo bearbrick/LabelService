@@ -1,7 +1,15 @@
 using System.Text;
 using System.Text.RegularExpressions;
 using LabelService.Contracts.Protocol;
-using LabelService.Server.Data;
+using LabelService.Domain.ApiClients;
+using LabelService.Domain.Businesses;
+using LabelService.Domain.Identity;
+using LabelService.Domain.Layouts;
+using LabelService.Domain.Logs;
+using LabelService.Domain.Resources;
+using LabelService.Domain.Shared;
+using LabelService.Domain.Templates;
+using LabelService.Infrastructure.Persistence;
 using LabelService.Server.Logging;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -68,7 +76,7 @@ internal static partial class TimingChecks
         return (headerTotal, bytes);
     }
 
-    private static async Task<RenderLogRecord?> WaitForLogAsync(RenderLogQuery logs, string requestId)
+    private static async Task<RenderLogEntity?> WaitForLogAsync(RenderLogQuery logs, string requestId)
     {
         for (var i = 0; i < 100; i++)
         {

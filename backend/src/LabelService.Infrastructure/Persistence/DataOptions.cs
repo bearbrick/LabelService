@@ -1,11 +1,11 @@
 using Microsoft.Data.Sqlite;
 
-namespace LabelService.Server.Data;
+namespace LabelService.Infrastructure.Persistence;
 
 /// <summary>
 /// 配置节 LabelService:Data：数据目录（ADR 0003）。
 /// </summary>
-internal sealed class DataOptions
+public sealed class DataOptions
 {
     /// <summary>
     /// 配置节名称。

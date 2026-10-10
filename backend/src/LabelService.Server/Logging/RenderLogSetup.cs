@@ -1,4 +1,12 @@
-using LabelService.Server.Data;
+using LabelService.Domain.ApiClients;
+using LabelService.Domain.Businesses;
+using LabelService.Domain.Identity;
+using LabelService.Domain.Layouts;
+using LabelService.Domain.Logs;
+using LabelService.Domain.Resources;
+using LabelService.Domain.Shared;
+using LabelService.Domain.Templates;
+using LabelService.Infrastructure.Persistence;
 using LabelService.Server.Templates;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -17,12 +25,7 @@ internal static class RenderLogSetup
     public static IServiceCollection AddRenderLog(this IServiceCollection services, IConfiguration configuration)
     {
         services.Configure<RenderLogOptions>(configuration.GetSection(RenderLogOptions.SectionName));
-        services.Configure<DataOptions>(configuration.GetSection(DataOptions.SectionName));
-        services.TryAddSingleton(TimeProvider.System);
-        services.TryAddSingleton<SqlitePragmaInterceptor>();
-        services.AddDbContextFactory<LogDbContext>((provider, options) => options
-            .UseSqlite(provider.GetRequiredService<IOptions<DataOptions>>().Value.LogConnectionString())
-            .AddInterceptors(provider.GetRequiredService<SqlitePragmaInterceptor>()));
+        services.AddLabelPersistence(configuration);
         services.AddSingleton<RenderLogWriter>();
         services.AddSingleton<RenderLogService>();
         services.AddHostedService(provider => provider.GetRequiredService<RenderLogService>());

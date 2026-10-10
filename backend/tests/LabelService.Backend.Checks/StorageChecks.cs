@@ -1,8 +1,16 @@
 using System.Diagnostics;
 using LabelService.Contracts.Protocol;
 using LabelService.Contracts.Templates;
+using LabelService.Domain.ApiClients;
+using LabelService.Domain.Businesses;
+using LabelService.Domain.Identity;
+using LabelService.Domain.Layouts;
+using LabelService.Domain.Logs;
+using LabelService.Domain.Resources;
+using LabelService.Domain.Shared;
+using LabelService.Domain.Templates;
+using LabelService.Infrastructure.Persistence;
 using LabelService.Server;
-using LabelService.Server.Data;
 using LabelService.Server.Templates;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
@@ -206,14 +214,14 @@ internal static class StorageChecks
         return await db.TemplateVersions.CountAsync(item => item.Template!.Code == code && item.Status == TemplateStatuses.Draft);
     }
 
-    private static async Task<ManagementException?> CatchAsync(Func<Task> action)
+    private static async Task<UserFriendlyException?> CatchAsync(Func<Task> action)
     {
         try
         {
             await action();
             return null;
         }
-        catch (ManagementException ex)
+        catch (UserFriendlyException ex)
         {
             return ex;
         }

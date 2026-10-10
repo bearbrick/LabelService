@@ -4,6 +4,15 @@ using System.Text.Json;
 using LabelService.Contracts;
 using LabelService.Contracts.Protocol;
 using LabelService.Contracts.Templates;
+using LabelService.Domain.ApiClients;
+using LabelService.Domain.Businesses;
+using LabelService.Domain.Identity;
+using LabelService.Domain.Layouts;
+using LabelService.Domain.Logs;
+using LabelService.Domain.Resources;
+using LabelService.Domain.Shared;
+using LabelService.Domain.Templates;
+using LabelService.Infrastructure.Persistence;
 using LabelService.Rendering;
 using LabelService.Rendering.Validation;
 using LabelService.Server.Diagnostics;
@@ -24,7 +33,7 @@ internal static class PreviewEndpoints
     /// 注册路由。
     /// </summary>
     public static void Map(RouteGroupBuilder api) =>
-        api.MapPost("/preview", PreviewAsync).RequireAdmin(Permissions.TemplateView);
+        api.MapPost("/preview", PreviewAsync).RequireAdmin(PermissionNames.TemplateView);
 
     private static async Task<IResult> PreviewAsync(HttpContext http, ILabelRenderer renderer, LabelMetrics metrics)
     {

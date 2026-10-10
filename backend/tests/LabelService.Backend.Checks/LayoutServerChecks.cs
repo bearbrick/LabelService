@@ -32,7 +32,7 @@ internal static partial class LayoutServerChecks
             await CheckErrorsAsync(http, sample, check);
 
             var logs = factory.Services.GetRequiredService<RenderLogQuery>();
-            IReadOnlyList<Server.Data.RenderLogRecord> records = [];
+            IReadOnlyList<LabelService.Domain.Logs.RenderLogEntity> records = [];
             for (var i = 0; i < 100 && !records.Any(log => log.LayoutCode == Layout); i++)
             {
                 await Task.Delay(50);

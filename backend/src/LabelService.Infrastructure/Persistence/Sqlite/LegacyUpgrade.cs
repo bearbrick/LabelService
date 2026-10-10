@@ -1,7 +1,9 @@
 using System.Data.Common;
+using LabelService.Domain.Businesses;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
-namespace LabelService.Server.Data;
+namespace LabelService.Infrastructure.Persistence.Sqlite;
 
 /// <summary>
 /// 旧库升级的数据转换：T-008、T-009 时期的库（迁移到 AddApiClients 为止）用“模板分类 category”和“调用方允许的模板编码 allowed_templates”，
@@ -112,7 +114,7 @@ internal static class LegacyUpgrade
         var ids = new Dictionary<string, int>(StringComparer.Ordinal);
         foreach (var business in plan.Businesses)
         {
-            var record = new BusinessRecord { Code = business.Code, Name = business.Name, Description = business.Description, CreatedAt = now };
+            var record = new BusinessEntity { Code = business.Code, Name = business.Name, Description = business.Description, CreatedAt = now };
             db.Businesses.Add(record);
             await db.SaveChangesAsync();
             ids[business.Code] = record.Id;

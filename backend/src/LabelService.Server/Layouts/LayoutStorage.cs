@@ -1,7 +1,15 @@
 using System.Text.Json;
 using LabelService.Contracts;
 using LabelService.Contracts.Layouts;
-using LabelService.Server.Data;
+using LabelService.Domain.ApiClients;
+using LabelService.Domain.Businesses;
+using LabelService.Domain.Identity;
+using LabelService.Domain.Layouts;
+using LabelService.Domain.Logs;
+using LabelService.Domain.Resources;
+using LabelService.Domain.Shared;
+using LabelService.Domain.Templates;
+using LabelService.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
 namespace LabelService.Server.Layouts;
@@ -44,7 +52,7 @@ internal static class LayoutStorage
                         await repository.SaveAsync(layout, enabled: true, "system", create: true);
                         logger.LogInformation("已导入示例版式 {Code}", layout.Code);
                     }
-                    catch (ManagementException ex)
+                    catch (UserFriendlyException ex)
                     {
                         logger.LogWarning("示例版式 {Code} 没有导入：{Message} {Details}", layout.Code, ex.Message, string.Join("；", ex.Details));
                     }

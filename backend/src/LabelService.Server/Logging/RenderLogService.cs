@@ -1,4 +1,12 @@
-using LabelService.Server.Data;
+using LabelService.Domain.ApiClients;
+using LabelService.Domain.Businesses;
+using LabelService.Domain.Identity;
+using LabelService.Domain.Layouts;
+using LabelService.Domain.Logs;
+using LabelService.Domain.Resources;
+using LabelService.Domain.Shared;
+using LabelService.Domain.Templates;
+using LabelService.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
@@ -33,7 +41,7 @@ internal sealed class RenderLogService(
 
     private async Task WriteLoopAsync(CancellationToken stoppingToken)
     {
-        var batch = new List<RenderLogRecord>(options.Value.BatchSize);
+        var batch = new List<RenderLogEntity>(options.Value.BatchSize);
         try
         {
             while (await writer.Reader.WaitToReadAsync(stoppingToken))
@@ -79,7 +87,7 @@ internal sealed class RenderLogService(
         }
     }
 
-    private async Task DrainAsync(List<RenderLogRecord> batch, CancellationToken cancellationToken)
+    private async Task DrainAsync(List<RenderLogEntity> batch, CancellationToken cancellationToken)
     {
         while (true)
         {

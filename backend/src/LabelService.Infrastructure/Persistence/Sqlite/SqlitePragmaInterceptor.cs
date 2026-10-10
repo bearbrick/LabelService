@@ -2,7 +2,7 @@ using System.Data.Common;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 
-namespace LabelService.Server.Data;
+namespace LabelService.Infrastructure.Persistence.Sqlite;
 
 /// <summary>
 /// 每个连接打开时设置 SQLite 的 PRAGMA（ADR 0003）。全项目只在这里写 SQLite 特有的语句（备份的 VACUUM INTO 除外，见 Hosting/BackupService）。

@@ -1,4 +1,12 @@
-using LabelService.Server.Data;
+using LabelService.Domain.ApiClients;
+using LabelService.Domain.Businesses;
+using LabelService.Domain.Identity;
+using LabelService.Domain.Layouts;
+using LabelService.Domain.Logs;
+using LabelService.Domain.Resources;
+using LabelService.Domain.Shared;
+using LabelService.Domain.Templates;
+using LabelService.Infrastructure.Persistence;
 using LabelService.Server.Logging;
 using LabelService.Server.Templates;
 using Microsoft.EntityFrameworkCore;
@@ -15,9 +23,9 @@ internal static class LogEndpoints
     /// </summary>
     public static void Map(RouteGroupBuilder api)
     {
-        api.MapGet("/call-logs", SearchCallLogsAsync).RequireAdmin(Permissions.LogView);
-        api.MapGet("/op-logs", SearchOpLogsAsync).RequireAdmin(Permissions.LogView);
-        api.MapGet("/dashboard", DashboardAsync).RequireAdmin(Permissions.TemplateView);
+        api.MapGet("/call-logs", SearchCallLogsAsync).RequireAdmin(PermissionNames.LogView);
+        api.MapGet("/op-logs", SearchOpLogsAsync).RequireAdmin(PermissionNames.LogView);
+        api.MapGet("/dashboard", DashboardAsync).RequireAdmin(PermissionNames.TemplateView);
     }
 
     private static async Task<IResult> SearchCallLogsAsync(
@@ -62,7 +70,7 @@ internal static class LogEndpoints
         int? pageSize)
     {
         await using var db = await contexts.CreateDbContextAsync();
-        var query = db.OpLogs.AsNoTracking();
+        var query = db.OperationLogs.AsNoTracking();
         if (from is { } start)
         {
             var utc = start.ToUniversalTime();
@@ -118,7 +126,7 @@ internal static class LogEndpoints
             changed = visible.Count(item => item.LatestVersion > 0 && item.HasDraft),
             neverPublished = visible.Count(item => item.LatestVersion == 0),
         };
-        if (!admin.Can(Permissions.LogView))
+        if (!admin.Can(PermissionNames.LogView))
         {
             return Results.Json(new
             {
@@ -128,7 +136,7 @@ internal static class LogEndpoints
 
         var codes = admin.AllBusinesses ? null : visible.Select(item => item.Code).ToArray();
         await using var db = await logs.CreateDbContextAsync();
-        IQueryable<RenderLogRecord> Calls(DateTime from, DateTime to)
+        IQueryable<RenderLogEntity> Calls(DateTime from, DateTime to)
         {
             var query = db.RenderLogs.AsNoTracking().Where(log => log.CreatedAt >= from && log.CreatedAt < to);
             return codes is null ? query : query.Where(log => codes.Contains(log.TemplateCode));
@@ -182,7 +190,7 @@ internal static class LogEndpoints
             .OrderByDescending(item => item.calls)
             .Take(5)
             .ToListAsync();
-        var recentOps = await db.OpLogs.AsNoTracking().OrderByDescending(log => log.Id).Take(8).ToListAsync();
+        var recentOps = await db.OperationLogs.AsNoTracking().OrderByDescending(log => log.Id).Take(8).ToListAsync();
         return Results.Json(new
         {
             templates = templateStats,

@@ -1,6 +1,14 @@
 using System.Security.Claims;
 using System.Security.Cryptography;
-using LabelService.Server.Data;
+using LabelService.Domain.ApiClients;
+using LabelService.Domain.Businesses;
+using LabelService.Domain.Identity;
+using LabelService.Domain.Layouts;
+using LabelService.Domain.Logs;
+using LabelService.Domain.Resources;
+using LabelService.Domain.Shared;
+using LabelService.Domain.Templates;
+using LabelService.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Options;
@@ -47,7 +55,7 @@ internal sealed class AdminTokens
     /// <summary>
     /// 签发令牌。勾选“7 天内自动登录”时 7 天，否则 8 小时。
     /// </summary>
-    public (string Token, DateTime ExpiresAt) Issue(UserRecord user, bool remember)
+    public (string Token, DateTime ExpiresAt) Issue(UserEntity user, bool remember)
     {
         var now = clock.GetUtcNow().UtcDateTime;
         var expires = now.Add(remember ? TimeSpan.FromDays(7) : TimeSpan.FromHours(8));
@@ -110,19 +118,19 @@ internal sealed class AdminOptions
 /// <summary>
 /// 当前登录的后台用户和权限，由 <see cref="AdminFilter"/> 每次请求从库里读出来放进 HttpContext。
 /// </summary>
-internal sealed class AdminUser(UserRecord user, RoleRecord role)
+internal sealed class AdminUser(UserEntity user, RoleEntity role)
 {
     private readonly IReadOnlySet<string> permissions = role.AllPermissions
-        ? Admin.Permissions.All.Select(item => item.Key).ToHashSet(StringComparer.Ordinal)
+        ? PermissionNames.All.Select(item => item.Key).ToHashSet(StringComparer.Ordinal)
         : role.Permissions.Split(',', StringSplitOptions.RemoveEmptyEntries).ToHashSet(StringComparer.Ordinal);
 
     private readonly IReadOnlySet<int> businesses = Auth.ApiKeyAuthenticator.ParseIds(user.BusinessIds);
 
     /// <summary>用户记录。</summary>
-    public UserRecord User { get; } = user;
+    public UserEntity User { get; } = user;
 
     /// <summary>角色。</summary>
-    public RoleRecord Role { get; } = role;
+    public RoleEntity Role { get; } = role;
 
     /// <summary>权限点。</summary>
     public IReadOnlySet<string> Permissions => permissions;

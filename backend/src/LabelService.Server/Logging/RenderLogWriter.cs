@@ -1,7 +1,15 @@
 using System.Text;
 using System.Threading.Channels;
+using LabelService.Domain.ApiClients;
+using LabelService.Domain.Businesses;
+using LabelService.Domain.Identity;
+using LabelService.Domain.Layouts;
+using LabelService.Domain.Logs;
+using LabelService.Domain.Resources;
+using LabelService.Domain.Shared;
+using LabelService.Domain.Templates;
+using LabelService.Infrastructure.Persistence;
 using LabelService.Rendering.Diagnostics;
-using LabelService.Server.Data;
 using Microsoft.Extensions.Options;
 
 namespace LabelService.Server.Logging;
@@ -14,7 +22,7 @@ namespace LabelService.Server.Logging;
 /// </remarks>
 internal sealed class RenderLogWriter
 {
-    private readonly Channel<RenderLogRecord> channel;
+    private readonly Channel<RenderLogEntity> channel;
     private readonly Action? onDropped;
     private long dropped;
 
@@ -24,7 +32,7 @@ internal sealed class RenderLogWriter
     public RenderLogWriter(IOptions<RenderLogOptions> options, Diagnostics.LabelMetrics? metrics = null)
     {
         Enabled = options.Value.Enabled;
-        channel = Channel.CreateBounded<RenderLogRecord>(new BoundedChannelOptions(Math.Max(1, options.Value.QueueCapacity))
+        channel = Channel.CreateBounded<RenderLogEntity>(new BoundedChannelOptions(Math.Max(1, options.Value.QueueCapacity))
         {
             FullMode = BoundedChannelFullMode.Wait,
             SingleReader = true,
@@ -54,12 +62,12 @@ internal sealed class RenderLogWriter
     /// <summary>
     /// 给后台服务读取。
     /// </summary>
-    public ChannelReader<RenderLogRecord> Reader => channel.Reader;
+    public ChannelReader<RenderLogEntity> Reader => channel.Reader;
 
     /// <summary>
     /// 投递一条日志。队列满时丢弃，返回 false。
     /// </summary>
-    public bool TryWrite(RenderLogRecord record)
+    public bool TryWrite(RenderLogEntity record)
     {
         if (!Enabled)
         {

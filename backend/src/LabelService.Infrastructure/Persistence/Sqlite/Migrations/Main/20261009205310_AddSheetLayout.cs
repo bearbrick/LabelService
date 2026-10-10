@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace LabelService.Server.Data.Migrations
+namespace LabelService.Infrastructure.Persistence.Sqlite.Migrations.Main
 {
     /// <inheritdoc />
     public partial class AddSheetLayout : Migration

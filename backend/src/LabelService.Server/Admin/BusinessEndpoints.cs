@@ -1,5 +1,13 @@
 using System.Text.RegularExpressions;
-using LabelService.Server.Data;
+using LabelService.Domain.ApiClients;
+using LabelService.Domain.Businesses;
+using LabelService.Domain.Identity;
+using LabelService.Domain.Layouts;
+using LabelService.Domain.Logs;
+using LabelService.Domain.Resources;
+using LabelService.Domain.Shared;
+using LabelService.Domain.Templates;
+using LabelService.Infrastructure.Persistence;
 using LabelService.Server.Templates;
 using Microsoft.EntityFrameworkCore;
 
@@ -16,9 +24,9 @@ internal static partial class BusinessEndpoints
     public static void Map(RouteGroupBuilder api)
     {
         api.MapGet("/businesses", ListAsync).RequireAdmin();
-        api.MapPost("/businesses", CreateAsync).RequireAdmin(Permissions.BusinessManage);
-        api.MapPut("/businesses/{id:int}", UpdateAsync).RequireAdmin(Permissions.BusinessManage);
-        api.MapDelete("/businesses/{id:int}", DeleteAsync).RequireAdmin(Permissions.BusinessManage);
+        api.MapPost("/businesses", CreateAsync).RequireAdmin(PermissionNames.BusinessManage);
+        api.MapPut("/businesses/{id:int}", UpdateAsync).RequireAdmin(PermissionNames.BusinessManage);
+        api.MapDelete("/businesses/{id:int}", DeleteAsync).RequireAdmin(PermissionNames.BusinessManage);
     }
 
     private static async Task<IResult> ListAsync(HttpContext http, IDbContextFactory<LabelDbContext> contexts)
@@ -36,7 +44,7 @@ internal static partial class BusinessEndpoints
     private static async Task<IResult> CreateAsync(BusinessRequest body, HttpContext http, IDbContextFactory<LabelDbContext> contexts, OperationLog log, TimeProvider clock)
     {
         await using var db = await contexts.CreateDbContextAsync();
-        var business = new BusinessRecord { CreatedAt = clock.GetUtcNow().UtcDateTime, Sort = await db.Businesses.CountAsync() * 10 + 10 };
+        var business = new BusinessEntity { CreatedAt = clock.GetUtcNow().UtcDateTime, Sort = await db.Businesses.CountAsync() * 10 + 10 };
         if (await ApplyAsync(db, business, body) is { } problem)
         {
             return AdminResults.Invalid(problem);
@@ -102,7 +110,7 @@ internal static partial class BusinessEndpoints
     private static string Without(string ids, int id) =>
         string.Join(",", Auth.ApiKeyAuthenticator.ParseIds(ids).Where(item => item != id).Order());
 
-    private static async Task<string?> ApplyAsync(LabelDbContext db, BusinessRecord business, BusinessRequest body)
+    private static async Task<string?> ApplyAsync(LabelDbContext db, BusinessEntity business, BusinessRequest body)
     {
         var code = (body.Code ?? "").Trim().ToUpperInvariant();
         var name = (body.Name ?? "").Trim();
@@ -134,7 +142,7 @@ internal static partial class BusinessEndpoints
         return null;
     }
 
-    private static object View(BusinessRecord business, int templates) => new
+    private static object View(BusinessEntity business, int templates) => new
     {
         id = business.Id,
         code = business.Code,

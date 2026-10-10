@@ -1,4 +1,12 @@
-using LabelService.Server.Data;
+using LabelService.Domain.ApiClients;
+using LabelService.Domain.Businesses;
+using LabelService.Domain.Identity;
+using LabelService.Domain.Layouts;
+using LabelService.Domain.Logs;
+using LabelService.Domain.Resources;
+using LabelService.Domain.Shared;
+using LabelService.Domain.Templates;
+using LabelService.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
 namespace LabelService.Server.Logging;
@@ -20,7 +28,7 @@ internal sealed class RenderLogQuery(IDbContextFactory<LogDbContext> contexts)
     /// <summary>
     /// 查询一页日志，按时间倒序。
     /// </summary>
-    public async Task<IReadOnlyList<RenderLogRecord>> SearchAsync(RenderLogFilter filter, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<RenderLogEntity>> SearchAsync(RenderLogFilter filter, CancellationToken cancellationToken = default)
     {
         await using var db = await contexts.CreateDbContextAsync(cancellationToken);
         var query = db.RenderLogs.AsNoTracking();

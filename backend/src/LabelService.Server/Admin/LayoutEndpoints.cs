@@ -3,9 +3,17 @@ using System.Text.Json;
 using LabelService.Contracts;
 using LabelService.Contracts.Layouts;
 using LabelService.Contracts.Protocol;
+using LabelService.Domain.ApiClients;
+using LabelService.Domain.Businesses;
+using LabelService.Domain.Identity;
+using LabelService.Domain.Layouts;
+using LabelService.Domain.Logs;
+using LabelService.Domain.Resources;
+using LabelService.Domain.Shared;
+using LabelService.Domain.Templates;
+using LabelService.Infrastructure.Persistence;
 using LabelService.Rendering;
 using LabelService.Rendering.Validation;
-using LabelService.Server.Data;
 using LabelService.Server.Layouts;
 using LabelService.Server.Templates;
 
@@ -27,11 +35,11 @@ internal static class LayoutEndpoints
         api.MapGet("/layouts", ListAsync).RequireAdmin();
         api.MapGet("/layouts/{code}", GetAsync).RequireAdmin();
         api.MapPost("/layouts", (LayoutBody body, HttpContext http, LayoutRepository repository, OperationLog log) => SaveAsync(null, body, http, repository, log))
-            .RequireAdmin(Permissions.ResourceManage);
+            .RequireAdmin(PermissionNames.ResourceManage);
         api.MapPut("/layouts/{code}", (string code, LayoutBody body, HttpContext http, LayoutRepository repository, OperationLog log) => SaveAsync(code, body, http, repository, log))
-            .RequireAdmin(Permissions.ResourceManage);
-        api.MapDelete("/layouts/{code}", DeleteAsync).RequireAdmin(Permissions.ResourceManage);
-        api.MapPost("/layouts/preview", Preview).RequireAdmin(Permissions.TemplateView);
+            .RequireAdmin(PermissionNames.ResourceManage);
+        api.MapDelete("/layouts/{code}", DeleteAsync).RequireAdmin(PermissionNames.ResourceManage);
+        api.MapPost("/layouts/preview", Preview).RequireAdmin(PermissionNames.TemplateView);
         api.MapPost("/layouts/test-page", TestPage).RequireAdmin();
     }
 
@@ -76,7 +84,7 @@ internal static class LayoutEndpoints
             await log.WriteAsync(http, "拼版版式", record.Code, (code is null ? "新建" : "修改") + $"，{record.Name}，{SlotCount(record)} 个格子{(record.Enabled ? "" : "，已停用")}");
             return Results.Json(View(record), LabelJson.Options);
         }
-        catch (ManagementException ex)
+        catch (UserFriendlyException ex)
         {
             return AdminResults.From(ex);
         }
@@ -221,9 +229,9 @@ internal static class LayoutEndpoints
         return RenderLimits.AllowedDpi.Contains(dpi);
     }
 
-    private static int SlotCount(SheetLayoutRecord record) => LayoutRepository.ToModel(record).Slots.Count;
+    private static int SlotCount(SheetLayoutEntity record) => LayoutRepository.ToModel(record).Slots.Count;
 
-    private static LayoutView View(SheetLayoutRecord record) => new(LayoutRepository.ToModel(record), record.Enabled, record.UpdatedBy, record.UpdatedAt);
+    private static LayoutView View(SheetLayoutEntity record) => new(LayoutRepository.ToModel(record), record.Enabled, record.UpdatedBy, record.UpdatedAt);
 
     /// <summary>列表和详情的一项：版式 JSON 加上启用状态和修改记录。</summary>
     internal sealed record LayoutView(SheetLayout Layout, bool Enabled, string UpdatedBy, DateTime UpdatedAt);

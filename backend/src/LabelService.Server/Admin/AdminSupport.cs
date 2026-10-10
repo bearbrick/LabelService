@@ -1,4 +1,12 @@
-using LabelService.Server.Data;
+using LabelService.Domain.ApiClients;
+using LabelService.Domain.Businesses;
+using LabelService.Domain.Identity;
+using LabelService.Domain.Layouts;
+using LabelService.Domain.Logs;
+using LabelService.Domain.Resources;
+using LabelService.Domain.Shared;
+using LabelService.Domain.Templates;
+using LabelService.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
 namespace LabelService.Server.Admin;
@@ -31,9 +39,9 @@ internal static class AdminResults
     public static IResult Forbidden(string message) => Error(StatusCodes.Status403Forbidden, "FORBIDDEN", message);
 
     /// <summary>
-    /// 把 <see cref="ManagementException"/> 转成 400。
+    /// 把 <see cref="UserFriendlyException"/> 转成 400。
     /// </summary>
-    public static IResult From(ManagementException ex) => Invalid(ex.Message, ex.Details);
+    public static IResult From(UserFriendlyException ex) => Invalid(ex.Message, ex.Details);
 
     /// <summary>
     /// 当前登录用户（<see cref="AdminFilter"/> 放进来的）。
@@ -71,7 +79,7 @@ internal sealed class OperationLog(IDbContextFactory<LogDbContext> contexts, Tim
         try
         {
             await using var db = await contexts.CreateDbContextAsync();
-            db.OpLogs.Add(new OpLogRecord
+            db.OperationLogs.Add(new OperationLogEntity
             {
                 UserId = userId,
                 UserName = Truncate(userName, 64),
