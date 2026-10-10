@@ -15,6 +15,7 @@ internal static class Program
         BindingChecks.Run(Check);
         ValidationChecks.Run(backendRoot, Check);
         RenderChecks.Run(backendRoot, Check);
+        PngChecks.Run(backendRoot, Check);
         TextChecks.Run(backendRoot, Check);
         BarcodeChecks.Run(backendRoot, Check);
         QrCodeChecks.Run(backendRoot, Check);
