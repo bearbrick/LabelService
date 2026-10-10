@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /** 调用方与密钥：每个业务系统一个调用方和一把 API Key，按业务分组授权，可选 IP 白名单。Key 只在创建和重置时显示一次。 */
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { createClient, listClients, resetClientKey, setClientStatus, updateClient } from '../api/admin.ts'
 import type { ApiClient } from '../api/admin.ts'
 import { errorText } from '../api/http.ts'
@@ -11,8 +11,11 @@ import { businessOf, catalog } from '../stores/catalog.ts'
 import { toast } from '../stores/designer.ts'
 import { confirmBox, showSecret } from '../stores/dialogs.ts'
 import { go } from '../stores/router.ts'
+import { session } from '../stores/session.ts'
 
 const clients = ref<ApiClient[]>([])
+// 业务范围受限的用户只能授权自己范围里的分组（服务端同样检查，T-021）；分组列表本来就只有自己范围里的。
+const mayGrantAll = computed(() => session.me?.allBusinesses === true)
 const form = reactive({ open: false, id: 0, name: '', appId: '', description: '', allBusinesses: false, businessIds: [] as number[], ipAllowlist: '', error: '', busy: false })
 
 onMounted(reload)
@@ -125,7 +128,7 @@ async function reset(c: ApiClient): Promise<void> {
       <div class="form-row" style="align-items: start">
         <span class="lb muted" style="padding-top: 4px">可调用</span>
         <div style="display: grid; gap: 6px">
-          <label class="check"><input id="cf-all" v-model="form.allBusinesses" type="checkbox" />全部业务（包括以后新建的）</label>
+          <label class="check" :title="mayGrantAll ? '' : '只有业务范围是“全部业务”的用户才能授权全部业务'"><input id="cf-all" v-model="form.allBusinesses" type="checkbox" :disabled="!mayGrantAll" />全部业务（包括以后新建的）</label>
           <div v-if="!form.allBusinesses" class="check-list">
             <label v-for="b in catalog.businesses" :key="b.id" class="check"><input v-model="form.businessIds" type="checkbox" :value="b.id" /><span class="biz-dot" :style="{ background: b.color }"></span>{{ b.name }}</label>
           </div>
