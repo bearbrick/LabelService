@@ -1,0 +1,27 @@
+# 旧库升级：数据换算、迁移前备份、失败恢复（T-021）
+
+检查：backend/tests/LabelService.Backend.Checks/UpgradeChecks.cs。旧库按 AddApiClients 迁移时的结构建（模板有 category，调用方有 allowed_templates），调用方 MES 是 *、WMS 是 BOX_LABEL、ERP 是 BOX2、A4_SHIPPING_MARK、GONE（GONE 库里不存在）。
+故障注入：用自己的 DbContext 拦截命令，在迁移执行 PRAGMA foreign_keys = 0 之后抛异常（验收报告里“中途失败后重试报 duplicate column”的位置）。
+实现：Server/Data/DatabaseUpgrade.cs（有待执行迁移时先 VACUUM INTO 备份到 data/backups/，失败就用备份覆盖库文件并拒绝启动）、Server/Data/LegacyUpgrade.cs（迁移前读出分类和授权，迁移后按“分类 + 能用的调用方集合”建业务分组，逐个调用方换算授权）。
+
+## 去掉备份恢复保护（GuardAsync 一律直接执行迁移）后运行后端检查
+PASS: 旧库换算：每个调用方升级后能用的模板和升级前完全一样（* 换成全部业务，其余按模板所在分组授权）
+PASS: 同一分类里能用的调用方不同的模板拆成“分类（2）”，没有分类的进“未分组”，库里不存在的模板编码记下来
+FAIL: 迁移中途失败（PRAGMA foreign_keys = 0 之后注入异常）：升级报错、服务不启动
+
+## 修复后运行后端检查
+PASS: 旧库换算：每个调用方升级后能用的模板和升级前完全一样（* 换成全部业务，其余按模板所在分组授权）
+PASS: 同一分类里能用的调用方不同的模板拆成“分类（2）”，没有分类的进“未分组”，库里不存在的模板编码记下来
+PASS: 迁移中途失败（PRAGMA foreign_keys = 0 之后注入异常）：升级报错、服务不启动
+PASS: 失败后库恢复到升级前：迁移记录仍到 AddApiClients，分类列和调用方授权原样都在
+PASS: 升级前的备份留在数据目录的 backups/
+PASS: 恢复后重试升级成功（不再出现 duplicate column），分类和授权换算进了业务分组
+      旧库升级：按模板分类和调用方授权建了 3 个业务分组（LEGACY_1 包装 1 个模板；LEGACY_2 包装（2） 1 个模板；LEGACY_3 未分组 1 个模板）；调用方授权：MES 全部业务；WMS LEGACY_1；ERP LEGACY_2、LEGACY_3
+      旧库升级：调用方 ERP 原来允许的模板 GONE 在库里不存在，无法换算
+PASS: 用旧库启动服务：旧 API Key 能用的模板和升级前一样，不能用的返回 403
+后端检查全部通过：420 项
+
+## 换算规则说明（需要用户确认的选择）
+- 原来按模板编码授权，现在按业务分组授权（ADR 0006）。为了让每个调用方升级后能用的模板一个不多一个不少，同一分类里“能用的调用方集合”不同的模板拆成不同的分组（“包装”“包装（2）”），没有分类的进“未分组”，编码 LEGACY_n；* 换成“全部业务”。
+- 授权里写了、库里已经不存在的模板编码（如 GONE）没法换算，写一条警告日志。
+- 另一种做法是按分类一对一建分组、接受部分调用方权限变宽或变窄；如果更想要这种，需要用户决定。
