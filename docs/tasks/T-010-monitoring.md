@@ -38,6 +38,7 @@
 ## 交接记录
 
 <!-- 按时间倒序追加：日期 · 谁 · 做了什么 / 卡在哪里 / 留给下一位的话 -->
+- 2026-10-10 · Claude（T-021 验收复核）· 如实补充：ADR 0009（自己实现 /metrics 的 Prometheus 文本格式、不引入 OpenTelemetry 包）仍是“提议”，等用户确认。上面勾选的仪表盘、告警规则指的是 `backend/deploy/monitoring/` 里的文件和检查程序里的格式、名称核对；**没有接真实的 Prometheus 抓取、没有导入 Grafana、没有触发过告警**（本机没有这些服务），链路（trace）只有 `X-Trace-Id`（Activity），没有导出到任何链路系统。这些属于环境阻塞，不算已验证。另：T-021 起 `label_render_duration_ms` 和慢调用都按“写完最后一个字节”计时。
 - 2026-10-10 · Claude · 完成，待验收。和任务原文有一处不同，请确认 ADR 0009。
   - 没有接 OpenTelemetry 包：它的 Prometheus 导出器只有预发布版（R8 不允许），监控平台也没定。指标本来就用 .NET 自带的 `System.Diagnostics.Metrics`（OpenTelemetry 的指标 API），`/metrics` 由 `Diagnostics/PrometheusExporter` 自己输出 Prometheus 文本格式（MeterListener 订阅 LabelService、Microsoft.AspNetCore.Hosting、System.Runtime 三个 Meter，前两个只认本主机的，检查程序里多个主机不串）。本服务的指标名原样导出，和设计书一致；没有新增依赖。链路（trace）暂不导出，响应和日志里已有 traceId。ADR 0009（提议）。
   - `label_queue_wait_ms` 在 T-017 已补；新增 `label_cache_hit_ratio`（templates、fonts、images、symbols）：Rendering 里 `RenderCaches` 用 Interlocked 计命中和未命中，模板存储计查找，服务端用可观测仪表报命中率。改了 Rendering，基准没有变化（203dpi 5.48 ms、300dpi 11.46 ms，分配不变）。
