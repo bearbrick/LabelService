@@ -1,0 +1,31 @@
+# 单张接口持续 50 并发压测（T-021）
+
+机器：AMD Ryzen AI 9 H 465（10 核 20 线程），Windows 11，.NET 10，Release，ASPNETCORE_ENVIRONMENT=Development（开发 Key），临时数据目录。
+服务进程用 start /affinity 从启动起绑核（渲染并发名额 = 进程可用的 CPU 数）；k6 v2.1.0 绑在逻辑核 8-19，不和服务抢 CPU。
+请求：100x60 mm 示例箱标 BOX_LABEL，PNG 300 dpi；k6 constant-vus 50，60 秒；门槛 Server-Timing total P95 <= 100、http_req_duration P95 <= 100、错误 0（Codex strict-load.js 的口径）。
+到写完最后一个字节：backend/tests/load/log-report.cs 读调用日志 render_log.duration_ms（全部请求都写进了日志，没有丢条）。
+
+## 修复前（a78a75f 起的代码），affinity 15 = 逻辑核 0-3（2 个物理核），每次相同请求（开始 2026-10-10T07:13:56Z）
+http_req_duration：med 229.1，p95 296.9，p99 415.5，max 641.4
+Server-Timing total：med 219.9，p95 253.3，p99 284.0，max 324.7
+请求 12848，213.3 次/秒，失败率 0，平均响应 48.7 KB
+
+## PNG 编码优化后，affinity 15，每次相同请求（开始 2026-10-10T07:18:29Z）
+http_req_duration：med 47.3，p95 64.8，p99 80.5，max 129.3
+Server-Timing total：med 42.1，p95 53.8，p99 62.1，max 90.7
+请求 62158，1035.2 次/秒，失败率 0，平均响应 40.2 KB
+调用日志 duration_ms（到写完最后一个字节）：单张接口 62158 次成功；P50 42.1，P95 54.0，P99 62.2，最大 90.7
+
+## PNG 编码优化后，affinity 15，每次换箱号（开始 2026-10-10T07:21:17Z）
+http_req_duration：med 49.9，p95 63.8，p99 72.9，max 105.4
+Server-Timing total：med 46.2，p95 58.1，p99 67.5，max 95.0
+请求 59227，986.4 次/秒，失败率 0，平均响应 40.3 KB
+调用日志 duration_ms（到写完最后一个字节）：单张接口 59227 次成功；P50 46.2，P95 58.2，P99 67.6，最大 95.1
+
+## PNG 编码优化后，affinity 0x55 = 逻辑核 0/2/4/6（4 个物理核），每次换箱号（开始 2026-10-10T07:25:44Z）
+http_req_duration：med 41.4，p95 75.1，p99 111.7，max 305.9
+Server-Timing total：med 37.4，p95 63.6，p99 97.9，max 282.3
+请求 65172，1085.6 次/秒，失败率 0，平均响应 40.4 KB
+调用日志 duration_ms（到写完最后一个字节）：单张接口 65172 次成功；P50 37.4，P95 63.7，P99 98.1，最大 282.3
+
+单次请求（低负载）Server-Timing：修复前 draw 1.0-1.3 ms、encode 10.7-13.5 ms、total 12-15 ms；优化后 draw 1.2-1.5 ms、encode 0.8-0.9 ms、total 2.6-3.3 ms。PNG 从 RGBA 49 KB 变成 8 位灰度 40 KB（无损，后端检查 PngChecks）。
