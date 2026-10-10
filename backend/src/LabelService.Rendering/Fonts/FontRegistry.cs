@@ -117,9 +117,10 @@ public sealed class FontRegistry : IDisposable
         foreach (var path in paths)
         {
             var loaded = 0;
+            using var data = LoadData(path);
             for (var index = 0; ; index++)
             {
-                var typeface = SKTypeface.FromFile(path, index);
+                var typeface = data is null ? SKTypeface.FromFile(path, index) : SKTypeface.FromData(data, index);
                 if (typeface is null)
                 {
                     break;
@@ -174,6 +175,17 @@ public sealed class FontRegistry : IDisposable
         {
             typeface.Dispose();
         }
+    }
+
+    /// <summary>
+    /// 单个字体文件按 <see cref="RadicalCmap"/> 去掉和汉字共用字形的部首码位后加载（PDF 复制、搜索出来的字才对）；
+    /// 字体集合和不需要改的字体返回 null，照常按文件加载。
+    /// </summary>
+    private static SKData? LoadData(string path)
+    {
+        var bytes = File.ReadAllBytes(path);
+        var filtered = RadicalCmap.Filter(bytes, out var removed);
+        return removed == 0 ? null : SKData.CreateCopy(filtered);
     }
 
     /// <summary>

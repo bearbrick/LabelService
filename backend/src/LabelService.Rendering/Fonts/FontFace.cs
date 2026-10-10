@@ -77,10 +77,27 @@ internal sealed class FontFace : IDisposable
 
     /// <summary>
     /// 查字形和字宽。字宽的单位是字号（1 = 一个字号），乘以实际字号就是实际宽度。
+    /// 部首字符（如 ⽇ U+2F47）按对应的汉字查字形，见 <see cref="RadicalCmap"/>。
     /// </summary>
     public void Measure(ReadOnlySpan<int> codepoints, Span<ushort> glyphs, Span<float> advances)
     {
-        smooth.GetGlyphs(codepoints, glyphs);
+        var lookup = codepoints;
+        foreach (var codepoint in codepoints)
+        {
+            if (RadicalCmap.IsRadical(codepoint))
+            {
+                var unified = new int[codepoints.Length];
+                for (var i = 0; i < unified.Length; i++)
+                {
+                    unified[i] = RadicalCmap.Unify(codepoints[i]);
+                }
+
+                lookup = unified;
+                break;
+            }
+        }
+
+        smooth.GetGlyphs(lookup, glyphs);
         smooth.GetGlyphWidths(glyphs, advances, Span<SKRect>.Empty, null);
         for (var i = 0; i < advances.Length; i++)
         {
