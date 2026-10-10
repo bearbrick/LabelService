@@ -43,6 +43,6 @@
 | [0004](0004-three-parts.md) | 仓库分成前端、后端、调用端三个独立部分 | 已采纳 |
 | [0005](0005-sheet-layout.md) | A4 拼版用独立的“版式”，模板嵌套放到二期 | 已采纳 |
 | [0006](0006-admin-auth.md) | 管理后台用内置账号 + JWT，权限按“角色 × 业务范围”控制 | 已采纳 |
-| [0007](0007-preview-in-admin-api.md) | 服务端预览放在管理接口，字体通过 /fonts 公开提供 | 提议 |
+| [0007](0007-preview-in-admin-api.md) | 服务端预览放在管理接口，字体通过 /fonts 公开提供 | 已采纳 |
 | [0008](0008-deployment.md) | 部署：Docker 或 Windows 服务，单实例，每日 VACUUM INTO 备份 | 已采纳 |
-| [0009](0009-metrics-export.md) | 指标导出：自己实现 Prometheus 文本格式，暂不引入 OpenTelemetry 包 | 提议 |
+| [0009](0009-metrics-export.md) | 指标导出：自己实现 Prometheus 文本格式，暂不引入 OpenTelemetry 包 | 已采纳 |
