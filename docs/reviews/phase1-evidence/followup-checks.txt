@@ -1,0 +1,38 @@
+# 补充验证（T-021，2026-10-10）：演示程序自检、PNG 解码兼容、管理后台和 PDF 目视
+
+## WinForms 演示程序 --smoke（要桌面会话，不在 verify.ps1 里）
+命令：client/samples/LabelService.Demo.WinForms/bin/Debug/<框架>/LabelServiceDemo.exe --smoke <目录> [服务地址]；内置模拟服务和真实服务（本地开发服务 http://localhost:5080/，临时数据目录）各跑一次。
+net48 模拟服务：退出码 0，6 张截图，自检通过
+net48 真实服务：退出码 0，6 张截图，自检通过
+net10.0-windows 模拟服务：退出码 0，6 张截图，自检通过
+net10.0-windows 真实服务：退出码 0，6 张截图，自检通过
+net48 真实服务的 smoke.txt：
+  真实服务 http://localhost:5080/
+  PASS 读取字段：表格里有 BOX_LABEL 的全部字段，样例值已填好
+  PASS 状态栏显示当前连接的服务
+  PASS 生成单张 PNG，有预览图
+  PASS 生成单张 PDF，文件以 %PDF 开头，预览区提示用默认程序打开
+  PASS 批量 5 条 ZPL，解出 5 张黑白预览
+  PASS 缺必填字段：响应信息显示 FIELD_REQUIRED 和逐条错误
+  PASS Key 无效：响应信息显示 UNAUTHORIZED
+  PASS 模板未发布：响应信息显示 TEMPLATE_NOT_FOUND
+  PASS 批量超量：SDK 本地拦下，响应信息对照服务端错误码 BATCH_TOO_LARGE
+  PASS 慢调用：A4 单张服务端 92 ms，超过 100 ms 的才标为慢调用
+  PASS 调用代码：批量写法里有 BatchRenderRequest 和递增的箱号
+  自检通过
+截图里 .NET Framework 4.8 的预览区正常显示新的 8 位灰度 PNG（39.7 KB，服务端 17.6 ms）。
+
+## 新 PNG 编码在 Windows 自带解码器里的兼容性
+服务端生成：示例箱标 PNG（8 位灰度）、mono=true（1 位黑白）、管理预览里一个红色矩形的模板（8 位 RGB）。
+gray：IHDR 位深 8、颜色类型 0；GDI+（System.Drawing）1181×709，抽样无彩色像素；WPF（WIC）Gray8
+mono：IHDR 位深 1、颜色类型 0；GDI+ 1181×709；WPF BlackWhite
+rgb：IHDR 位深 8、颜色类型 2；GDI+ 320×160，取样点 R=212 G=58 B=58（模板颜色 #D43A3A）；WPF Bgr32
+老的 .NET 调用方用 System.Drawing 或 WPF 显示、打印都能正常解码。
+
+## 管理后台目视检查（可见的 Edge 窗口，1418×869）
+截了 18 个页面：工作台、模板列表、成品箱标和出口唛头设计器、字段、接口调试、版本记录、业务分组、画布预设、拼版版式、素材、调用方、接口调试页、调用日志、操作日志、用户、角色、个人设置；没有脚本错误，排版正常。
+发现：模板设计器页面多出 12 px 横向滚动——工具栏最右边“适应窗口 Ctrl+0”按钮的提示框（平时透明）居中伸出窗口右边，悬停时提示也被截断。已修复：工具栏最后一个按钮的提示框改为右对齐（frontend/src/style.css）。修复后各页面 scrollWidth = 窗口宽度，悬停时提示完整显示。
+另一处：调用方与密钥列表为空时只有表头（调用日志等页面有“没有…”的提示行）。已补提示行“还没有调用方。点“新建调用方”给业务系统生成一把 API Key”（frontend/src/pages/ClientsPage.vue，加载完成后才显示）。
+
+## 示例 PDF 在 Edge 自带查看器（Adobe Acrobat 引擎）里的显示
+成品箱标 PDF、出口唛头 PDF 显示正常（中文、条码、二维码、图标、logo 位置都对）。查看器里的搜索框是浏览器界面，页面截图拍不到，搜索结果没能截图；中文能否搜索以 pdf-tounicode.txt 里对 ToUnicode 的核对为准。
