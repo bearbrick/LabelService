@@ -13,9 +13,15 @@ namespace LabelService.Server.Endpoints;
 /// 一次生成请求的收尾工作：总耗时、Server-Timing 头、指标、调用日志。单张、批量、预览共用。
 /// </summary>
 /// <remarks>
-/// 每个请求必须恰好结束一次：成功走 <see cref="Succeed"/>，失败走 <see cref="Fail"/>，
-/// 异常或取消时由 <see cref="Dispose"/> 兜底，保证并发数指标不泄漏。
-/// 结束时写一条 ILogger 日志，并投递一条调用日志（render_log，后台批量写入，不阻塞请求）。
+/// <para>
+/// 计时口径（docs/performance.md）：服务端处理时间从开始处理请求算到写完最后一个字节。
+/// 成功走 <see cref="Succeed"/>、失败走 <see cref="Fail"/> 时只记下结果并写 Server-Timing 头——响应头先于响应体发出，
+/// 头里的 total 只能算到这一刻，不含写响应体；真正的总耗时在响应写完后（<c>HttpResponse.OnCompleted</c>）计算，
+/// 指标、ILogger 日志、调用日志（render_log）和慢调用判断都用这个总耗时。
+/// </para>
+/// <para>
+/// 每个请求恰好结束一次：响应写完时由 OnCompleted 结束（包括抛异常、客户端断开），并发数指标不会泄漏。
+/// </para>
 /// </remarks>
 internal sealed class RenderCall : IDisposable
 {
@@ -25,7 +31,9 @@ internal sealed class RenderCall : IDisposable
     private readonly string endpoint;
     private readonly RenderLogWriter? renderLog;
     private readonly long started = Stopwatch.GetTimestamp();
-    private bool finished;
+    private string? outcome;
+    private int outcomeLabels;
+    private bool completed;
     private string? failureMessage;
 
     /// <summary>
@@ -39,6 +47,11 @@ internal sealed class RenderCall : IDisposable
         this.logger = logger;
         this.endpoint = endpoint;
         metrics.RequestStarted();
+        http.Response.OnCompleted(() =>
+        {
+            Complete();
+            return Task.CompletedTask;
+        });
     }
 
     /// <summary>请求开始时的时间戳。</summary>
@@ -94,12 +107,12 @@ internal sealed class RenderCall : IDisposable
     }
 
     /// <summary>
-    /// 失败结束：写头、记指标和日志，返回统一错误响应。
+    /// 失败：记下错误码、写 Server-Timing 头，返回统一错误响应。指标和日志在响应写完后记。
     /// </summary>
     public IResult Fail(string code, string message, IReadOnlyList<ErrorDetail>? errors = null, int? statusCode = null)
     {
         failureMessage = message;
-        Finish(code, 0);
+        Settle(code, 0);
         return ApiErrors.Create(http, code, message, errors, statusCode);
     }
 
@@ -122,7 +135,7 @@ internal sealed class RenderCall : IDisposable
     /// <param name="pageCount">拼版时的页数，写进 X-Page-Count；不拼版时为 null，不写这个头。</param>
     public IResult SucceedFile(ReadOnlyMemory<byte> content, string contentType, string extension, int labelCount, int dpi, IReadOnlyCollection<string> warnings, int templateVersion, int? pageCount = null)
     {
-        Finish("ok", labelCount);
+        Settle("ok", labelCount);
         var headers = http.Response.Headers;
         headers[HeaderNames.TemplateVersion] = templateVersion.ToString(CultureInfo.InvariantCulture);
         headers[HeaderNames.LabelCount] = labelCount.ToString(CultureInfo.InvariantCulture);
@@ -143,25 +156,60 @@ internal sealed class RenderCall : IDisposable
     }
 
     /// <summary>
-    /// 请求被取消或抛出未处理异常时兜底结束。
+    /// 处理函数结束时调用：没走到 Succeed、Fail（抛异常或取消）的记为 aborted，响应写完后照样结束。
     /// </summary>
     public void Dispose()
     {
-        if (!finished)
+        if (outcome is null)
         {
-            Finish("aborted", 0);
+            Settle("aborted", 0);
         }
     }
 
-    private void Finish(string result, int labelCount)
+    /// <summary>
+    /// 记下结果，写 Server-Timing 头（total 到此刻为止，不含写响应体）。只记第一次。
+    /// </summary>
+    private void Settle(string result, int labelCount)
     {
-        finished = true;
+        if (outcome is not null)
+        {
+            return;
+        }
+
+        outcome = result;
+        outcomeLabels = labelCount;
         Timings.Mark(TimingStages.Total, started);
-        http.Response.Headers[HeaderNames.ServerTiming] = Timings.ToServerTimingHeader();
+        if (!http.Response.HasStarted)
+        {
+            http.Response.Headers[HeaderNames.ServerTiming] = Timings.ToServerTimingHeader();
+        }
+    }
+
+    /// <summary>
+    /// 响应写完（最后一个字节交给连接）后：总耗时改成到这一刻，记指标、日志、调用日志。
+    /// </summary>
+    private void Complete()
+    {
+        if (completed)
+        {
+            return;
+        }
+
+        completed = true;
+        var result = outcome ?? "aborted";
+        var labelCount = result == "ok" ? outcomeLabels : 0;
+        if (result == "ok" && http.RequestAborted.IsCancellationRequested)
+        {
+            // 客户端在响应写完前断开：文件没有送到。
+            result = "aborted";
+            labelCount = 0;
+        }
+
+        var total = Stopwatch.GetElapsedTime(started).TotalMilliseconds;
+        Timings.Add(TimingStages.Total, total - Timings.Get(TimingStages.Total));
         var format = Format is { } value ? LabelFormats.Extension(value) : "";
         metrics.RequestFinished(endpoint, Client, TemplateCode, format, Dpi, result, Timings, labelCount);
 
-        var total = Timings.Get(TimingStages.Total);
         var slow = result == "ok" && total > RenderLimits.SlowRenderThresholdMs * Math.Max(1, labelCount);
         logger.Log(
             slow ? LogLevel.Warning : LogLevel.Information,

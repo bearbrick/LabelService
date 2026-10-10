@@ -26,6 +26,7 @@ internal static class Program
         await StorageChecks.RunAsync(backendRoot, Check);
         await BatchChecks.RunAsync(backendRoot, Check);
         await LayoutServerChecks.RunAsync(backendRoot, Check);
+        await TimingChecks.RunAsync(backendRoot, Check);
         await ClientLogChecks.RunAsync(backendRoot, Check);
         await AdminChecks.RunAsync(backendRoot, Check);
         await HostingChecks.RunAsync(backendRoot, Check);
