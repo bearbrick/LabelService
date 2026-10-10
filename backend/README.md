@@ -55,7 +55,7 @@ dotnet run -c Release --project backend/tests/LabelService.Benchmarks -- --gate 
 
 ## 模板存储
 
-- **数据目录**：配置 `LabelService:Data:Directory`，默认程序目录下的 `data/`（本地 `dotnet run` 时在 `backend/src/LabelService.Server/bin/Debug/net10.0/data/`），库文件 `label.db`。启动时自动建库、执行迁移。
+- **数据目录**：配置 `LabelService:Data:Directory`，默认程序目录下的 `data/`（本地 `dotnet run` 时在 `backend/src/LabelService.Server/bin/Debug/net10.0/data/`），库文件 `label.db`。启动时自动建库、执行迁移；已有数据的库升级前先快照到 `backups/`，失败自动恢复（`Data/DatabaseUpgrade.cs`），T-014 以前的旧库把模板分类和调用方授权换算成业务分组（`Data/LegacyUpgrade.cs`）。
 - **示例模板**：开发环境首次建库（库里没有模板）时，把 `samples/templates` 导入为已发布版本 1，走正常的保存草稿和发布流程。改了示例模板想重新导入，停掉服务、删掉数据目录再启动。
 - **拼版版式**（T-018）：表 `sheet_layout`，管理接口 `/api/admin/layouts` 维护，保存后立即更新内存快照 `Layouts/LayoutStore.cs`（开放接口只读它）。开发环境版式表为空时导入 `samples/layouts`；模板来源是 `Files` 时也从这个目录读。
 - **模板来源**：配置 `LabelService:Templates:Source`，默认 `Database`；设成 `Files` 时直接读示例目录、不建库，只适合只读演示。

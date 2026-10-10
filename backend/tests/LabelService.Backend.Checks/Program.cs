@@ -24,6 +24,7 @@ internal static class Program
         LayoutRenderChecks.Run(backendRoot, Check);
         await ServerChecks.RunAsync(backendRoot, Check);
         await StorageChecks.RunAsync(backendRoot, Check);
+        await UpgradeChecks.RunAsync(backendRoot, Check);
         await BatchChecks.RunAsync(backendRoot, Check);
         await LayoutServerChecks.RunAsync(backendRoot, Check);
         await TimingChecks.RunAsync(backendRoot, Check);

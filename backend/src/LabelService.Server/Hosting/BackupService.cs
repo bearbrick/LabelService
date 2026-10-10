@@ -93,7 +93,10 @@ internal sealed class BackupService(IOptions<BackupOptions> options, IOptions<Da
         return target;
     }
 
-    private static async Task SnapshotAsync(string database, string snapshot, CancellationToken cancellationToken)
+    /// <summary>
+    /// 用 VACUUM INTO 给库做一份一致的快照，并改成 WAL 模式（恢复时直接替换就能用）。升级数据库前的备份也用它（<see cref="Data.DatabaseUpgrade"/>）。
+    /// </summary>
+    internal static async Task SnapshotAsync(string database, string snapshot, CancellationToken cancellationToken)
     {
         if (!File.Exists(database))
         {

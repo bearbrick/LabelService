@@ -57,10 +57,11 @@ internal static class TemplateStorage
         var directory = services.GetRequiredService<IOptions<DataOptions>>().Value.ResolveDirectory();
         Directory.CreateDirectory(directory);
         var contexts = services.GetRequiredService<IDbContextFactory<LabelDbContext>>();
+        // 有待执行的迁移时先备份，失败恢复；旧库的模板分类和调用方授权换算成业务分组（T-021）。
+        await DatabaseUpgrade.UpgradeMainAsync(() => contexts.CreateDbContextAsync(), directory, services.GetRequiredService<TimeProvider>(), logger);
         bool empty;
         await using (var db = await contexts.CreateDbContextAsync())
         {
-            await db.Database.MigrateAsync();
             empty = !await db.Templates.AnyAsync();
         }
 

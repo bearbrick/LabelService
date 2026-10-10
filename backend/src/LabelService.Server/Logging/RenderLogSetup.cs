@@ -42,8 +42,9 @@ internal static class RenderLogSetup
             return;
         }
 
-        Directory.CreateDirectory(app.Services.GetRequiredService<IOptions<DataOptions>>().Value.ResolveDirectory());
-        await using var db = await app.Services.GetRequiredService<IDbContextFactory<LogDbContext>>().CreateDbContextAsync();
-        await db.Database.MigrateAsync();
+        var directory = app.Services.GetRequiredService<IOptions<DataOptions>>().Value.ResolveDirectory();
+        Directory.CreateDirectory(directory);
+        var contexts = app.Services.GetRequiredService<IDbContextFactory<LogDbContext>>();
+        await DatabaseUpgrade.UpgradeLogAsync(() => contexts.CreateDbContextAsync(), directory, app.Services.GetRequiredService<ILoggerFactory>().CreateLogger(typeof(RenderLogSetup)));
     }
 }
