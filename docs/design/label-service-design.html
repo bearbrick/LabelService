@@ -763,10 +763,9 @@ footer { margin-top: 48px; font-size: 13px; color: var(--ink-3); }
             <tr><td>POST</td><td><code>/api/v1/render</code></td><td>单张生成，返回文件流</td></tr>
             <tr><td>POST</td><td><code>/api/v1/render/batch</code></td><td>批量生成，返回合并后的文件或 ZIP</td></tr>
             <tr><td>GET</td><td><code>/api/v1/templates/{code}/schema</code></td><td>返回字段定义和 JSON 样例，给调用方对接用</td></tr>
-            <tr><td>POST</td><td><code>/api/v1/preview</code></td><td>设计器用：未保存的模板 JSON + 样例数据，返回 PNG（需要登录）</td></tr>
           </tbody>
         </table></div>
-        <p>模板、版本、画布预设、素材、API Key 的增删改查属于管理 API，按 REST 设计，只给设计器用，不对外公开。</p>
+        <p>模板、版本、画布预设、素材、API Key 的增删改查，以及设计器用的服务端预览（<code>POST /api/admin/preview</code>：未保存的模板 JSON + 样例数据，返回 PNG，需要登录），属于管理 API，按 REST 设计，只给设计器用，不对外公开。开放接口只认 API Key，管理 API 只认登录令牌，两边互不通用。</p>
 
         <h3>单张生成</h3>
 <pre><code>POST /api/v1/render
@@ -1282,7 +1281,8 @@ catch (LabelServiceException ex) when (ex.IsTransient)
           <li><span class="tag">待定</span><span>打印边界：服务只返回文件、由调用方送打印机，这个分工是否认可？</span></li>
           <li><span class="tag done">已定</span><span>A4 拼版进初版：把单张标签拖到 A4 上排成版式，同一模板可以单张打也可以拼版打（2026-10-09）。模板嵌套放到二期。</span></li>
           <li><span class="tag">待定</span><span>试点选哪个项目、哪种标签？</span></li>
-          <li><span class="tag">待定</span><span>监控接入公司现有平台，还是随服务部署一套 Prometheus + Grafana？告警发到哪个群？</span></li>
+          <li><span class="tag done">已定</span><span>监控随服务自建 Prometheus + Grafana（2026-10-11）；<code>/metrics</code> 由服务自己输出，暂不引入 OpenTelemetry 导出包。</span></li>
+          <li><span class="tag">待定</span><span>监控告警发到哪个群？</span></li>
           <li><span class="tag">待定</span><span>生产服务器配置：本设计的吞吐目标按 4 核 8 GB 单实例估算，需要确认实际机器。</span></li>
           <li><span class="tag">待定</span><span>对接的三方是否都用 .NET？如果有 Java 或 Python 系统，需要另做 SDK，还是先只给接口文档？</span></li>
           <li><span class="tag">待定</span><span>私有 NuGet 源用哪个（Azure Artifacts、ProGet 还是自建）？代码签名证书由谁申请？</span></li>

@@ -113,6 +113,16 @@ internal static class PreviewChecks
         using var keyed = new HttpRequestMessage(HttpMethod.Post, "/api/admin/preview") { Content = JsonContent.Create(new { template }) };
         keyed.Headers.Add(HeaderNames.ApiKey, Fixtures.DevApiKey);
         check("API Key 不能调预览（预览在管理接口，只认登录）", (await http.SendAsync(keyed)).StatusCode == HttpStatusCode.Unauthorized);
+
+        // ADR 0007 采纳后开放接口不再有预览的占位（原来返回 501），带 Key 或登录令牌都是 404。
+        using var publicKeyed = new HttpRequestMessage(HttpMethod.Post, "/api/v1/preview") { Content = JsonContent.Create(new { template }) };
+        publicKeyed.Headers.Add(HeaderNames.ApiKey, Fixtures.DevApiKey);
+        check("开放接口没有 /api/v1/preview（ADR 0007），带 API Key 或登录令牌都是 404",
+            (await http.SendAsync(publicKeyed)).StatusCode == HttpStatusCode.NotFound
+            && (await admin.PostAsync("/api/v1/preview", new
+            {
+                template
+            })).StatusCode == HttpStatusCode.NotFound);
     }
 
     private static async Task CheckFontFilesAsync(HttpClient http, Action<string, bool> check)
