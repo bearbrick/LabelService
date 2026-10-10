@@ -28,14 +28,14 @@ function Invoke-Step([string]$Title, [scriptblock]$Command) {
 function Invoke-ClientChecksWithServer {
     $port = 5089
     $url = "http://127.0.0.1:$port/"
-    $bin = Join-Path $root 'backend/src/LabelService.Server/bin/Debug/net10.0'
+    $bin = Join-Path $root 'backend/src/LabelService.Api/bin/Debug/net10.0'
     $log = Join-Path ([IO.Path]::GetTempPath()) "labelservice-verify-$port.log"
     $data = Join-Path ([IO.Path]::GetTempPath()) ('labelservice-verify-data-' + [Guid]::NewGuid().ToString('N'))
     $previous = $env:ASPNETCORE_ENVIRONMENT
     $env:ASPNETCORE_ENVIRONMENT = 'Development'
     Write-Host ''
     Write-Host "==> 启动后端服务 $url（日志：$log）" -ForegroundColor Cyan
-    $server = Start-Process -FilePath 'dotnet' -ArgumentList @('LabelService.Server.dll', '--urls', "http://127.0.0.1:$port", "--LabelService:Data:Directory=$data") `
+    $server = Start-Process -FilePath 'dotnet' -ArgumentList @('LabelService.Api.dll', '--urls', "http://127.0.0.1:$port", "--LabelService:Data:Directory=$data") `
         -WorkingDirectory $bin -NoNewWindow -PassThru -RedirectStandardOutput $log -RedirectStandardError "$log.err"
     $env:ASPNETCORE_ENVIRONMENT = $previous
     try {

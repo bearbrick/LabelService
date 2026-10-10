@@ -8,7 +8,7 @@ COPY . .
 RUN ls assets/fonts/*.ttf assets/fonts/*.otf > /dev/null 2>&1 \
     || (echo "assets/fonts 里没有字体文件，见 assets/fonts/README.md" && exit 1)
 # 指定运行时标识时项目会打开 ReadyToRun（预编译），启动和第一个请求更快。
-RUN dotnet publish src/LabelService.Server -c Release -r linux-x64 --self-contained false -o /app
+RUN dotnet publish src/LabelService.Api -c Release -r linux-x64 --self-contained false -o /app
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0
 WORKDIR /app
@@ -21,4 +21,4 @@ VOLUME /data
 EXPOSE 8080
 USER app
 # 就绪检查：GET /health/ready（预热完成前 503）；存活检查：GET /health。镜像里没有 curl，由编排工具或负载均衡探测。
-ENTRYPOINT ["dotnet", "LabelService.Server.dll"]
+ENTRYPOINT ["dotnet", "LabelService.Api.dll"]
