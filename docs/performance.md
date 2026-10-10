@@ -37,7 +37,7 @@
 4. **少分配**：大缓冲区用 `ArrayPool`；结果直接写响应流（`RenderResult.Content` 指向 MemoryStream 的缓冲区，不再复制）；避免 LINQ 出现在逐元素、逐像素的循环里。
 5. **SKPaint、SKFont 等对象**：目前每次绘制新建，T-001 起按“字体 + 字号”等键缓存，缓存必须线程安全。
 6. **条码矩阵按内容缓存**，批量里公共字段的条码只编码一次（T-002）。
-7. **PNG 用最低压缩等级、不做行过滤**，以体积换速度。改编码参数要附基准对比。
+7. **PNG 按内容选最小的无损格式**（全是黑白灰时 8 位灰度、有彩色时 8 位 RGB、mono 时 1 位，都不带 alpha），用 .NET 自带的 zlib 最快档压缩、不做行过滤（`Output/PngWriter.cs`，T-021）。改编码参数要附基准对比。
 8. **并发**：渲染并发数等于 CPU 核数，排队超过 2 秒返回 503（T-017）。不要在渲染代码里 `Task.Run` 或加锁。
 
 ## 怎么测
@@ -56,7 +56,7 @@ dotnet run -c Release --project backend/tests/LabelService.Benchmarks -- --filte
 
 基准覆盖成品箱标（`RenderBenchmarks`：203、300 dpi × PNG、PDF、ZPL，加一项每次换箱号、条码缓存不命中的 PNG）和每个示例模板 × PNG、PDF、ZPL（`TemplateBenchmarks`，模板自己的 DPI）。新增示例模板后把它加进 `TemplateBenchmarks.Template` 的参数。
 
-**基准门禁**（T-015）：中位数比基线慢 20% 以上就不通过（退出码 1），CI 每次提交跑一遍。
+**基准门禁**（T-015）：中位数比基线慢 20% 以上就不通过（退出码 1），CI 每次提交跑一遍。门禁先列出这次应该跑的全部基准，再看结果（T-021）：有基准没跑出结果（构建失败、运行出错）、过滤后一项都没有、不带 `--filter` 时少了基线里的项，都算没跑全，退出码 3，不算通过，也不写基线；基线里没有的新基准只打印、不比较。每项同时打印中位数和 P95（门禁按中位数比较，P95 只供记录）。`--self-test` 检查这些覆盖规则。
 
 ```powershell
 dotnet run -c Release --project backend/tests/LabelService.Benchmarks -- --gate               # 和 baseline.json 比较，约 5 分钟
@@ -69,7 +69,7 @@ dotnet run -c Release --project backend/tests/LabelService.Benchmarks -- --updat
 - 门禁用 ShortRun 加到 10 次迭代：同一台机器连跑两次差 ±4% 以内；3 次迭代时能差到 25%，会误报。跑门禁时机器上不要有别的重负载（编译、视频会议）。
 - CI 平台还没定（见 README 待定问题）：选定后加一步 `--gate`，并在 CI 机器上生成基线。CI 上要先准备字体（`backend/assets/fonts`），否则文本相关的检查和基准会失败。
 
-**压测**（T-015）：k6 脚本在 `backend/tests/load/`，用法和报告模板见那里的 README。验收：在 4 核 8 GB 目标机器上单张 50 并发 P95 ≤ 100 ms、错误率 0、吞吐 ≥ 60 次/秒。
+**压测**（T-015）：k6 脚本在 `backend/tests/load/`，用法和报告模板见那里的 README。验收：在 4 核 8 GB 目标机器上 `k6 run single.js`（50 个并发持续发 60 秒），到写完最后一个字节的 P95 ≤ 100 ms（`log-report.cs` 从调用日志算）、k6 的 P95 ≤ 100 ms（同机）或 ≤ 150 ms（局域网）、错误率 0、吞吐 ≥ 60 次/秒（T-021）。
 
 ## 当前基线
 
@@ -111,5 +111,13 @@ dotnet run -c Release --project backend/tests/LabelService.Benchmarks -- --updat
 | 2026-10-10 | k6 压批量接口（T-015），同上 4 核，100 张示例箱标合并 PDF，4 个并发 30 秒 | 服务端中位数 41.8 ms、P95 66.5 ms，错误 0，约 82 批/秒 | 要求 100 张 ≤ 3 s |
 
 | 2026-10-10 | A4 拼版（T-018，`SheetBenchmarks`），一页 24 张 70×37 mm 小箱标（每张 12 个元素、箱号各不相同），300 dpi，ShortRun 10 次迭代，同上机器 | PDF 中位数 7.3 ms（预算 250 ms）；PNG 122 ms（A4 整页 PNG 编码为主，和 A4 唛头 PNG 相当） | 固定元素只排版一次（`LabelPlan`）：PDF 7.31 ms 对 7.31 ms，时间看不出差别（文本测量、条码编码本来就有缓存），分配从 1078 KB 降到 875 KB（−19%）。门禁只放 PDF 两项，PNG 太重会让笔记本降频、拖慢后面的基准（整套门禁跑完时 TemplateBenchmarks 曾误报慢 30%，单独重跑 ±3%） |
+
+| 2026-10-10 | PNG 编码改为 `PngWriter`（T-021），完整门禁、基线不变，ShortRun 10 次迭代，同上机器 | 箱标 PNG 203dpi 5.49 → 0.94 ms、300dpi 11.66 → 1.82 ms；换箱号 5.75 → 1.21、11.60 → 2.02 ms；A4 唛头 PNG 115.3 → 15.9 ms；A4 拼版 PNG 124.8 → 23.1 ms（P95 128.1 → 23.9） | 原来 Skia 编码 RGBA 占单张总耗时近九成。输出逐像素一致（后端检查 `PngChecks`），示例箱标从 RGBA 49 KB 变成 8 位灰度 40 KB。其余 PDF、ZPL 各项比基线 +2%～+12%（没改这些代码，属笔记本温度、负载波动，门禁 20% 以内）。按验收要求没有更新基线，改进后要不要收紧基线由人决定。证据 `docs/reviews/phase1-evidence/gate-full-pngwriter.txt` |
+
+| 2026-10-10 | 单张请求 Server-Timing（T-021），Release，示例箱标 PNG 300dpi，低负载热请求 | 修复前 draw 1.0–1.3、encode 10.7–13.5、total 12–15 ms；修复后 draw 1.2–1.5、encode 0.8–0.9、total 2.6–3.3 ms | |
+
+| 2026-10-10 | k6 单张验收压测（T-021，`single.js` 默认：50 个并发持续 60 秒，每次换箱号），Release，示例箱标 PNG 300dpi，服务进程从启动起绑核，k6 绑在另外的核 | 修复前（绑 2 个物理核）：213 次/秒，k6 P95 296.9 ms、Server-Timing P95 253.3 ms，**不通过**。修复后绑 2 个物理核（4 个逻辑核）：986 次/秒，k6 P95 63.8 ms，到最后一个字节 P95 58.2 ms、P99 67.6 ms；绑 4 个物理核：1086 次/秒，k6 P95 75.1 ms，到最后一个字节 P95 63.7 ms、P99 98.1 ms；错误都是 0 | 50 个并发不停地发时排队时间算进耗时，上一行 T-015 的“饱和 P95 251 ms”就是这个口径没过。本机是 Ryzen AI 9 H 465 笔记本，**4 核 8 GB 目标机器上还没测**（环境阻塞）。证据 `docs/reviews/phase1-evidence/load-50vu.txt` |
+
+| 2026-10-10 | A4 拼版（T-021 复核 T-018），`SheetBenchmarks` PDF、PNG 都在门禁里，同上 | PDF 中位数 8.05 ms、P95 8.15 ms；PNG（`PngWriter` 后）中位数 23.1 ms、P95 23.9 ms；预算是 P95 ≤ 250 ms | 固定元素共享排版（`ShareStatic`）**没有带来可测的提速**：PDF 两次完整门禁 −3%、−5%，PNG +1%、+2%，都在同机 ±4% 的波动内；只是 PDF 每次分配少 19%。T-018 行里“PNG 太重、门禁只放 PDF”已改回 PDF、PNG 都放（T-021）。上面 T-018 行的 7.3 ms 是中位数，不是 P95 |
 
 实现新元素或格式后在这里追加一行，写明机器和条件。
