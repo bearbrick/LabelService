@@ -24,7 +24,7 @@
 | `layout` | 10 ms | 文本测量、条码编码 |
 | `draw` | 30 ms | SkiaSharp 绘制 |
 | `encode` | 35 ms | PNG / PDF / ZPL 编码 |
-| 写回响应 | 5 ms | 不计入 Server-Timing |
+| 写回响应 | 5 ms | Server-Timing 头先于响应体发出，头里的 total 不含这一段；调用日志、指标的总耗时含这一段（见下） |
 | 余量 | 15 ms | |
 
 ## 热路径规则
@@ -43,6 +43,8 @@
 ## 怎么测
 
 **看单次请求**：每个响应的 `Server-Timing` 头列出各阶段耗时；服务端日志每次调用一行，`slow=True` 表示单张超过 100 ms。
+
+**计时口径**（T-021）：服务端处理时间从开始处理请求算到写完最后一个字节。响应头必须先于响应体发出，所以 `Server-Timing` 的 `total` 只能算到写响应头为止；服务端日志的 `total`、调用日志 `render_log.duration_ms`、指标 `label_render_duration_ms` 和慢调用判断都在响应写完后（`HttpResponse.OnCompleted`）计算，包含写响应体的时间（`Endpoints/RenderCall.cs`）。后端检查 `TimingChecks` 验证：客户端拿到响应头后停 800 ms 再读约 1 MB 的响应体，调用日志的耗时 ≥ 800 ms，头里的 total 不含这段。验收压测要以日志或指标为准，头里的 total 偏小。
 
 **基准测试**（BenchmarkDotNet，必须 Release）：
 

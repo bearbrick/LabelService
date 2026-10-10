@@ -207,7 +207,7 @@ PDF：矢量输出，一张标签每份一页；页面尺寸是模板的 mm 尺�
 
 ### Server-Timing
 
-格式：`auth;dur=0.3, tpl;dur=0.1, validate;dur=0.6, layout;dur=4.2, draw;dur=18.5, encode;dur=21.7, total;dur=46.1`。毫秒保留 1 位小数，已知阶段按 `auth`、`tpl`、`validate`、`layout`、`draw`、`encode`、`total` 的顺序输出，同名阶段累加（批量逐张累加），失败时只有走到的阶段。
+格式：`auth;dur=0.3, tpl;dur=0.1, validate;dur=0.6, layout;dur=4.2, draw;dur=18.5, encode;dur=21.7, total;dur=46.1`。毫秒保留 1 位小数，已知阶段按 `auth`、`tpl`、`validate`、`layout`、`draw`、`encode`、`total` 的顺序输出，同名阶段累加（批量逐张累加），失败时只有走到的阶段。`total` 是到写响应头为止的耗时（响应头先于响应体发出），不含写响应体；服务端的调用日志和指标按写完最后一个字节计时（见 docs/performance.md“计时口径”）。
 
 ### 警告码
 
