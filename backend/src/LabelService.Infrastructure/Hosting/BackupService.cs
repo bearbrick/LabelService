@@ -9,7 +9,7 @@ using Microsoft.Extensions.Options;
 namespace LabelService.Infrastructure.Hosting;
 
 /// <summary>
-/// 每日备份：用 SQLite 的 <c>VACUUM INTO</c> 给 label.db、label-log.db 生成一致的快照，连同上传的素材文件
+/// 每日备份（只支持 SQLite）：用 SQLite 的 <c>VACUUM INTO</c> 给 label.db、label-log.db 生成一致的快照，连同上传的素材文件
 /// 放进数据目录下的 <c>backups/yyyyMMdd-HHmmss/</c>，保留最近若干份。
 /// </summary>
 /// <remarks>
@@ -38,6 +38,13 @@ public sealed class BackupService(IOptions<BackupOptions> options, IOptions<Data
     {
         if (!options.Value.Enabled || !TimeOnly.TryParse(options.Value.Time, CultureInfo.InvariantCulture, out var time))
         {
+            return;
+        }
+
+        // SQL Server、PostgreSQL 用数据库自己的备份工具（见 backend/deploy/README.md），这里不做。
+        if (!data.Value.IsSqlite)
+        {
+            logger.LogInformation("数据库是 {Provider}，内置的每日备份只支持 SQLite，请用数据库自己的备份工具", data.Value.Provider);
             return;
         }
 
@@ -71,6 +78,11 @@ public sealed class BackupService(IOptions<BackupOptions> options, IOptions<Data
     /// </summary>
     public async Task<string> RunAsync(CancellationToken cancellationToken = default)
     {
+        if (!data.Value.IsSqlite)
+        {
+            throw new InvalidOperationException("内置备份只支持 SQLite");
+        }
+
         var source = data.Value.ResolveDirectory();
         var stamp = TimeZoneInfo.ConvertTime(clock.GetUtcNow(), TimeZoneInfo.Local).ToString(StampFormat, CultureInfo.InvariantCulture);
         var target = Path.Combine(Directory, stamp);

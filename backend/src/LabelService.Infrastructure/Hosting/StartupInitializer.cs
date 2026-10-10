@@ -63,7 +63,7 @@ public static class StartupInitializer
     }
 
     /// <summary>
-    /// 主库迁移（有待执行的迁移时先备份，失败恢复；旧库的数据换算）；调用日志开启时日志库迁移。
+    /// 主库迁移；调用日志开启时日志库迁移。SQLite 有待执行的迁移时先备份、失败恢复，并换算旧库的数据。
     /// </summary>
     /// <param name="services">根服务。</param>
     /// <param name="directory">数据目录。</param>
@@ -72,10 +72,24 @@ public static class StartupInitializer
     private static async Task UpgradeDatabasesAsync(IServiceProvider services, string directory, ILogger logger)
     {
         var main = services.GetRequiredService<IDbContextFactory<LabelDbContext>>();
-        await DatabaseUpgrade.UpgradeMainAsync(() => main.CreateDbContextAsync(), directory, services.GetRequiredService<TimeProvider>(), logger);
-        if (services.GetRequiredService<RenderLogQueue>().Enabled)
+        var log = services.GetRequiredService<IDbContextFactory<LogDbContext>>();
+        var logEnabled = services.GetRequiredService<RenderLogQueue>().Enabled;
+        if (!services.GetRequiredService<IOptions<DataOptions>>().Value.IsSqlite)
         {
-            var log = services.GetRequiredService<IDbContextFactory<LogDbContext>>();
+            // SQL Server、PostgreSQL：迁移在事务里执行，失败自动回滚。
+            await DatabaseUpgrade.MigrateAsync(() => main.CreateDbContextAsync(), "主库", logger);
+            if (logEnabled)
+            {
+                await DatabaseUpgrade.MigrateAsync(() => log.CreateDbContextAsync(), "日志库", logger);
+            }
+
+            return;
+        }
+
+        // SQLite：升级前做快照，失败时恢复；旧库的数据换算。
+        await DatabaseUpgrade.UpgradeMainAsync(() => main.CreateDbContextAsync(), directory, services.GetRequiredService<TimeProvider>(), logger);
+        if (logEnabled)
+        {
             await DatabaseUpgrade.UpgradeLogAsync(() => log.CreateDbContextAsync(), directory, logger);
         }
     }

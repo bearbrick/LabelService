@@ -7,12 +7,13 @@ using Microsoft.Extensions.Logging;
 namespace LabelService.Infrastructure.Persistence;
 
 /// <summary>
-/// 启动时升级数据库（执行迁移），保证失败可恢复：有待执行的迁移、库里已经有数据时，先用 VACUUM INTO 备份到数据目录的 backups/；
+/// 启动时升级数据库（执行迁移）。SQLite 保证失败可恢复：有待执行的迁移、库里已经有数据时，先用 VACUUM INTO 备份到数据目录的 backups/；
 /// 迁移或之后的数据转换出错时关闭连接、用备份覆盖回去，再抛出异常让服务不启动。
 /// </summary>
 /// <remarks>
 /// SQLite 上部分迁移（删列时重建表、<c>PRAGMA foreign_keys = 0</c>）不在事务里执行，中途失败会留下半套结构，重试也过不去
 /// （验收的故障注入：重试时 duplicate column）。所以靠升级前的完整快照恢复，不靠事务。
+/// SQL Server、PostgreSQL 的迁移每个都在事务里执行，失败自动回滚，用 <see cref="MigrateAsync{TContext}"/>；它们的备份用数据库自己的工具。
 /// </remarks>
 public static class DatabaseUpgrade
 {
@@ -79,6 +80,29 @@ public static class DatabaseUpgrade
             await using var db = await create();
             await db.Database.MigrateAsync();
         });
+    }
+
+    /// <summary>
+    /// SQL Server、PostgreSQL：执行待执行的迁移（每个迁移在事务里，失败自动回滚，服务不启动）。
+    /// </summary>
+    /// <typeparam name="TContext">主库或日志库的上下文。</typeparam>
+    /// <param name="create">创建上下文。</param>
+    /// <param name="name">日志里显示的库名，如“主库”。</param>
+    /// <param name="logger">日志。</param>
+    /// <returns>完成时完成。</returns>
+    public static async Task MigrateAsync<TContext>(Func<Task<TContext>> create, string name, ILogger logger)
+        where TContext : DbContext
+    {
+        await using var db = await create();
+        var pending = (await db.Database.GetPendingMigrationsAsync()).ToList();
+        if (pending.Count == 0)
+        {
+            return;
+        }
+
+        logger.LogWarning("{Database}有 {Count} 个待执行的迁移（{Pending}），开始升级", name, pending.Count, string.Join("、", pending));
+        await db.Database.MigrateAsync();
+        logger.LogInformation("{Database}升级完成", name);
     }
 
     /// <summary>
