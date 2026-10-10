@@ -125,13 +125,14 @@ PDF：矢量输出，一张标签每份一页；页面尺寸是模板的 mm 尺�
 
 | 方法 | 路径 | 说明 | 状态 |
 | --- | --- | --- | --- |
-| POST | `/api/v1/render` | 单张生成，成功时返回文件流 | PNG 可用；PDF、ZPL 见 T-005、T-006 |
+| POST | `/api/v1/render` | 单张生成，成功时返回文件流 | 可用（PNG、PDF、ZPL） |
 | POST | `/api/v1/render/batch` | 批量生成，返回合并文件或 ZIP | 可用 |
 | GET | `/api/v1/templates/{code}/schema` | 最新发布版本的字段定义和样例 | 可用 |
-| POST | `/api/v1/preview` | 设计器用：未保存的模板 + 样例数据 → PNG（需要登录） | 返回 501：预览实现在管理接口 `POST /api/admin/preview`（ADR 0007，提议中，采纳后删掉这一行） |
 | GET | `/health` | 存活检查 | 可用 |
 | GET | `/health/ready` | 就绪检查：启动预热完成前 503，完成后 200 | 可用（T-017） |
 | GET | `/metrics` | Prometheus 指标（只在内网开放），指标见 `backend/deploy/monitoring/README.md` | 可用（T-010） |
+
+开放接口只认 API Key。设计器用的服务端预览（`POST /api/admin/preview`）和模板、调用方等的管理都在管理接口 `/api/admin`，只认登录令牌，见 `docs/admin-api.md`（ADR 0006、0007）。
 
 ### 单张请求
 
