@@ -5,6 +5,7 @@
  */
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { errorText } from '../api/http.ts'
+import { listLayouts } from '../api/layouts.ts'
 import AppIcon from '../components/AppIcon.vue'
 import DesignerView from '../components/DesignerView.vue'
 import ModalDialog from '../components/admin/ModalDialog.vue'
@@ -14,10 +15,11 @@ import PreviewDialog from '../components/workspace/PreviewDialog.vue'
 import PublishDialog from '../components/workspace/PublishDialog.vue'
 import VersionsTab from '../components/workspace/VersionsTab.vue'
 import { paperName, sizeText, fmtTime } from '../model/format.ts'
+import type { LayoutView } from '../model/layout.ts'
 import { businessOf, catalog, templateState } from '../stores/catalog.ts'
 import { designer, exportTemplate, importTemplate, saveDraft, toast } from '../stores/designer.ts'
 import { confirmBox, dialogs } from '../stores/dialogs.ts'
-import { goBiz, openWorkspace, route } from '../stores/router.ts'
+import { go, goBiz, openWorkspace, route } from '../stores/router.ts'
 import type { WorkspaceView } from '../stores/router.ts'
 import { can, inScope } from '../stores/session.ts'
 import { canEdit, discardDraft, loadWorkspace, moveToBusiness, workspace } from '../stores/workspace.ts'
@@ -36,6 +38,23 @@ const business = computed(() => businessOf(detail.value?.businessId))
 const state = computed(() => (detail.value ? templateState(detail.value) : null))
 const page = computed(() => designer.template.page)
 const kind = computed(() => (paperName(page.value) ? `${paperName(page.value)} 纸张模板` : '标签模板'))
+/** 格子尺寸和当前画布相同、已启用的拼版版式（设计书第 4 节“模板详情页列出可用的版式”）。 */
+const layouts = ref<LayoutView[]>([])
+watch(
+  () => [detail.value?.code, page.value.width, page.value.height] as const,
+  async ([code, width, height]) => {
+    layouts.value = []
+    if (!code) return
+    try {
+      const found = (await listLayouts(width, height)).filter((view) => view.enabled)
+      if (detail.value?.code === code) layouts.value = found
+    } catch {
+      layouts.value = []
+    }
+  },
+  { immediate: true },
+)
+
 const changed = computed(() => !!detail.value && (detail.value.hasDraft || designer.dirty))
 const canPublish = computed(() => can('tpl.publish') && !!detail.value && inScope(detail.value.businessId))
 const saveText = computed(() => {
@@ -145,6 +164,13 @@ async function move(): Promise<void> {
           >
           <span>画布<b>{{ sizeText(page) }}</b></span>
           <span>DPI<b>{{ page.dpi ?? 300 }}</b></span>
+          <span class="layouts-meta"
+            >可用版式<b v-if="!layouts.length" class="muted" title="还没有格子尺寸和这个模板相同的拼版版式">无</b
+            ><template v-else
+              ><button v-for="view in layouts.slice(0, 3)" :key="view.layout.code" class="link" type="button" :title="view.layout.name + '，' + view.layout.slots.length + ' 格'" @click="go('layouts', view.layout.code)">{{ view.layout.code }}</button
+              ><b v-if="layouts.length > 3">等 {{ layouts.length }} 个</b></template
+            ></span
+          >
           <span>更新<b>{{ detail.updatedBy || '—' }} · {{ fmtTime(detail.updatedAt) }}</b></span>
         </div>
       </div>
