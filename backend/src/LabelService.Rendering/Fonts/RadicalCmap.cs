@@ -248,7 +248,10 @@ internal static class RadicalCmap
             var glyph = mapping[code];
             if (groups.Count > 0 && groups[^1].End == code - 1 && groups[^1].Glyph + (code - groups[^1].Start) == glyph)
             {
-                groups[^1] = groups[^1] with { End = code };
+                groups[^1] = groups[^1] with
+                {
+                    End = code
+                };
             }
             else
             {
