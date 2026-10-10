@@ -6,8 +6,14 @@ namespace LabelService.Server.Admin;
 /// <summary>
 /// 调用方与密钥（api.manage）：新建（返回一次 Key）、修改业务范围和 IP 白名单、启停、重置 Key。
 /// </summary>
+/// <remarks>
+/// 业务范围（ADR 0006，T-021）：只能管理授权完全在自己范围里的调用方，也只能把自己范围里的分组授权出去；
+/// 不是“全部业务”的用户不能授权全部业务。否则范围受限的用户新建或重置一把全部业务的 Key，就能从开放接口调到别的业务的模板。
+/// </remarks>
 internal static class ClientEndpoints
 {
+    private const string OutOfScope = "只能把自己业务范围里的分组授权给调用方";
+
     /// <summary>
     /// 注册路由。
     /// </summary>
@@ -20,11 +26,19 @@ internal static class ClientEndpoints
         api.MapPost("/clients/{id:int}/reset-key", ResetKeyAsync).RequireAdmin(Permissions.ApiManage);
     }
 
-    private static async Task<IResult> ListAsync(ApiClientRepository repository) =>
-        Results.Json((await repository.ListAsync()).Select(View));
+    private static async Task<IResult> ListAsync(HttpContext http, ApiClientRepository repository)
+    {
+        var admin = http.CurrentAdmin();
+        return Results.Json((await repository.ListAsync()).Where(client => Manages(admin, client)).Select(View));
+    }
 
     private static async Task<IResult> CreateAsync(ClientRequest body, HttpContext http, ApiClientRepository repository, OperationLog log)
     {
+        if (!Grants(http.CurrentAdmin(), body))
+        {
+            return AdminResults.Forbidden(OutOfScope);
+        }
+
         try
         {
             var (client, key) = await repository.CreateAsync(body.ToInput());
@@ -43,6 +57,16 @@ internal static class ClientEndpoints
 
     private static async Task<IResult> UpdateAsync(int id, ClientRequest body, HttpContext http, ApiClientRepository repository, OperationLog log)
     {
+        if (await CheckScopeAsync(id, http, repository) is { } denied)
+        {
+            return denied;
+        }
+
+        if (!Grants(http.CurrentAdmin(), body))
+        {
+            return AdminResults.Forbidden(OutOfScope);
+        }
+
         try
         {
             var client = await repository.UpdateAsync(id, body.ToInput(), null);
@@ -57,6 +81,11 @@ internal static class ClientEndpoints
 
     private static async Task<IResult> SetStatusAsync(int id, UserRoleEndpoints.StatusRequest body, HttpContext http, ApiClientRepository repository, OperationLog log)
     {
+        if (await CheckScopeAsync(id, http, repository) is { } denied)
+        {
+            return denied;
+        }
+
         try
         {
             var client = await repository.UpdateAsync(id, null, body.Enabled);
@@ -71,6 +100,11 @@ internal static class ClientEndpoints
 
     private static async Task<IResult> ResetKeyAsync(int id, HttpContext http, ApiClientRepository repository, OperationLog log)
     {
+        if (await CheckScopeAsync(id, http, repository) is { } denied)
+        {
+            return denied;
+        }
+
         try
         {
             var (client, key) = await repository.ResetKeyAsync(id);
@@ -86,6 +120,24 @@ internal static class ClientEndpoints
             return AdminResults.From(ex);
         }
     }
+
+    /// <summary>
+    /// 调用方不存在或授权超出自己的业务范围时返回 404（和模板一样不暴露是否存在），否则返回 null。
+    /// </summary>
+    private static async Task<IResult?> CheckScopeAsync(int id, HttpContext http, ApiClientRepository repository) =>
+        await repository.FindAsync(id) is { } client && Manages(http.CurrentAdmin(), client) ? null : AdminResults.NotFound("调用方不存在");
+
+    /// <summary>
+    /// 调用方的授权是否完全在用户的业务范围里。没有授权任何分组的调用方谁都能管。
+    /// </summary>
+    private static bool Manages(AdminUser admin, ApiClientRecord client) =>
+        admin.AllBusinesses || (!client.AllBusinesses && ApiKeyAuthenticator.ParseIds(client.BusinessIds).All(id => admin.InScope(id)));
+
+    /// <summary>
+    /// 要授权的分组是否都在用户的业务范围里。
+    /// </summary>
+    private static bool Grants(AdminUser admin, ClientRequest body) =>
+        admin.AllBusinesses || (!body.AllBusinesses && (body.BusinessIds ?? []).All(id => admin.InScope(id)));
 
     /// <summary>
     /// 调用方的信息。不含 Key 哈希。

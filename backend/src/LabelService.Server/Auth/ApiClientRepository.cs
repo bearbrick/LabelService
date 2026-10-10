@@ -29,6 +29,15 @@ internal sealed class ApiClientRepository(
     }
 
     /// <summary>
+    /// 按 ID 找调用方，没有时返回 null。
+    /// </summary>
+    public async Task<ApiClientRecord?> FindAsync(int id, CancellationToken cancellationToken = default)
+    {
+        await using var db = await contexts.CreateDbContextAsync(cancellationToken);
+        return await db.ApiClients.AsNoTracking().SingleOrDefaultAsync(client => client.Id == id, cancellationToken);
+    }
+
+    /// <summary>
     /// 新建调用方。返回记录和 Key 原文（只返回这一次）。
     /// </summary>
     public async Task<(ApiClientRecord Client, string ApiKey)> CreateAsync(ApiClientInput input, CancellationToken cancellationToken = default)
