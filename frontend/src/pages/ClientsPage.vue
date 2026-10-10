@@ -14,6 +14,7 @@ import { go } from '../stores/router.ts'
 import { session } from '../stores/session.ts'
 
 const clients = ref<ApiClient[]>([])
+const loaded = ref(false)
 // 业务范围受限的用户只能授权自己范围里的分组（服务端同样检查，T-021）；分组列表本来就只有自己范围里的。
 const mayGrantAll = computed(() => session.me?.allBusinesses === true)
 const form = reactive({ open: false, id: 0, name: '', appId: '', description: '', allBusinesses: false, businessIds: [] as number[], ipAllowlist: '', error: '', busy: false })
@@ -23,6 +24,7 @@ onMounted(reload)
 async function reload(): Promise<void> {
   try {
     clients.value = await listClients()
+    loaded.value = true
   } catch (error) {
     toast(errorText(error), true)
   }
@@ -115,6 +117,7 @@ async function reset(c: ApiClient): Promise<void> {
                 <td><button class="switch" type="button" :class="{ on: c.enabled }" :aria-label="c.enabled ? '停用' : '启用'" @click="toggle(c)"></button></td>
                 <td class="actions"><button class="link" type="button" @click="edit(c)">编辑</button><button class="link" type="button" @click="reset(c)">重置密钥</button></td>
               </tr>
+              <tr v-if="loaded && !clients.length"><td colspan="8" class="muted" style="text-align: center; padding: 32px">还没有调用方。点“新建调用方”给业务系统生成一把 API Key</td></tr>
             </tbody>
           </table>
         </div>

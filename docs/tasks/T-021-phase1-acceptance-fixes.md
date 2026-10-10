@@ -49,6 +49,16 @@
 
 <!-- 按时间倒序追加：日期 · 谁 · 做了什么 / 卡在哪里 / 留给下一位的话 -->
 
+### 2026-10-10 · Claude（补充验证）
+
+用户确认可以操作本机后，把原来只因为“内置浏览器窗格隐藏”“要桌面会话”而没做的验证补上（证据 `docs/reviews/phase1-evidence/followup-checks.txt`、`t019-browser.txt`）：
+
+- 拼版设计器逐帧帧率：本机 Edge（临时用户目录、关闭窗口遮挡检测）用 CDP 发真实鼠标事件拖动，24 格 × 20 元素 56 帧/秒（等于窗口出帧上限），帧间隔最大 18.5 ms；放大到 114% 相同。不再是环境阻塞。
+- 演示程序 `--smoke`：net48、net10.0-windows × 模拟服务、真实服务，4 次都通过。
+- 新 PNG 编码的兼容性：灰度、1 位黑白、RGB 在 GDI+ 和 WPF 里都能正确解码。
+- 管理后台 18 个页面目视检查，修了两处小问题：设计器工具栏最右边按钮的提示框伸出窗口（`frontend/src/style.css`），调用方列表为空时没有提示行（`pages/ClientsPage.vue`）。示例 PDF 在 Edge 查看器里显示正常。
+- 仍是环境阻塞：4 核 8 GB 目标机、真实 Prometheus / Grafana / 告警、真实打印机、干净 Win10、Docker、Windows 服务安装（按验收要求不安装新服务、不用真实打印机）。
+
 ### 2026-10-10 · Claude
 
 **做了什么**（逐项结论、权限和测试有效性的 review 见 `docs/reviews/phase1-review.md`，原始输出见 `docs/reviews/phase1-evidence/`）
