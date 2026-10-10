@@ -3,7 +3,7 @@
 状态：待验收
 负责人：Claude 2026-10-10
 里程碑：M4
-依赖：—（监控平台待确认：公司现有平台还是自建 Prometheus + Grafana）
+依赖：—（监控平台已定：随服务自建 Prometheus + Grafana，2026-10-11）
 设计书：§9 监控、告警
 
 ## 目标
@@ -38,6 +38,7 @@
 ## 交接记录
 
 <!-- 按时间倒序追加：日期 · 谁 · 做了什么 / 卡在哪里 / 留给下一位的话 -->
+- 2026-10-11 · Claude（T-022）· 用户确认采纳 ADR 0009，监控平台自建 Prometheus + Grafana。`backend/deploy/monitoring/` 的抓取配置、告警规则、仪表盘就是部署起点；实际部署和接入由用户在正式环境做。告警通知渠道（发到哪个群）还没定。
 - 2026-10-10 · Claude（T-021 验收复核）· 如实补充：ADR 0009（自己实现 /metrics 的 Prometheus 文本格式、不引入 OpenTelemetry 包）仍是“提议”，等用户确认。上面勾选的仪表盘、告警规则指的是 `backend/deploy/monitoring/` 里的文件和检查程序里的格式、名称核对；**没有接真实的 Prometheus 抓取、没有导入 Grafana、没有触发过告警**（本机没有这些服务），链路（trace）只有 `X-Trace-Id`（Activity），没有导出到任何链路系统。这些属于环境阻塞，不算已验证。另：T-021 起 `label_render_duration_ms` 和慢调用都按“写完最后一个字节”计时。
 - 2026-10-10 · Claude · 完成，待验收。和任务原文有一处不同，请确认 ADR 0009。
   - 没有接 OpenTelemetry 包：它的 Prometheus 导出器只有预发布版（R8 不允许），监控平台也没定。指标本来就用 .NET 自带的 `System.Diagnostics.Metrics`（OpenTelemetry 的指标 API），`/metrics` 由 `Diagnostics/PrometheusExporter` 自己输出 Prometheus 文本格式（MeterListener 订阅 LabelService、Microsoft.AspNetCore.Hosting、System.Runtime 三个 Meter，前两个只认本主机的，检查程序里多个主机不串）。本服务的指标名原样导出，和设计书一致；没有新增依赖。链路（trace）暂不导出，响应和日志里已有 traceId。ADR 0009（提议）。

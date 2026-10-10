@@ -39,6 +39,7 @@
 ## 交接记录
 
 <!-- 按时间倒序追加：日期 · 谁 · 做了什么 / 卡在哪里 / 留给下一位的话 -->
+- 2026-10-11 · Claude（T-022）· 用户确认采纳 ADR 0007：`/api/v1/preview` 的 501 占位已删除（现在是 404，有检查），设计书第 8 节和 contracts.md 已同步；预览只在 `POST /api/admin/preview`，`/fonts` 公开。
 - 2026-10-10 · Claude（T-021 验收复核）· 如实补充：任务范围和设计书第 8 节写的是 `POST /api/v1/preview`（需要登录），实际做在 `POST /api/admin/preview`，`/api/v1/preview` 返回 501 指向管理接口。原因是已采纳的 ADR 0006 规定开放接口只认 API Key、登录令牌只在 /api/admin 有效（T-014 验收也要求登录态不能调开放接口），和“/api/v1 下需要登录的接口”冲突；解决办法写在 ADR 0007，**仍是“提议”，没有被批准**，所以公共合同没有改。需要用户决定：①采纳 ADR 0007（预览在管理接口，删掉 /api/v1/preview 的 501，同步设计书第 8 节和 contracts.md）；或②保留 /api/v1/preview 并让它例外接受登录令牌（要改 ADR 0006）。/fonts 公开也在 ADR 0007 里，同样待确认。
 - 2026-10-09 · Claude · 完成，待验收。
   - 地址改了，请确认 ADR 0007：设计书第 8 节写的是 `POST /api/v1/preview`（需要登录），但 ADR 0006 已经定了登录令牌只在 `/api/admin` 有效。预览实现成管理接口 `POST /api/admin/preview`（tpl.view），`/api/v1/preview` 仍返回 501，消息指向新地址；ADR 采纳后再删掉它、改设计书和 contracts.md。

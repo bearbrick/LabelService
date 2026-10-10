@@ -1,6 +1,6 @@
 # 监控
 
-标签服务在 `GET /metrics` 输出 Prometheus 文本格式（ADR 0009），这里是抓取配置、告警规则和 Grafana 仪表盘的样例。
+标签服务在 `GET /metrics` 输出 Prometheus 文本格式（ADR 0009），这里是抓取配置、告警规则和 Grafana 仪表盘的样例。监控平台已定为随服务自建 Prometheus + Grafana（2026-10-11），部署时直接从这些文件开始；告警发到哪个群还没定，`alerts.yml` 只有规则，没配通知渠道。
 
 | 文件 | 用途 |
 | --- | --- |
