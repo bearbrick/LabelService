@@ -7,15 +7,14 @@ namespace LabelService.Rendering.Output;
 /// PNG：一份文档只含一张标签、一份。批量 PNG 由服务端逐张渲染后打包 ZIP。
 /// </summary>
 /// <remarks>
-/// 用最低的 zlib 压缩等级、不做行过滤，以体积换速度（单张预算见 docs/performance.md）。
-/// mono 为 true 时按 <see cref="Monochrome"/> 转成纯黑白（和 ZPL 同一个函数）。
+/// 编码见 <see cref="PngWriter"/>：没有彩色时输出 8 位灰度，有彩色时输出 RGB；mono 为 true 时输出 1 位黑白（和 ZPL 同一个阈值）。
 /// </remarks>
 internal sealed class PngOutputDocument(int widthDots, int heightDots, int dpi, bool mono)
     : OutputDocument(widthDots, heightDots, dpi)
 {
     private SKBitmap? bitmap;
     private SKCanvas? canvas;
-    private SKData? encoded;
+    private byte[]? encoded;
 
     public override LabelFormat Format => LabelFormat.Png;
 
@@ -50,13 +49,7 @@ internal sealed class PngOutputDocument(int widthDots, int heightDots, int dpi, 
         }
 
         canvas.Flush();
-        if (Mono)
-        {
-            Monochrome.Apply(bitmap);
-        }
-
-        using var pixmap = bitmap.PeekPixels();
-        encoded = pixmap.Encode(new SKPngEncoderOptions(SKPngEncoderFilterFlags.NoFilters, 1));
+        encoded = PngWriter.Encode(bitmap, Mono);
     }
 
     public override void WriteTo(Stream output)
@@ -66,12 +59,11 @@ internal sealed class PngOutputDocument(int widthDots, int heightDots, int dpi, 
             throw new InvalidOperationException("还没有完成任何标签。");
         }
 
-        encoded.SaveTo(output);
+        output.Write(encoded);
     }
 
     public override void Dispose()
     {
-        encoded?.Dispose();
         canvas?.Dispose();
         bitmap?.Dispose();
     }

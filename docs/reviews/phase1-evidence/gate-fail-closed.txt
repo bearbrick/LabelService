@@ -1,0 +1,21 @@
+# 门禁 fail-closed 验证（2026-10-10，T-021）
+## --self-test
+PASS 完整运行没有问题
+PASS 构建失败、0 项执行时不通过
+PASS 什么都没发现时不通过
+PASS 有一项没跑出结果时不通过
+PASS 跑全部时基线的项缺席不通过
+PASS 带过滤时只要求同一方法的基线项
+PASS 带过滤时同一方法缺参数组合不通过
+PASS 更新基线时 0 项执行也不通过
+## --gate --filter *NoSuchBenchmark*（exit 3）
+发现 0 项基准，跑出结果 0 项
+门禁不通过：没有发现任何基准（--filter 写错了，或者程序集里没有基准）
+基准门禁不通过：运行不完整
+## MSBuildSDKsPath 指向不存在的目录，模拟自动构建失败（exit 3）
+Run time: 00:00:00 (0 sec), executed benchmarks: 0
+Global total time: 00:00:00 (0.84 sec), executed benchmarks: 0
+发现 4 项基准，跑出结果 0 项
+门禁不通过：4 项基准没跑出结果（构建或运行失败）：SheetBenchmarks.A4Sheet24(Format=Pdf, ShareStatic=False)、SheetBenchmarks.A4Sheet24(Format=Pdf, ShareStatic=True)、SheetBenchmarks.A4Sheet24(Format=Png, ShareStatic=False)、SheetBenchmarks.A4Sheet24(Format=Png, ShareStatic=True)
+门禁不通过：基线里的 2 项这次没有结果：SheetBenchmarks.A4Sheet24(Format=Pdf, ShareStatic=False)、SheetBenchmarks.A4Sheet24(Format=Pdf, ShareStatic=True)
+基准门禁不通过：运行不完整

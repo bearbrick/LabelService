@@ -15,7 +15,7 @@
 | `label-log.db`（及 `-wal`、`-shm`） | 调用日志、操作日志，保留 180 天 | 删了只丢日志 |
 | `assets/` | 上传的图片素材 | 不能 |
 | `admin-signing.key` | 管理后台 JWT 签名密钥（没配置 `LabelService:Admin:SigningKey` 时自动生成） | 删了所有人要重新登录 |
-| `backups/` | 每日备份快照 | 可以按需清理 |
+| `backups/` | 每日备份快照；升级数据库前的快照 `label-before-upgrade-*.db` | 可以按需清理（升级确认没问题后再删升级前的快照） |
 
 ## 常用配置
 
@@ -80,7 +80,7 @@ Invoke-WebRequest http://localhost:8080/health/ready -UseBasicParsing
 
 - 服务名是 `LabelService`（程序里 `UseWindowsService` 用的名字）。日志写到 Windows 事件查看器的“应用程序”日志。
 - 也可以在 `D:\LabelService\app\appsettings.json` 里写配置，不用机器级环境变量。
-- 升级：`Stop-Service LabelService`，覆盖 `app` 目录（不要动 `data`），`Start-Service LabelService`。数据库迁移在启动时自动执行。
+- 升级：`Stop-Service LabelService`，覆盖 `app` 目录（不要动 `data`），`Start-Service LabelService`。数据库迁移在启动时自动执行：有待执行的迁移时先把库快照到 `data/backups/label-before-upgrade-时间.db`（日志库同理）；迁移或数据转换中途失败时自动用这份快照恢复，服务不启动，启动日志写明原因和快照路径，排除原因后再启动会重新升级。T-014 以前的旧库（模板分类、调用方允许的模板编码）在升级时换算成业务分组，授权不变（T-021）。不要用 `dotnet ef database update` 升级旧库：它不备份，也不做这一步换算。
 
 ## 前端（设计器和管理后台）
 

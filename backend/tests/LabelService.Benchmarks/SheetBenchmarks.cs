@@ -14,7 +14,7 @@ namespace LabelService.Benchmarks;
 /// <summary>
 /// 拼版（T-018）：A4 一页 24 张 70×37 mm 的标签（3 列 × 8 行，每张 12 个元素、箱号各不相同），300 dpi。
 /// 预算：PDF 每页 P95 ≤ 250 ms（ADR 0005）。<see cref="ShareStatic"/> 对比“固定元素只排版一次”的效果。
-/// 只测 PDF：拼版 PNG 的时间几乎都花在 A4 整页的 PNG 编码上（和 A4 唛头 PNG 一样，见 TemplateBenchmarks），放进门禁只会让机器发热、拖慢后面的基准。
+/// PDF、PNG 都测（门禁要覆盖两种格式）；PNG 的时间主要花在 A4 整页的 PNG 编码上。
 /// </summary>
 [MemoryDiagnoser]
 public class SheetBenchmarks
@@ -29,7 +29,7 @@ public class SheetBenchmarks
     /// <summary>
     /// 输出格式。
     /// </summary>
-    [Params(LabelFormat.Pdf)]
+    [Params(LabelFormat.Pdf, LabelFormat.Png)]
     public LabelFormat Format
     {
         get; set;

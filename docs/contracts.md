@@ -109,7 +109,7 @@
 - `icon.icon` 是图标库路径（如 `gb191/fragile`），图标拉伸画满元素框，`color` 着色（默认黑色，单色着色）；图标不存在返回 `IMAGE_INVALID`。
 ZPL：整张标签栅格化成黑白位图，每张标签一个 `^XA … ^XZ`，`^PW`、`^LL` 是点数，份数用 `^PQ`，位图用 `^GFA` 加 ZPL 自带的 ASCII 压缩。`mono: true` 时 PNG 也输出纯黑白（文字、线条按亮度阈值 128，图片用抖动），和 ZPL 打出来的一致。
 
-PDF：矢量输出，一张标签每份一页；页面尺寸是模板的 mm 尺寸，按输出 DPI 对齐到打印点（误差小于半个点）；字体以 Type3 方式嵌入，文字可以选中、搜索。已知限制：少数汉字和康熙部首共用字形（如“日”），复制出来是部首字符，打印、显示不受影响。
+PDF：矢量输出，一张标签每份一页；页面尺寸是模板的 mm 尺寸，按输出 DPI 对齐到打印点（误差小于半个点）；字体以 Type3 方式嵌入，文字可以选中、搜索。思源 / Noto 里少数汉字和康熙部首共用字形（如“日”和 ⽇ U+2F47），服务端加载字体时去掉部首的 cmap 映射、文本里的部首字符按对应汉字显示，复制、搜索出来是正确的汉字（T-021，`Fonts/RadicalCmap.cs`）。
 
 - SVG（图标、素材）加载前会清洗：禁止 DTD，去掉脚本、样式表、foreignObject、动画和 on* 事件属性，链接只保留文档内引用和 `data:image/` 内嵌图片，不会访问外部地址。
 
@@ -207,7 +207,7 @@ PDF：矢量输出，一张标签每份一页；页面尺寸是模板的 mm 尺�
 
 ### Server-Timing
 
-格式：`auth;dur=0.3, tpl;dur=0.1, validate;dur=0.6, layout;dur=4.2, draw;dur=18.5, encode;dur=21.7, total;dur=46.1`。毫秒保留 1 位小数，已知阶段按 `auth`、`tpl`、`validate`、`layout`、`draw`、`encode`、`total` 的顺序输出，同名阶段累加（批量逐张累加），失败时只有走到的阶段。
+格式：`auth;dur=0.3, tpl;dur=0.1, validate;dur=0.6, layout;dur=4.2, draw;dur=18.5, encode;dur=21.7, total;dur=46.1`。毫秒保留 1 位小数，已知阶段按 `auth`、`tpl`、`validate`、`layout`、`draw`、`encode`、`total` 的顺序输出，同名阶段累加（批量逐张累加），失败时只有走到的阶段。`total` 是到写响应头为止的耗时（响应头先于响应体发出），不含写响应体；服务端的调用日志和指标按写完最后一个字节计时（见 docs/performance.md“计时口径”）。
 
 ### 警告码
 

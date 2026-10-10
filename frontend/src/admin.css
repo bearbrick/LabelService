@@ -308,6 +308,8 @@ a { color: var(--blue); text-decoration: none; }
 
 .table-meta .mono { font-size: 12px; color: #4b5870; }
 
+.table-meta .layouts-meta .link { margin-left: 9px; font-size: 12px; }
+
 .tabs { display: flex; gap: 24px; border-bottom: 1px solid var(--line); padding: 0 30px; height: 42px; flex: none; white-space: nowrap; overflow-x: auto; }
 
 .tabs button { border: 0; border-radius: 0; border-bottom: 3px solid transparent; background: transparent; padding: 0 3px 9px; color: #788398; font-size: 13px; gap: 7px; display: inline-flex; align-items: center; cursor: pointer; align-self: flex-end; }

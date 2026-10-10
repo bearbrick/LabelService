@@ -3,7 +3,7 @@ using SkiaSharp;
 namespace LabelService.Rendering.Output;
 
 /// <summary>
-/// 黑白化：PNG 的 mono 和 ZPL 共用。
+/// 黑白化的阈值：PNG 的 mono（<see cref="PngWriter"/>）和 ZPL 共用。
 /// </summary>
 /// <remarks>
 /// 黑白输出时绘制器已经按黑白画（文字、线条不抗锯齿，图片用 Floyd–Steinberg 抖动），这里只按亮度阈值把剩下的颜色归成黑或白：
@@ -48,26 +48,5 @@ internal static class Monochrome
         return packed;
     }
 
-    /// <summary>
-    /// 把 RGBA 位图原地转成纯黑白（PNG 的 mono）。
-    /// </summary>
-    public static void Apply(SKBitmap bitmap)
-    {
-        var pixels = bitmap.GetPixelSpan();
-        for (var offset = 0; offset < pixels.Length; offset += 4)
-        {
-            var value = IsBlack(pixels[offset], pixels[offset + 1], pixels[offset + 2]) ? (byte)0 : (byte)255;
-            pixels[offset] = value;
-            pixels[offset + 1] = value;
-            pixels[offset + 2] = value;
-            pixels[offset + 3] = 255;
-        }
-
-        bitmap.NotifyPixelsChanged();
-    }
-
-    /// <summary>
-    /// 按 ITU-R BT.601 亮度判断黑白（白底不透明位图）。
-    /// </summary>
-    private static bool IsBlack(byte red, byte green, byte blue) => (299 * red + 587 * green + 114 * blue) / 1000 < Threshold;
+    internal static bool IsBlack(byte red, byte green, byte blue) => (299 * red + 587 * green + 114 * blue) / 1000 < Threshold;
 }

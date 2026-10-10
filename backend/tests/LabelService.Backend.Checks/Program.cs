@@ -15,6 +15,7 @@ internal static class Program
         BindingChecks.Run(Check);
         ValidationChecks.Run(backendRoot, Check);
         RenderChecks.Run(backendRoot, Check);
+        PngChecks.Run(backendRoot, Check);
         TextChecks.Run(backendRoot, Check);
         BarcodeChecks.Run(backendRoot, Check);
         QrCodeChecks.Run(backendRoot, Check);
@@ -24,8 +25,10 @@ internal static class Program
         LayoutRenderChecks.Run(backendRoot, Check);
         await ServerChecks.RunAsync(backendRoot, Check);
         await StorageChecks.RunAsync(backendRoot, Check);
+        await UpgradeChecks.RunAsync(backendRoot, Check);
         await BatchChecks.RunAsync(backendRoot, Check);
         await LayoutServerChecks.RunAsync(backendRoot, Check);
+        await TimingChecks.RunAsync(backendRoot, Check);
         await ClientLogChecks.RunAsync(backendRoot, Check);
         await AdminChecks.RunAsync(backendRoot, Check);
         await HostingChecks.RunAsync(backendRoot, Check);
