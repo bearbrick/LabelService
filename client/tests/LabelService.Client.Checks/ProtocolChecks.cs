@@ -7,6 +7,10 @@ namespace LabelService.Client.Checks;
 /// </summary>
 internal static class ProtocolChecks
 {
+    /// <summary>
+    /// 运行协议解析的检查。
+    /// </summary>
+    /// <param name="check">记录检查结果。</param>
     public static void Run(Action<string, bool> check)
     {
         // docs/contracts.md 里的示例原文。
