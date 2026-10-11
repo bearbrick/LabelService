@@ -12,6 +12,12 @@ namespace LabelService.Backend.Checks;
 /// </summary>
 internal static class ServerChecks
 {
+    /// <summary>
+    /// 运行开放接口的全部检查，结束后删除临时数据目录。
+    /// </summary>
+    /// <param name="backendRoot">backend 目录。</param>
+    /// <param name="check">记录检查结果。</param>
+    /// <returns>检查做完时完成。</returns>
     public static async Task RunAsync(string backendRoot, Action<string, bool> check)
     {
         var dataDirectory = TempDataDirectory.Create();
@@ -25,6 +31,13 @@ internal static class ServerChecks
         }
     }
 
+    /// <summary>
+    /// 启动服务并逐项检查开放接口：健康检查、单张生成和响应头、鉴权、请求错误码、字段定义。
+    /// </summary>
+    /// <param name="backendRoot">backend 目录。</param>
+    /// <param name="dataDirectory">临时数据目录。</param>
+    /// <param name="check">记录检查结果。</param>
+    /// <returns>检查做完时完成。</returns>
     private static async Task RunAsync(string backendRoot, string dataDirectory, Action<string, bool> check)
     {
         await using var factory = new ServerFactory(backendRoot, dataDirectory);
@@ -69,6 +82,13 @@ internal static class ServerChecks
 
     }
 
+    /// <summary>
+    /// 调单张生成接口。
+    /// </summary>
+    /// <param name="http">调用服务的客户端。</param>
+    /// <param name="json">请求体。</param>
+    /// <param name="apiKey">API Key，默认开发 Key；null 表示不带 Key。</param>
+    /// <returns>响应。</returns>
     internal static async Task<HttpResponseMessage> Post(HttpClient http, string json, string? apiKey = Fixtures.DevApiKey)
     {
         using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/render") { Content = new StringContent(json, Encoding.UTF8, "application/json") };
@@ -80,12 +100,23 @@ internal static class ServerChecks
         return await http.SendAsync(request);
     }
 
+    /// <summary>
+    /// 响应的状态码和错误响应里的错误码。
+    /// </summary>
+    /// <param name="response">响应。</param>
+    /// <returns>状态码和错误码（没有错误体时为 null）。</returns>
     private static async Task<(int Status, string? Code)> Code(HttpResponseMessage response)
     {
         var body = await response.Content.ReadFromJsonAsync<ErrorResponse>(LabelJson.Options);
         return ((int)response.StatusCode, body?.Code);
     }
 
+    /// <summary>
+    /// 取响应头的值，多个值用逗号连起来。
+    /// </summary>
+    /// <param name="response">响应。</param>
+    /// <param name="name">响应头名称。</param>
+    /// <returns>响应头的值；没有这个头时为 null。</returns>
     internal static string? Header(HttpResponseMessage response, string name) =>
         response.Headers.TryGetValues(name, out var values) ? string.Join(",", values) : null;
 }

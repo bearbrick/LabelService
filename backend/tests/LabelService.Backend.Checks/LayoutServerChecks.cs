@@ -12,13 +12,22 @@ using SkiaSharp;
 namespace LabelService.Backend.Checks;
 
 /// <summary>
-/// 拼版的接口（T-018）：开放接口的 layout、startSlot、X-Page-Count、错误码、张数上限、调用日志；
+/// 拼版的接口：开放接口的 layout、startSlot、X-Page-Count、错误码、张数上限、调用日志；
 /// 管理接口的版式增删改、检查、启用停用、预览和打印校准测试页。
 /// </summary>
 internal static partial class LayoutServerChecks
 {
+    /// <summary>
+    /// 示例版式的编码。
+    /// </summary>
     private const string Layout = "A4_100x60_2x4";
 
+    /// <summary>
+    /// 开放接口的拼版检查：用临时数据目录启动服务，单张、批量、错误码和调用日志。
+    /// </summary>
+    /// <param name="backendRoot">backend 目录。</param>
+    /// <param name="check">记录检查结果。</param>
+    /// <returns>检查做完时完成。</returns>
     public static async Task RunAsync(string backendRoot, Action<string, bool> check)
     {
         var dataDirectory = TempDataDirectory.Create();
@@ -51,6 +60,10 @@ internal static partial class LayoutServerChecks
     /// <summary>
     /// 管理接口的版式检查，用 <see cref="AdminChecks"/> 登录好的管理员。
     /// </summary>
+    /// <param name="http">调用服务的客户端。</param>
+    /// <param name="admin">已登录并改过密码的 admin 会话。</param>
+    /// <param name="check">记录检查结果。</param>
+    /// <returns>检查做完时完成。</returns>
     public static async Task RunAdminAsync(HttpClient http, AdminSession admin, Action<string, bool> check)
     {
         var list = await admin.JsonAsync(HttpMethod.Get, "/api/admin/layouts");
@@ -128,6 +141,13 @@ internal static partial class LayoutServerChecks
             && (int)(await admin.GetAsync("/api/admin/layouts/A4_TWO")).StatusCode == 404);
     }
 
+    /// <summary>
+    /// 拼版输出：单张多份、批量加起始格子的页数和张数，PNG 单张多份、批量 PNG 打包 ZIP，不传 layout 时和原来一样。
+    /// </summary>
+    /// <param name="http">调用服务的客户端。</param>
+    /// <param name="data">示例箱标的数据（JSON 对象文本）。</param>
+    /// <param name="check">记录检查结果。</param>
+    /// <returns>检查做完时完成。</returns>
     private static async Task CheckSheetsAsync(HttpClient http, string data, Action<string, bool> check)
     {
         var single = await ServerChecks.Post(http, Single("pdf", data, copies: 8));
@@ -153,6 +173,13 @@ internal static partial class LayoutServerChecks
         check("不传 layout 时和原来一样：没有 X-Page-Count 头", plain.IsSuccessStatusCode && ServerChecks.Header(plain, HeaderNames.PageCount) is null);
     }
 
+    /// <summary>
+    /// 拼版的错误码：ZPL 不能拼版、版式不存在、起始格子越界、格子尺寸和模板不符、张数超过上限。
+    /// </summary>
+    /// <param name="http">调用服务的客户端。</param>
+    /// <param name="data">示例箱标的数据（JSON 对象文本）。</param>
+    /// <param name="check">记录检查结果。</param>
+    /// <returns>检查做完时完成。</returns>
     private static async Task CheckErrorsAsync(HttpClient http, string data, Action<string, bool> check)
     {
         check("ZPL 加版式返回 400 FORMAT_INVALID", await Code(await ServerChecks.Post(http, Single("zpl", data))) == (400, ErrorCodes.FormatInvalid));
@@ -168,6 +195,12 @@ internal static partial class LayoutServerChecks
         check("拼版的张数上限按标签张数算：6 条 × 100 份返回 413 BATCH_TOO_LARGE", await Code(tooMany) == (413, ErrorCodes.BatchTooLarge));
     }
 
+    /// <summary>
+    /// 新建版式的请求体：A4 上两个 100×60 的格子。
+    /// </summary>
+    /// <param name="code">版式编码。</param>
+    /// <param name="secondX">第二个格子的横坐标，mm（改小可以造出重叠的格子）。</param>
+    /// <returns>版式 JSON（匿名对象）。</returns>
     private static object NewLayout(string code, double secondX) => new
     {
         code,
@@ -191,18 +224,42 @@ internal static partial class LayoutServerChecks
         cutLines = true,
     };
 
+    /// <summary>
+    /// 单张生成的请求体。
+    /// </summary>
+    /// <param name="format">输出格式。</param>
+    /// <param name="data">字段数据（JSON 对象文本）。</param>
+    /// <param name="copies">份数。</param>
+    /// <param name="layout">版式编码；null 表示不拼版。</param>
+    /// <param name="startSlot">起始格子；null 表示不传。</param>
+    /// <returns>请求体 JSON。</returns>
     private static string Single(string format, string data, int copies = 1, string? layout = Layout, int? startSlot = null)
     {
         var extra = (layout is null ? "" : $$""","layout":"{{layout}}" """.TrimEnd()) + (startSlot is null ? "" : $$""","startSlot":{{startSlot}}""");
         return $$"""{"templateCode":"BOX_LABEL","format":"{{format}}","copies":{{copies}}{{extra}},"data":""" + data + "}";
     }
 
+    /// <summary>
+    /// 批量生成的请求体（拼版）：公共字段用示例数据，每条只改箱号。
+    /// </summary>
+    /// <param name="format">输出格式。</param>
+    /// <param name="data">公共字段（JSON 对象文本）。</param>
+    /// <param name="count">条数。</param>
+    /// <param name="extra">额外的属性，如 ,"startSlot":3。</param>
+    /// <param name="copies">每条的份数。</param>
+    /// <returns>请求体 JSON。</returns>
     private static string Batch(string format, string data, int count, string extra, int copies = 1)
     {
         var items = string.Join(",", Enumerable.Range(1, count).Select(i => $$"""{"data":{"boxNo":"C26100800{{i:D2}}"},"copies":{{copies}}""" + "}"));
         return $$"""{"templateCode":"BOX_LABEL","format":"{{format}}","layout":"{{Layout}}"{{extra}},"common":{{data}},"items":[{{items}}]}""";
     }
 
+    /// <summary>
+    /// 用开发 Key 调批量接口。
+    /// </summary>
+    /// <param name="http">调用服务的客户端。</param>
+    /// <param name="json">请求体。</param>
+    /// <returns>响应。</returns>
     private static async Task<HttpResponseMessage> PostBatch(HttpClient http, string json)
     {
         using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/render/batch") { Content = new StringContent(json, Encoding.UTF8, "application/json") };
@@ -210,11 +267,25 @@ internal static partial class LayoutServerChecks
         return await http.SendAsync(request);
     }
 
+    /// <summary>
+    /// 响应的状态码和错误码。
+    /// </summary>
+    /// <param name="response">响应。</param>
+    /// <returns>状态码和错误码（成功时错误码为 null）。</returns>
     private static async Task<(int Status, string? Code)> Code(HttpResponseMessage response) => ((int)response.StatusCode, await ReadCode(response));
 
+    /// <summary>
+    /// 读开放接口错误响应里的错误码。
+    /// </summary>
+    /// <param name="response">响应。</param>
+    /// <returns>错误码；成功时为 null。</returns>
     private static async Task<string?> ReadCode(HttpResponseMessage response) =>
         response.IsSuccessStatusCode ? null : (await response.Content.ReadFromJsonAsync<ErrorResponse>(LabelJson.Options))?.Code;
 
+    /// <summary>
+    /// PDF 里的页对象（/Type /Page，不含 /Pages）。
+    /// </summary>
+    /// <returns>编译好的正则。</returns>
     [GeneratedRegex(@"/Type\s*/Page(?![s\w])")]
     private static partial Regex PdfPage();
 }

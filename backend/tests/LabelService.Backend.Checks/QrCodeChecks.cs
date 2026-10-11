@@ -11,10 +11,15 @@ using ZXing.Common;
 namespace LabelService.Backend.Checks;
 
 /// <summary>
-/// 二维码（T-003）：QR、DataMatrix、PDF417 渲染后用 ZXing.Net 解码核对（含中文），ecLevel、quietZone、居中、模块对齐打印点、错误码。
+/// 二维码：QR、DataMatrix、PDF417 渲染后用 ZXing.Net 解码核对（含中文），ecLevel、quietZone、居中、模块对齐打印点、错误码。
 /// </summary>
 internal static class QrCodeChecks
 {
+    /// <summary>
+    /// 运行二维码的全部检查：三种码制渲染后解码核对内容。
+    /// </summary>
+    /// <param name="backendRoot">backend 目录。</param>
+    /// <param name="check">记录检查结果。</param>
     public static void Run(string backendRoot, Action<string, bool> check)
     {
         var renderer = Fixtures.Renderer(backendRoot);
@@ -73,6 +78,11 @@ internal static class QrCodeChecks
         CheckErrors(renderer, check);
     }
 
+    /// <summary>
+    /// 几何：模块大小按框和模块数取整、在框里居中、对齐打印点（含旋转 90°），quietZone 留白。
+    /// </summary>
+    /// <param name="renderer">渲染引擎。</param>
+    /// <param name="check">记录检查结果。</param>
     private static void CheckGeometry(LabelRenderer renderer, Action<string, bool> check)
     {
         const string Value = "3100-0123|20261008-A|C2610080001";
@@ -105,6 +115,11 @@ internal static class QrCodeChecks
         }
     }
 
+    /// <summary>
+    /// 错误码：模块小于 2 点时 BARCODE_TOO_DENSE，内容超出容量、内容为空时 BARCODE_INVALID。
+    /// </summary>
+    /// <param name="renderer">渲染引擎。</param>
+    /// <param name="check">记录检查结果。</param>
     private static void CheckErrors(LabelRenderer renderer, Action<string, bool> check)
     {
         string? Error(QrCodeElement element)
@@ -125,6 +140,13 @@ internal static class QrCodeChecks
         check("内容为空返回 BARCODE_INVALID", Error(new QrCodeElement { Id = "e", X = 5, Y = 5, Width = 20, Height = 20, Value = "" }) == ErrorCodes.BarcodeInvalid);
     }
 
+    /// <summary>
+    /// 渲染一张 PNG 的任务。
+    /// </summary>
+    /// <param name="template">模板。</param>
+    /// <param name="dpi">分辨率。</param>
+    /// <param name="values">字段值；没有时为空。</param>
+    /// <returns>渲染任务。</returns>
     private static RenderJob Job(LabelTemplate template, int dpi, IReadOnlyDictionary<string, object?>? values = null) =>
         new()
         {
@@ -134,6 +156,11 @@ internal static class QrCodeChecks
             Dpi = dpi
         };
 
+    /// <summary>
+    /// 只有一个元素的 90×60 模板。
+    /// </summary>
+    /// <param name="element">元素。</param>
+    /// <returns>模板。</returns>
     private static LabelTemplate Single(LabelElement element) =>
         new()
         {
@@ -142,11 +169,18 @@ internal static class QrCodeChecks
             Elements = [element]
         };
 
+    /// <summary>
+    /// 把渲染结果解码成位图。
+    /// </summary>
+    /// <param name="result">PNG 渲染结果。</param>
+    /// <returns>位图，用完释放。</returns>
     private static SKBitmap Bitmap(RenderResult result) => SKBitmap.Decode(result.Content.ToArray());
 
     /// <summary>
     /// 有墨迹的最小外接矩形（像素）。
     /// </summary>
+    /// <param name="bitmap">位图。</param>
+    /// <returns>外接矩形；没有墨迹时左上角大于右下角。</returns>
     private static SKRectI Ink(SKBitmap bitmap)
     {
         int left = bitmap.Width, top = bitmap.Height, right = 0, bottom = 0;
@@ -167,6 +201,12 @@ internal static class QrCodeChecks
         return new SKRectI(left, top, right, bottom);
     }
 
+    /// <summary>
+    /// 用 ZXing.Net 解码位图里的码（只认指定的码制）。
+    /// </summary>
+    /// <param name="bitmap">位图。</param>
+    /// <param name="format">码制。</param>
+    /// <returns>解出的内容；解不出时为 null。</returns>
     private static string? Decode(SKBitmap bitmap, BarcodeFormat format)
     {
         var gray = new byte[bitmap.Width * bitmap.Height];

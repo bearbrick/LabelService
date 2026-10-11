@@ -10,6 +10,11 @@ namespace LabelService.Backend.Checks;
 /// </summary>
 internal static class ValidationChecks
 {
+    /// <summary>
+    /// 运行字段校验的全部检查。
+    /// </summary>
+    /// <param name="root">backend 目录。</param>
+    /// <param name="check">记录检查结果。</param>
     public static void Run(string root, Action<string, bool> check)
     {
         var fields = Fixtures.LoadTemplate(root).Fields;

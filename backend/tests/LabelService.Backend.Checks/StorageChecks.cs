@@ -19,13 +19,22 @@ using Microsoft.Extensions.Options;
 namespace LabelService.Backend.Checks;
 
 /// <summary>
-/// 模板存储（T-008）：SQLite 建库和迁移、草稿和发布、发布后不可修改、开放接口不访问数据库、重启后从库加载。
+/// 模板存储：SQLite 建库和迁移、草稿和发布、发布后不可修改、开放接口不访问数据库、重启后从库加载。
 /// 用临时数据目录，跑完删除。
 /// </summary>
 internal static class StorageChecks
 {
+    /// <summary>
+    /// 示例箱标的模板编码。
+    /// </summary>
     private const string BoxLabel = "BOX_LABEL";
 
+    /// <summary>
+    /// 运行模板存储的全部检查：用临时数据目录启动服务，再重启一次、换成文件来源启动一次。
+    /// </summary>
+    /// <param name="backendRoot">backend 目录。</param>
+    /// <param name="check">记录检查结果。</param>
+    /// <returns>检查做完时完成。</returns>
     public static async Task RunAsync(string backendRoot, Action<string, bool> check)
     {
         var dataDirectory = TempDataDirectory.Create();
@@ -64,6 +73,13 @@ internal static class StorageChecks
         check("检查程序的临时数据目录已删除", !Directory.Exists(dataDirectory));
     }
 
+    /// <summary>
+    /// 建库和迁移：库文件、全部迁移已执行、实体和迁移一致、连接 PRAGMA、默认画布预设。
+    /// </summary>
+    /// <param name="services">服务的根容器。</param>
+    /// <param name="dataDirectory">临时数据目录。</param>
+    /// <param name="check">记录检查结果。</param>
+    /// <returns>检查做完时完成。</returns>
     private static async Task CheckDatabaseAsync(IServiceProvider services, string dataDirectory, Action<string, bool> check)
     {
         check("启动时在数据目录自动建库 label.db", File.Exists(Path.Combine(dataDirectory, DataOptions.DatabaseFileName)));
@@ -86,6 +102,14 @@ internal static class StorageChecks
         check("建库时写入默认画布预设（和设计器一致）", presets.Count == 8 && presets[0] is { Name: "A4", WidthMm: 210, HeightMm: 297 });
     }
 
+    /// <summary>
+    /// 草稿和发布：示例模板导入为版本 1，保存草稿不影响开放接口，发布后立即生效，回滚和放弃草稿。
+    /// </summary>
+    /// <param name="services">服务的根容器。</param>
+    /// <param name="http">调用服务的客户端。</param>
+    /// <param name="backendRoot">backend 目录。</param>
+    /// <param name="check">记录检查结果。</param>
+    /// <returns>检查做完时完成。</returns>
     private static async Task CheckDraftAndPublishAsync(IServiceProvider services, HttpClient http, string backendRoot, Action<string, bool> check)
     {
         var repository = new ScopedTemplateManager(services);
@@ -117,6 +141,14 @@ internal static class StorageChecks
         check("没有草稿时不能发布", await CatchAsync(() => repository.PublishAsync(BoxLabel, "checks")) is not null);
     }
 
+    /// <summary>
+    /// 发布前检查：有问题时列出全部问题并保持旧版本，编码不合法不能保存，新模板只有草稿时开放接口 404。
+    /// </summary>
+    /// <param name="services">服务的根容器。</param>
+    /// <param name="http">调用服务的客户端。</param>
+    /// <param name="backendRoot">backend 目录。</param>
+    /// <param name="check">记录检查结果。</param>
+    /// <returns>检查做完时完成。</returns>
     private static async Task CheckPublishRulesAsync(IServiceProvider services, HttpClient http, string backendRoot, Action<string, bool> check)
     {
         var repository = new ScopedTemplateManager(services);
@@ -154,6 +186,13 @@ internal static class StorageChecks
         check("新模板发布后立即能调用", ok.IsSuccessStatusCode && ServerChecks.Header(ok, HeaderNames.TemplateVersion) == "1");
     }
 
+    /// <summary>
+    /// 已发布版本不能改、不能删；并发保存时后到的失败。
+    /// </summary>
+    /// <param name="services">服务的根容器。</param>
+    /// <param name="backendRoot">backend 目录。</param>
+    /// <param name="check">记录检查结果。</param>
+    /// <returns>检查做完时完成。</returns>
     private static async Task CheckImmutableAsync(IServiceProvider services, string backendRoot, Action<string, bool> check)
     {
         var contexts = services.GetRequiredService<IDbContextFactory<LabelDbContext>>();
@@ -184,6 +223,13 @@ internal static class StorageChecks
         check("并发：草稿已被别人发布时，用旧数据保存会失败", await ThrowsAsync<DbUpdateConcurrencyException>(() => b.SaveChangesAsync()));
     }
 
+    /// <summary>
+    /// 热路径：开放接口生成和取字段定义时不执行任何主库命令。
+    /// </summary>
+    /// <param name="services">服务的根容器。</param>
+    /// <param name="http">调用服务的客户端。</param>
+    /// <param name="check">记录检查结果。</param>
+    /// <returns>检查做完时完成。</returns>
     private static async Task CheckHotPathAsync(IServiceProvider services, HttpClient http, Action<string, bool> check)
     {
         using var counter = new CommandCounter();
@@ -201,6 +247,13 @@ internal static class StorageChecks
         check($"开放接口取模板不访问数据库（生成、字段定义各调用多次，数据库命令 {duringRequests} 条）", duringRequests == 0 && counter.Count > 0);
     }
 
+    /// <summary>
+    /// 调开放接口生成一张，返回用的模板版本。
+    /// </summary>
+    /// <param name="http">调用服务的客户端。</param>
+    /// <param name="code">模板编码。</param>
+    /// <param name="version">指定的版本；null 表示最新。</param>
+    /// <returns>响应头里的版本号；失败时是 “HTTP 状态码”。</returns>
     private static async Task<string?> Version(HttpClient http, string code, int? version = null)
     {
         var versionJson = version is null ? "" : $""","version":{version}""";
@@ -208,12 +261,23 @@ internal static class StorageChecks
         return response.IsSuccessStatusCode ? ServerChecks.Header(response, HeaderNames.TemplateVersion) : $"HTTP {(int)response.StatusCode}";
     }
 
+    /// <summary>
+    /// 数模板有几个草稿版本。
+    /// </summary>
+    /// <param name="services">服务的根容器。</param>
+    /// <param name="code">模板编码。</param>
+    /// <returns>草稿个数。</returns>
     private static async Task<int> CountDraftsAsync(IServiceProvider services, string code)
     {
         await using var db = await services.GetRequiredService<IDbContextFactory<LabelDbContext>>().CreateDbContextAsync();
         return await db.TemplateVersions.CountAsync(item => item.Template!.Code == code && item.Status == TemplateStatuses.Draft);
     }
 
+    /// <summary>
+    /// 执行一个操作，捕获它抛出的 <see cref="UserFriendlyException"/>。
+    /// </summary>
+    /// <param name="action">操作。</param>
+    /// <returns>抛出的异常；没有抛异常时为 null。</returns>
     private static async Task<UserFriendlyException?> CatchAsync(Func<Task> action)
     {
         try
@@ -227,6 +291,12 @@ internal static class StorageChecks
         }
     }
 
+    /// <summary>
+    /// 执行一个操作，看它是否抛出指定类型的异常。
+    /// </summary>
+    /// <typeparam name="TException">期望的异常类型。</typeparam>
+    /// <param name="action">操作。</param>
+    /// <returns>抛出了这种异常时为 true。</returns>
     private static async Task<bool> ThrowsAsync<TException>(Func<Task> action)
         where TException : Exception
     {
@@ -246,13 +316,26 @@ internal static class StorageChecks
     /// </summary>
     private sealed class CommandCounter : IObserver<DiagnosticListener>, IObserver<KeyValuePair<string, object?>>, IDisposable
     {
+        /// <summary>
+        /// 订阅（诊断监听器列表本身，以及 EF Core 的监听器），释放时一起退订。
+        /// </summary>
         private readonly List<IDisposable> subscriptions = [];
+        /// <summary>
+        /// 数到的命令数（原子累加）。
+        /// </summary>
         private int count;
 
+        /// <summary>
+        /// 开始订阅：等 EF Core 的诊断监听器出现时订阅它的事件。
+        /// </summary>
         public CommandCounter() => subscriptions.Add(DiagnosticListener.AllListeners.Subscribe(this));
 
+        /// <summary>
+        /// 到目前为止数到的主库命令数。
+        /// </summary>
         public int Count => Volatile.Read(ref count);
 
+        /// <inheritdoc />
         public void OnNext(DiagnosticListener value)
         {
             if (value.Name == DbLoggerCategory.Name)
@@ -264,6 +347,7 @@ internal static class StorageChecks
             }
         }
 
+        /// <inheritdoc />
         public void OnNext(KeyValuePair<string, object?> value)
         {
             // 只数主库（模板）的命令：调用日志由后台服务写进 label-log.db，不在请求路径上。
@@ -273,14 +357,17 @@ internal static class StorageChecks
             }
         }
 
+        /// <inheritdoc />
         public void OnCompleted()
         {
         }
 
+        /// <inheritdoc />
         public void OnError(Exception error)
         {
         }
 
+        /// <inheritdoc />
         public void Dispose()
         {
             lock (subscriptions)

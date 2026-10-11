@@ -7,6 +7,11 @@ namespace LabelService.Benchmarks;
 /// </summary>
 internal static class Program
 {
+    /// <summary>
+    /// 按参数选择门禁、门禁自检或交给 BenchmarkDotNet。
+    /// </summary>
+    /// <param name="args">命令行参数。</param>
+    /// <returns>退出码。</returns>
     private static int Main(string[] args)
     {
         if (args.Contains("--self-test"))

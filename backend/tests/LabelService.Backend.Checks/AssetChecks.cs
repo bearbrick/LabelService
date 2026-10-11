@@ -12,12 +12,20 @@ using SkiaSharp;
 namespace LabelService.Backend.Checks;
 
 /// <summary>
-/// 图片和图标（T-004）：SVG 清洗、图标着色、素材的三种 fit、缩放缓存、字段图片、mono 抖动、错误码。
+/// 图片和图标：SVG 清洗、图标着色、素材的三种 fit、缩放缓存、字段图片、mono 抖动、错误码。
 /// </summary>
 internal static class AssetChecks
 {
+    /// <summary>
+    /// 检查用的分辨率。
+    /// </summary>
     private const int Dpi = 300;
 
+    /// <summary>
+    /// 运行图片和图标的全部检查。
+    /// </summary>
+    /// <param name="backendRoot">backend 目录。</param>
+    /// <param name="check">记录检查结果。</param>
     public static void Run(string backendRoot, Action<string, bool> check)
     {
         CheckSanitizer(check);
@@ -30,6 +38,10 @@ internal static class AssetChecks
         CheckFieldImages(renderer, check);
     }
 
+    /// <summary>
+    /// SVG 清洗：去掉脚本、外部引用、事件属性，拒绝 DTD，保留文档内引用和内嵌图片。
+    /// </summary>
+    /// <param name="check">记录检查结果。</param>
     private static void CheckSanitizer(Action<string, bool> check)
     {
         const string Evil = """
@@ -72,6 +84,12 @@ internal static class AssetChecks
             Rejected("""<!DOCTYPE svg [<!ENTITY x SYSTEM "file:///etc/passwd">]><svg xmlns="http://www.w3.org/2000/svg">&x;</svg>""") && Rejected("<html/>"));
     }
 
+    /// <summary>
+    /// 图标：拉伸画满元素框、着色、黑白输出不抗锯齿，图标不存在时 IMAGE_INVALID。
+    /// </summary>
+    /// <param name="backendRoot">backend 目录。</param>
+    /// <param name="renderer">渲染引擎。</param>
+    /// <param name="check">记录检查结果。</param>
     private static void CheckIcons(string backendRoot, LabelRenderer renderer, Action<string, bool> check)
     {
         var template = Fixtures.LoadTemplate(backendRoot);
@@ -89,6 +107,12 @@ internal static class AssetChecks
         check("图标不存在返回 IMAGE_INVALID", Error(renderer, new IconElement { Id = "i", X = 5, Y = 5, Width = 10, Height = 10, Icon = "gb191/nope" }) == ErrorCodes.ImageInvalid);
     }
 
+    /// <summary>
+    /// 素材图片：三种 fit、缩放缓存（同尺寸只缩放一次）、mono 抖动，素材不存在时 IMAGE_INVALID。
+    /// </summary>
+    /// <param name="renderer">渲染引擎。</param>
+    /// <param name="assets">素材库。</param>
+    /// <param name="check">记录检查结果。</param>
     private static void CheckImages(LabelRenderer renderer, AssetLibrary assets, Action<string, bool> check)
     {
         // 内置 logo 是 240×80（3:1），放进 30×30 的框。
@@ -123,6 +147,11 @@ internal static class AssetChecks
         }
     }
 
+    /// <summary>
+    /// 字段图片：PNG、JPG base64 按 fit 画出，可选字段没传时不画，解码失败、超过 1 MB 时报错。
+    /// </summary>
+    /// <param name="renderer">渲染引擎。</param>
+    /// <param name="check">记录检查结果。</param>
     private static void CheckFieldImages(LabelRenderer renderer, Action<string, bool> check)
     {
         var template = new LabelTemplate
@@ -176,6 +205,10 @@ internal static class AssetChecks
         }
     }
 
+    /// <summary>
+    /// 检查用的条纹图：100×50 像素，从左到右红、绿、蓝、黄四条竖条。
+    /// </summary>
+    /// <returns>PNG 的 base64。</returns>
     private static string Stripes()
     {
         using var bitmap = new SKBitmap(100, 50);
@@ -192,11 +225,26 @@ internal static class AssetChecks
         return Convert.ToBase64String(data.ToArray());
     }
 
+    /// <summary>
+    /// 判断像素是不是接近某个颜色（各分量相差小于 40）。
+    /// </summary>
+    /// <param name="color">目标颜色。</param>
+    /// <returns>判断函数。</returns>
     private static Func<SKColor, bool> Is(SKColor color) =>
         pixel => Math.Abs(pixel.Red - color.Red) < 40 && Math.Abs(pixel.Green - color.Green) < 40 && Math.Abs(pixel.Blue - color.Blue) < 40;
 
+    /// <summary>
+    /// 像素是不是不白（任一分量低于 240）。
+    /// </summary>
+    /// <param name="pixel">像素。</param>
+    /// <returns>不白时为 true。</returns>
     private static bool NotWhite(SKColor pixel) => pixel.Red < 240 || pixel.Green < 240 || pixel.Blue < 240;
 
+    /// <summary>
+    /// 一张 64×64 的纯色 PNG。
+    /// </summary>
+    /// <param name="color">颜色。</param>
+    /// <returns>PNG 的 base64。</returns>
     private static string Png(SKColor color)
     {
         using var bitmap = new SKBitmap(64, 64);
@@ -205,6 +253,12 @@ internal static class AssetChecks
         return Convert.ToBase64String(data.ToArray());
     }
 
+    /// <summary>
+    /// 渲染只有一个元素的模板，返回报的错误码。
+    /// </summary>
+    /// <param name="renderer">渲染引擎。</param>
+    /// <param name="element">元素。</param>
+    /// <returns>错误码；没有报错时为 null。</returns>
     private static string? Error(LabelRenderer renderer, LabelElement element)
     {
         try
@@ -218,6 +272,12 @@ internal static class AssetChecks
         }
     }
 
+    /// <summary>
+    /// 渲染一张 PNG 的任务。
+    /// </summary>
+    /// <param name="template">模板。</param>
+    /// <param name="values">字段值；没有时为空。</param>
+    /// <returns>渲染任务。</returns>
     private static RenderJob Job(LabelTemplate template, IReadOnlyDictionary<string, object?>? values = null) =>
         new()
         {
@@ -227,6 +287,11 @@ internal static class AssetChecks
             Dpi = Dpi
         };
 
+    /// <summary>
+    /// 只有一个元素的 40×40 模板。
+    /// </summary>
+    /// <param name="element">元素。</param>
+    /// <returns>模板。</returns>
     private static LabelTemplate Single(LabelElement element) =>
         new()
         {
@@ -235,12 +300,37 @@ internal static class AssetChecks
             Elements = [element]
         };
 
+    /// <summary>
+    /// 把渲染结果解码成位图。
+    /// </summary>
+    /// <param name="result">PNG 渲染结果。</param>
+    /// <returns>位图，用完释放。</returns>
     private static SKBitmap Bitmap(RenderResult result) => SKBitmap.Decode(result.Content.ToArray());
 
+    /// <summary>
+    /// 像素是不是深色（三个分量都低于 128）。
+    /// </summary>
+    /// <param name="pixel">像素。</param>
+    /// <returns>深色时为 true。</returns>
     private static bool Dark(SKColor pixel) => pixel.Red < 128 && pixel.Green < 128 && pixel.Blue < 128;
 
+    /// <summary>
+    /// 像素是不是红色。
+    /// </summary>
+    /// <param name="pixel">像素。</param>
+    /// <returns>红色时为 true。</returns>
     private static bool Red(SKColor pixel) => pixel.Red > 150 && pixel.Green < 80 && pixel.Blue < 80;
 
+    /// <summary>
+    /// 数一个区域里符合条件的像素。
+    /// </summary>
+    /// <param name="bitmap">位图。</param>
+    /// <param name="xMm">区域左边，mm。</param>
+    /// <param name="yMm">区域上边，mm。</param>
+    /// <param name="widthMm">区域宽度，mm。</param>
+    /// <param name="heightMm">区域高度，mm。</param>
+    /// <param name="match">条件。</param>
+    /// <returns>符合条件的像素个数。</returns>
     private static int Count(SKBitmap bitmap, double xMm, double yMm, double widthMm, double heightMm, Func<SKColor, bool> match)
     {
         int Dot(double mm) => (int)Math.Round(LabelUnits.MmToDots(mm, Dpi));

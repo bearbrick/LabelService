@@ -9,13 +9,18 @@ using SkiaSharp;
 namespace LabelService.Backend.Checks;
 
 /// <summary>
-/// ZPL 输出和黑白化（T-006）：结构（^XA…^XZ、^PW、^LL、^PQ）、ASCII 压缩按 ZPL II 手册解码后和黑白 PNG 逐像素一致、PNG 的 mono。
+/// ZPL 输出和黑白化：结构（^XA…^XZ、^PW、^LL、^PQ）、ASCII 压缩按 ZPL II 手册解码后和黑白 PNG 逐像素一致、PNG 的 mono。
 /// </summary>
 /// <remarks>
 /// 解码器按手册规则独立实现（不调用产品代码的压缩函数），并先用手册里的例子“vMB = 327 个 B”核对计数字母。
 /// </remarks>
 internal static partial class ZplChecks
 {
+    /// <summary>
+    /// 运行 ZPL 输出和黑白化的全部检查。
+    /// </summary>
+    /// <param name="backendRoot">backend 目录。</param>
+    /// <param name="check">记录检查结果。</param>
     public static void Run(string backendRoot, Action<string, bool> check)
     {
         check("ZPL 解码器按手册：vMB 是 327 个 B，G–Y 是 1–19，g–z 是 20–400",
@@ -63,6 +68,8 @@ internal static partial class ZplChecks
     /// <summary>
     /// 把一段计数字母 + 字符展开，用来核对手册里的例子。
     /// </summary>
+    /// <param name="text">压缩后的文本，如 vMB。</param>
+    /// <returns>展开后的文本。</returns>
     private static string Expand(string text)
     {
         var count = 0;
@@ -90,6 +97,10 @@ internal static partial class ZplChecks
     /// <summary>
     /// 按 ZPL II 手册解 ^GFA 的 ASCII 压缩：计数字母、逗号（本行剩余补 0）、感叹号（补 F）、冒号（重复上一行）。
     /// </summary>
+    /// <param name="data">^GFA 的数据部分。</param>
+    /// <param name="total">图形的总字节数。</param>
+    /// <param name="bytesPerRow">每行字节数。</param>
+    /// <returns>解出的位图字节（1 是黑点）。</returns>
     private static byte[] Decode(string data, int total, int bytesPerRow)
     {
         var width = bytesPerRow * 2;
@@ -149,6 +160,10 @@ internal static partial class ZplChecks
         return Enumerable.Range(0, Math.Min(total, text.Length / 2)).Select(i => Convert.ToByte(text.Substring(i * 2, 2), 16)).ToArray();
     }
 
+    /// <summary>
+    /// ZPL 里的 ^GFA 图形指令。
+    /// </summary>
+    /// <returns>编译好的正则，总字节数、每行字节数、数据分别在 total、row、data 组。</returns>
     [GeneratedRegex(@"\^GFA,(?<total>\d+),\d+,(?<row>\d+),(?<data>[^\^]*)\^FS")]
     private static partial Regex Graphic();
 }

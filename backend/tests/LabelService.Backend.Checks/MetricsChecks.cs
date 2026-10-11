@@ -10,17 +10,25 @@ using Microsoft.Extensions.DependencyInjection;
 namespace LabelService.Backend.Checks;
 
 /// <summary>
-/// 监控（T-010）：/metrics 的 Prometheus 文本格式、指标名和设计书一致、维度里没有高基数字段、缓存命中率、运行时和 ASP.NET Core 指标。
+/// 监控：/metrics 的 Prometheus 文本格式、指标名和设计书一致、维度里没有高基数字段、缓存命中率、运行时和 ASP.NET Core 指标。
 /// </summary>
 internal static class MetricsChecks
 {
-    /// <summary>设计书第 9 节列的指标名。</summary>
+    /// <summary>
+    /// 设计书第 9 节列的指标名。
+    /// </summary>
     private static readonly string[] DesignMetrics =
     [
         "label_render_duration_ms", "label_render_stage_ms", "label_requests_total", "labels_generated_total",
         "label_inflight_requests", "label_queue_wait_ms", "label_cache_hit_ratio",
     ];
 
+    /// <summary>
+    /// 运行监控的全部检查：用临时数据目录启动服务，调几次接口后读 /metrics。
+    /// </summary>
+    /// <param name="backendRoot">backend 目录。</param>
+    /// <param name="check">记录检查结果。</param>
+    /// <returns>检查做完时完成。</returns>
     public static async Task RunAsync(string backendRoot, Action<string, bool> check)
     {
         CheckFormat(check);
@@ -66,6 +74,10 @@ internal static class MetricsChecks
         }
     }
 
+    /// <summary>
+    /// 导出格式本身：直方图累计分桶、sum 和 count、标签值转义，其他 Meter 的指标名转换。
+    /// </summary>
+    /// <param name="check">记录检查结果。</param>
     private static void CheckFormat(Action<string, bool> check)
     {
 
@@ -97,6 +109,12 @@ internal static class MetricsChecks
             && PrometheusExporter.MetricName(bytes, PrometheusExporter.Kind.Gauge) == "process_memory_bytes");
     }
 
+    /// <summary>
+    /// 用示例请求体和开发 Key 调一次单张生成，模板编码换成指定的。
+    /// </summary>
+    /// <param name="http">调用服务的客户端。</param>
+    /// <param name="template">模板编码（不存在的编码用来造失败的调用）。</param>
+    /// <returns>响应。</returns>
     private static Task<HttpResponseMessage> Render(HttpClient http, string template)
     {
         var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/render")

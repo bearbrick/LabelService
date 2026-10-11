@@ -8,10 +8,15 @@ using SkiaSharp;
 namespace LabelService.Backend.Checks;
 
 /// <summary>
-/// PNG 编码（T-021，<see cref="PngWriter"/>）：无损（灰度、彩色逐像素一致，黑白按阈值），格式按内容选（灰度 / RGB / 1 位），能被独立的解码器读出。
+/// PNG 编码（<see cref="PngWriter"/>）：无损（灰度、彩色逐像素一致，黑白按阈值），格式按内容选（灰度 / RGB / 1 位），能被独立的解码器读出。
 /// </summary>
 internal static class PngChecks
 {
+    /// <summary>
+    /// 运行 PNG 编码的全部检查。
+    /// </summary>
+    /// <param name="backendRoot">backend 目录。</param>
+    /// <param name="check">记录检查结果。</param>
     public static void Run(string backendRoot, Action<string, bool> check)
     {
         using var gray = Canvas((canvas, width, height) =>
@@ -60,6 +65,11 @@ internal static class PngChecks
         check("示例箱标（黑白灰）输出 8 位灰度 PNG，1181×709，能被解码", Header(box) == (8, 0) && boxDecoded is { Width: 1181, Height: 709 });
     }
 
+    /// <summary>
+    /// 一张 331×197 的白底不透明位图，画上指定的内容。
+    /// </summary>
+    /// <param name="draw">绘制内容（画布、宽、高）。</param>
+    /// <returns>位图，用完释放。</returns>
     private static SKBitmap Canvas(Action<SKCanvas, int, int> draw)
     {
         var bitmap = new SKBitmap(new SKImageInfo(331, 197, SKColorType.Rgba8888, SKAlphaType.Opaque));
@@ -72,9 +82,17 @@ internal static class PngChecks
     /// <summary>
     /// IHDR 里的位深和颜色类型（0 灰度、2 RGB）。
     /// </summary>
+    /// <param name="png">PNG 文件内容。</param>
+    /// <returns>位深和颜色类型；不是 PNG 时都是 -1。</returns>
     private static (int BitDepth, int ColorType) Header(byte[] png) =>
         BinaryPrimitives.ReadUInt32BigEndian(png.AsSpan(12)) == 0x49484452 ? (png[24], png[25]) : (-1, -1);
 
+    /// <summary>
+    /// 把 PNG 解码后和原图逐像素比较 RGB。
+    /// </summary>
+    /// <param name="original">原图。</param>
+    /// <param name="png">编码出来的 PNG。</param>
+    /// <returns>尺寸相同且每个像素都一样时为 true。</returns>
     private static bool SamePixels(SKBitmap original, byte[] png)
     {
         using var decoded = SKBitmap.Decode(png);

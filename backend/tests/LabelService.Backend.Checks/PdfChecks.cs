@@ -11,11 +11,16 @@ using LabelService.Rendering.Validation;
 namespace LabelService.Backend.Checks;
 
 /// <summary>
-/// PDF 输出（T-005）：页数（份数、多张）、页面尺寸、字体嵌入、文字可选中（ToUnicode 里有中文）。
+/// PDF 输出：页数（份数、多张）、页面尺寸、字体嵌入、文字可选中（ToUnicode 里有中文）。
 /// 不引入 PDF 解析库，按 PDF 的文本结构核对，压缩流用 ZLibStream 解开。
 /// </summary>
 internal static partial class PdfChecks
 {
+    /// <summary>
+    /// 运行 PDF 输出的全部检查。
+    /// </summary>
+    /// <param name="backendRoot">backend 目录。</param>
+    /// <param name="check">记录检查结果。</param>
     public static void Run(string backendRoot, Action<string, bool> check)
     {
         var renderer = Fixtures.Renderer(backendRoot);
@@ -57,9 +62,13 @@ internal static partial class PdfChecks
     }
 
     /// <summary>
-    /// 复制、搜索出来的字要对（T-021）：思源 / Noto 里“日”“寸”“毛”和康熙部首共用字形，ToUnicode 不能映射成部首（⽇ U+2F47 等）。
+    /// 复制、搜索出来的字要对：思源 / Noto 里“日”“寸”“毛”和康熙部首共用字形，ToUnicode 不能映射成部首（⽇ U+2F47 等）。
     /// 按 PDF 文本结构解出全部 ToUnicode 的 bfchar / bfrange，核对映射到的字符，不只看某个字有没有出现。
     /// </summary>
+    /// <param name="backendRoot">backend 目录。</param>
+    /// <param name="renderer">渲染引擎。</param>
+    /// <param name="boxPdf">示例箱标的 PDF。</param>
+    /// <param name="check">记录检查结果。</param>
     private static void CheckToUnicode(string backendRoot, LabelRenderer renderer, byte[] boxPdf, Action<string, bool> check)
     {
         var box = ToUnicodeTargets(Inflate(boxPdf));
@@ -88,11 +97,18 @@ internal static partial class PdfChecks
             && radicalTargets.Contains(0x65E5) && !radicalTargets.Any(IsRadical));
     }
 
+    /// <summary>
+    /// 是不是部首区的码位（部首补充、康熙部首）。
+    /// </summary>
+    /// <param name="codepoint">码位。</param>
+    /// <returns>是部首时为 true。</returns>
     private static bool IsRadical(int codepoint) => codepoint is >= 0x2E80 and <= 0x2FDF;
 
     /// <summary>
     /// 解出 ToUnicode CMap 里全部映射到的字符（bfchar 和 bfrange，目标是 UTF-16BE 十六进制）。
     /// </summary>
+    /// <param name="inflated">解开压缩后的 PDF 内容（Latin1 字符串）。</param>
+    /// <returns>全部映射到的码位。</returns>
     private static HashSet<int> ToUnicodeTargets(string inflated)
     {
         var targets = new HashSet<int>();
@@ -141,11 +157,18 @@ internal static partial class PdfChecks
         return targets;
     }
 
+    /// <summary>
+    /// 数 PDF 的页数（数 /Type /Page 对象）。
+    /// </summary>
+    /// <param name="pdf">PDF 内容（Latin1 字符串）。</param>
+    /// <returns>页数。</returns>
     private static int PageCount(string pdf) => PageObject().Count(pdf);
 
     /// <summary>
     /// 解开全部 FlateDecode 流，拼成一个字符串（Latin1），用来找 ToUnicode 映射。
     /// </summary>
+    /// <param name="pdf">PDF 文件。</param>
+    /// <returns>全部解开的流内容，拼在一起。</returns>
     private static string Inflate(byte[] pdf)
     {
         var text = Encoding.Latin1.GetString(pdf);
@@ -176,27 +199,59 @@ internal static partial class PdfChecks
         return result.ToString();
     }
 
+    /// <summary>
+    /// 页对象（/Type /Page，不含 /Pages）。
+    /// </summary>
+    /// <returns>编译好的正则。</returns>
     [GeneratedRegex(@"/Type\s*/Page(?![s\w])")]
     private static partial Regex PageObject();
 
+    /// <summary>
+    /// 页面的 MediaBox（宽、高，pt）。
+    /// </summary>
+    /// <returns>编译好的正则。</returns>
     [GeneratedRegex(@"/MediaBox\s*\[\s*0\s+0\s+(?<w>[\d.]+)\s+(?<h>[\d.]+)\s*\]")]
     private static partial Regex MediaBox();
 
+    /// <summary>
+    /// 流的开头（stream 关键字加换行）。
+    /// </summary>
+    /// <returns>编译好的正则。</returns>
     [GeneratedRegex(@"stream\r?\n")]
     private static partial Regex StreamStart();
 
+    /// <summary>
+    /// ToUnicode 里的 bfchar 段。
+    /// </summary>
+    /// <returns>编译好的正则。</returns>
     [GeneratedRegex(@"beginbfchar(.*?)endbfchar", RegexOptions.Singleline)]
     private static partial Regex BfChar();
 
+    /// <summary>
+    /// ToUnicode 里的 bfrange 段。
+    /// </summary>
+    /// <returns>编译好的正则。</returns>
     [GeneratedRegex(@"beginbfrange(.*?)endbfrange", RegexOptions.Singleline)]
     private static partial Regex BfRange();
 
+    /// <summary>
+    /// bfchar 的一项：&lt;字形&gt; &lt;字符&gt;。
+    /// </summary>
+    /// <returns>编译好的正则。</returns>
     [GeneratedRegex(@"<([0-9A-Fa-f]+)>\s*<([0-9A-Fa-f]+)>")]
     private static partial Regex HexPair();
 
+    /// <summary>
+    /// bfrange 的一项：&lt;起&gt; &lt;止&gt; 后面跟起始字符或字符数组。
+    /// </summary>
+    /// <returns>编译好的正则。</returns>
     [GeneratedRegex(@"<([0-9A-Fa-f]+)>\s*<([0-9A-Fa-f]+)>\s*(?:<([0-9A-Fa-f]+)>|\[([^\]]*)\])")]
     private static partial Regex HexRange();
 
+    /// <summary>
+    /// 一个十六进制串 &lt;...&gt;。
+    /// </summary>
+    /// <returns>编译好的正则。</returns>
     [GeneratedRegex(@"<([0-9A-Fa-f]+)>")]
     private static partial Regex HexItem();
 }

@@ -16,6 +16,11 @@ namespace LabelService.Backend.Checks;
 /// </remarks>
 internal static class RenderChecks
 {
+    /// <summary>
+    /// 运行渲染引擎的全部检查。
+    /// </summary>
+    /// <param name="root">backend 目录。</param>
+    /// <param name="check">记录检查结果。</param>
     public static void Run(string root, Action<string, bool> check)
     {
         var template = Fixtures.LoadTemplate(root);
@@ -76,6 +81,12 @@ internal static class RenderChecks
         check("Server-Timing 按规范顺序输出、同名累加、保留 1 位小数", header == "auth;dur=0.3, draw;dur=2.5, custom;dur=2.0");
     }
 
+    /// <summary>
+    /// 执行一个操作，看它是否抛出指定类型的异常。
+    /// </summary>
+    /// <typeparam name="T">期望的异常类型。</typeparam>
+    /// <param name="action">操作。</param>
+    /// <returns>抛出了这种异常时为 true。</returns>
     private static bool Throws<T>(Action action)
         where T : Exception
     {
