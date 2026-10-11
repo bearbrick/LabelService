@@ -37,7 +37,11 @@ npm-debug.log*
 *.db-wal
 *.sqlite
 backup/
-logs/
+# 运行日志限定为仓库或组件运行目录，避免忽略 Domain/Logs、Application/Logs 等源码目录。
+/logs/
+/backend/logs/
+/client/logs/
+/frontend/logs/
 *.log
 
 # ---------------------------------------------------------------
