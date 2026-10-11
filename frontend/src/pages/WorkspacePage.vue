@@ -261,7 +261,7 @@ async function move(): Promise<void> {
     <input ref="fileInput" type="file" accept="application/json,.json" hidden @change="onFile" />
     <PublishDialog v-if="publishOpen" @close="publishOpen = false" />
     <PreviewDialog v-if="previewOpen" @close="previewOpen = false" />
-    <ModalDialog v-if="moveOpen" title="更换业务分组" width="min(420px, 100%)" @close="moveOpen = false">
+    <ModalDialog v-if="moveOpen" title="更换业务分组" @close="moveOpen = false">
       <p class="hint" style="margin-top: 0">换分组后，调用方按新分组授权，立即生效。</p>
       <div class="form-row">
         <label for="mv-biz">业务</label>

@@ -43,6 +43,7 @@ Select-String -Path docs/tasks/T-*.md -Pattern '^(状态|负责人)：'
 | [T-024](T-024-code-comments.md) | 代码注释补齐，去掉代码里的任务号 | 后端 + 调用端 + 前端 | 一期验收 | T-023 | 全部源码、检查程序 |
 | [T-025](T-025-ui-layout-pass.md) | 页面显示问题全面检查和修复 | 前端 + 调用端 | 一期验收 | T-024 | `src/**/*.vue`、样式、演示程序 |
 | [T-026](T-026-system-info.md) | 系统信息设置和公司 Logo | 后端 + 前端 | 一期验收 | T-025 | `Domain/SystemSettings`、`Application/SystemSettings`、`src/pages/SettingsPage.vue` |
+| [T-027](T-027-ui-feedback.md) | 界面反馈修复：模板树拖宽、素材格子、工作台滚动条、下拉框、登录页公司信息 | 前端 + 后端 | 一期验收 | T-026 | `src/**/*.vue`、样式、`Domain/SystemSettings` |
 
 “主要目录”是相对于对应部分（`frontend/`、`backend/`、`client/`）的路径；后端的 Rendering、Server 指 `backend/src/LabelService.Rendering`、`backend/src/LabelService.Server`（T-023 起 Server 改名为 `LabelService.Api`，原来的模板存储、鉴权、日志等拆到 Domain、Application、Infrastructure，见 ADR 0010；已完成任务的“主要目录”保留当时的写法）。跨两个部分的任务（T-014、T-016、T-018、T-020）建议按部分拆成子任务分别认领；T-018 是契约变更，后端和调用端的契约副本要在同一个提交里改齐。
 

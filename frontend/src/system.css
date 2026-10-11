@@ -40,3 +40,35 @@
 /* 输入框下面有说明的行：标签和输入框对齐，不和说明的中间对齐 */
 .form-row.top { align-items: start; }
 .form-row.top > label { padding-top: 9px; }
+
+/* 登录页的标语和说明来自系统信息，保留填写时的换行 */
+.login-intro .login-title, .login-intro .login-intro-text { white-space: pre-line; overflow-wrap: anywhere; }
+
+/* 系统信息页：登录页左栏的缩小预览 */
+.preview-login { margin-top: 12px; background: var(--navy); border-radius: 6px; padding: 14px 16px; color: #fff; display: grid; gap: 6px; }
+.preview-login .eyebrow { color: #91acd3; letter-spacing: 2px; font-size: 11px; }
+.preview-login b { font-size: 17px; font-weight: 500; line-height: 1.5; white-space: pre-line; overflow-wrap: anywhere; }
+.preview-login p { color: #a1b5d1; font-size: 12px; line-height: 1.8; white-space: pre-line; overflow-wrap: anywhere; margin: 0; }
+.form-row .with-count textarea.inp { resize: vertical; min-height: 56px; }
+
+/* 下拉框：去掉浏览器自带的箭头，换成和界面图标一致的细箭头，离右边 10px；文字放不下时省略号。
+   原有的 .sel 规则（禁用、表格里、悬停）用 background 简写会清掉箭头，这里按同样的状态再写一遍箭头。 */
+:root { --sel-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='%237c8a9e' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round' d='m4 6 4 4 4-4'/%3E%3C/svg%3E"); }
+select.sel { appearance: none; -webkit-appearance: none; padding-right: 30px; text-overflow: ellipsis; cursor: pointer; }
+select.sel, select.sel:disabled, table.grid td select.sel, table.grid td select.sel:hover, table.grid td select.sel:focus { background-image: var(--sel-arrow); background-repeat: no-repeat; background-position: right 10px center; background-size: 12px 12px; }
+select.sel:disabled { cursor: not-allowed; }
+select.sel.sm, .prow select.sel, .toolbar-row select.sel { padding-right: 26px; background-position: right 8px center; }
+table.grid td select.sel, table.grid td select.sel:hover, table.grid td select.sel:focus { padding-right: 22px; background-position: right 6px center; }
+
+/* 支持可定制下拉框的浏览器（Chrome / Edge 135 起）：展开的列表也用系统风格——白底圆角、阴影、选中项浅蓝 */
+@supports (appearance: base-select) {
+  select.sel, select.sel::picker(select) { appearance: base-select; }
+  select.sel { display: inline-flex; align-items: center; }
+  select.sel::picker-icon { display: none; }
+  select.sel::picker(select) { border: 1px solid var(--line); border-radius: 6px; box-shadow: 0 8px 28px #182d4625; padding: 4px; margin-top: 4px; background: #fff; max-height: 320px; }
+  select.sel option { padding: 7px 10px; border-radius: 4px; font-size: 13px; color: #223047; white-space: nowrap; }
+  select.sel option:hover, select.sel option:focus-visible { background: #f2f6fc; outline: none; }
+  select.sel option:checked { background: var(--blue-tint); color: var(--blue); font-weight: 500; }
+  select.sel option::checkmark { display: none; }
+  select.sel option:disabled { color: var(--faint); }
+}

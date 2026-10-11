@@ -29,6 +29,14 @@ export interface SystemInfo {
    */
   support: string
   /**
+   * 登录页左栏的大标题（宣传标语），可以有换行（\n）。
+   */
+  loginTitle: string
+  /**
+   * 登录页大标题下面的说明，可以有换行；空表示不显示。
+   */
+  loginIntro: string
+  /**
    * 公司 Logo 的版本，换一次 Logo 变一次；没上传时没有这个属性（界面显示占位）。
    */
   logoVersion?: string | null
@@ -48,6 +56,8 @@ export const SYSTEM_INFO_LIMITS: Record<keyof SaveSystemInfo, number> = {
   companyName: 60,
   copyright: 120,
   support: 60,
+  loginTitle: 40,
+  loginIntro: 200,
 }
 
 /**
@@ -59,6 +69,8 @@ export const DEFAULT_SYSTEM_INFO: SystemInfo = {
   companyName: '',
   copyright: '',
   support: '',
+  loginTitle: '标签和唛头在网页上设计，\n业务系统一个接口生成',
+  loginIntro: '拖拽设计模板，定义数据字段，发布后 MES、WMS、ERP 用模板编码加数据调用，拿回 PDF、PNG 或 ZPL 文件。',
 }
 
 /**

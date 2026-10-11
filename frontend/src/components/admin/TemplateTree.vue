@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * 左侧模板树：按业务分组列出模板，可搜索；窄屏时还放功能菜单。
+ * 左侧模板树：按业务分组列出模板，可搜索；窄屏时还放功能菜单。右边缘可以拖动改宽度（名称很长时拖宽看全）。
  */
 import { computed, reactive, ref, watch } from 'vue'
 import type { TemplateItem } from '../../api/admin.ts'
@@ -10,6 +10,7 @@ import { dialogs } from '../../stores/dialogs.ts'
 import { go, goBiz, openWorkspace, route } from '../../stores/router.ts'
 import type { Page } from '../../stores/router.ts'
 import { can } from '../../stores/session.ts'
+import { useSidebarWidth } from '../../composables/useSidebarWidth.ts'
 import AppIcon from '../AppIcon.vue'
 
 /**
@@ -31,6 +32,11 @@ const emit = defineEmits<{
    */
   navigate: []
 }>()
+
+/**
+ * 模板树宽度和拖动手柄。
+ */
+const sidebar = useSidebarWidth()
 
 /**
  * 搜索框的内容（按名称或编码过滤）。
@@ -106,7 +112,21 @@ function page(target: Page): void {
 </script>
 
 <template>
-  <aside class="sidebar" :class="{ collapsed: props.collapsed }" aria-label="模板树">
+  <aside class="sidebar" :class="{ collapsed: props.collapsed, resizing: sidebar.dragging.value }" :style="{ '--sidebar-w': `${sidebar.width.value}px` }" aria-label="模板树">
+    <div
+      class="sidebar-resizer"
+      role="separator"
+      aria-orientation="vertical"
+      aria-label="拖动调整模板树宽度，双击恢复默认"
+      title="拖动调整宽度，双击恢复默认"
+      tabindex="0"
+      :aria-valuenow="sidebar.width.value"
+      :aria-valuemin="sidebar.minWidth"
+      :aria-valuemax="sidebar.maxWidth"
+      @pointerdown="sidebar.startDrag"
+      @dblclick="sidebar.reset"
+      @keydown="sidebar.onKey"
+    ></div>
     <div class="sidebar-heading">
       <h2>模板</h2>
       <button class="btn ghost sm" type="button" :disabled="!can('tpl.edit')" @click="dialogs.newTemplate = true"><AppIcon name="plus" small />新建模板</button>

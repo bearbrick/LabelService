@@ -136,7 +136,8 @@ input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--blue); cur
 .icon-cell.on { border-color: var(--blue); box-shadow: inset 0 0 0 1px var(--blue); }
 .icon-cell svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 .asset-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
-.asset { border: 1px solid #e3e8f0; border-radius: 4px; background: #fff; height: 60px; display: grid; place-items: center; cursor: grab; padding: 6px; }
+/* 格子用 flex：高度固定 60px，图片的 max-height: 100% 才能按格子高度算（grid 的自动行高算不出百分比，方形图会撑出格子） */
+.asset { border: 1px solid #e3e8f0; border-radius: 4px; background: #fff; height: 60px; display: flex; align-items: center; justify-content: center; gap: 4px; cursor: grab; padding: 6px; overflow: hidden; min-width: 0; }
 .asset img { max-height: 100%; max-width: 100%; object-fit: contain; pointer-events: none; }
 .asset:hover { border-color: #9dbcf0; }
 .asset.upload { color: #6c7c94; cursor: pointer; border-style: dashed; font-size: 11px; gap: 2px; }

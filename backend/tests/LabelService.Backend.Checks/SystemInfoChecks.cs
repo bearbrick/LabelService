@@ -63,6 +63,20 @@ internal static class SystemInfoChecks
             })) == "INVALID"
             && (await anonymous.JsonAsync(HttpMethod.Get, "/api/admin/system-info")).GetProperty("subtitle").GetString() == "包装标签");
 
+        check("登录页标语和说明默认有值，标语可以换行",
+            read.GetProperty("loginTitle").GetString()!.Contains('\n', StringComparison.Ordinal)
+            && read.GetProperty("loginIntro").GetString()!.Length > 0);
+        var login = await admin.JsonAsync(HttpMethod.Put, "/api/admin/system-info", new
+        {
+            loginTitle = "第一行\r\n第二行",
+            loginIntro = "  说明  ",
+        });
+        check("只改登录页标语和说明：换行保留（统一成 \n），没传的项不变",
+            login.GetProperty("loginTitle").GetString() == "第一行\n第二行"
+            && login.GetProperty("loginIntro").GetString() == "说明"
+            && login.GetProperty("companyName").GetString() == "示例制造有限公司"
+            && login.GetProperty("systemName").GetString() == "标签平台");
+
         var uploaded = await AdminSession.ReadAsync(await admin.UploadAsync("/api/admin/system-info/logo", "logo.png", Png(), "image/png"));
         var version = uploaded.GetProperty("logoVersion").GetString();
         var logo = await http.GetAsync("/api/admin/system-info/logo?v=" + version);

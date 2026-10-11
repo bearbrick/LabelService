@@ -46,8 +46,10 @@ public sealed class SystemInfoAppService(
             throw new UserFriendlyException("请填写系统信息");
         }
 
-        // 先全部校验，有一项不合格就整体不保存。
-        var values = SystemInfoRules.Fields.ToDictionary(field => field, field => SystemInfoRules.Normalize(field, Pick(input, field.Key)));
+        // 先全部校验，有一项不合格就整体不保存；没传的项（null）不改。
+        var values = SystemInfoRules.Fields
+            .Where(field => Pick(input, field.Key) is not null)
+            .ToDictionary(field => field, field => SystemInfoRules.Normalize(field, Pick(input, field.Key)));
         var saved = await settings.ListAsync();
         var changed = new List<string>();
         foreach (var (field, value) in values)
@@ -65,7 +67,7 @@ public sealed class SystemInfoAppService(
         if (changed.Count > 0)
         {
             await unitOfWork.SaveChangesAsync();
-            var name = values.First(pair => pair.Key.Key == SystemInfoRules.SystemName).Value;
+            var name = Value(await settings.ListAsync(), SystemInfoRules.SystemName, SystemInfoRules.Fields[0].Default);
             await operationLog.WriteAsync(LogType, name, "修改" + string.Join("、", changed));
         }
 
@@ -129,6 +131,8 @@ public sealed class SystemInfoAppService(
         SystemInfoRules.CompanyName => input.CompanyName,
         SystemInfoRules.Copyright => input.Copyright,
         SystemInfoRules.Support => input.Support,
+        SystemInfoRules.LoginTitle => input.LoginTitle,
+        SystemInfoRules.LoginIntro => input.LoginIntro,
         _ => throw new ArgumentOutOfRangeException(nameof(key), key, "未知的设置项"),
     };
 
@@ -179,6 +183,8 @@ public sealed class SystemInfoAppService(
             Text(SystemInfoRules.CompanyName),
             Text(SystemInfoRules.Copyright),
             Text(SystemInfoRules.Support),
+            Text(SystemInfoRules.LoginTitle),
+            Text(SystemInfoRules.LoginIntro),
             version);
     }
 }
