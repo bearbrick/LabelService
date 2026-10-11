@@ -5,13 +5,19 @@ namespace LabelService.Contracts.Protocol;
 /// </summary>
 public enum LabelFormat
 {
-    /// <summary>矢量 PDF，一张标签一页。</summary>
+    /// <summary>
+    /// 矢量 PDF，一张标签一页。
+    /// </summary>
     Pdf,
 
-    /// <summary>按 DPI 栅格化的 PNG。</summary>
+    /// <summary>
+    /// 按 DPI 栅格化的 PNG。
+    /// </summary>
     Png,
 
-    /// <summary>整张栅格化成黑白位图，用 ^GFA 输出的 ZPL。</summary>
+    /// <summary>
+    /// 整张栅格化成黑白位图，用 ^GFA 输出的 ZPL。
+    /// </summary>
     Zpl,
 }
 
@@ -20,10 +26,14 @@ public enum LabelFormat
 /// </summary>
 public enum BatchOutput
 {
-    /// <summary>合并成一个文件：PDF 多页、ZPL 拼接。</summary>
+    /// <summary>
+    /// 合并成一个文件：PDF 多页、ZPL 拼接。
+    /// </summary>
     Merge,
 
-    /// <summary>每张一个文件打包成 ZIP。PNG 只能用这种方式。</summary>
+    /// <summary>
+    /// 每张一个文件打包成 ZIP。PNG 只能用这种方式。
+    /// </summary>
     Zip,
 }
 
@@ -32,7 +42,9 @@ public enum BatchOutput
 /// </summary>
 public static class LabelFormats
 {
-    /// <summary>ZIP 包的 Content-Type。</summary>
+    /// <summary>
+    /// ZIP 包的 Content-Type。
+    /// </summary>
     public const string ZipContentType = "application/zip";
 
     /// <summary>

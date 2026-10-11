@@ -5,10 +5,14 @@ namespace LabelService.Contracts;
 /// </summary>
 public static class LabelUnits
 {
-    /// <summary>每英寸毫米数。</summary>
+    /// <summary>
+    /// 每英寸毫米数。
+    /// </summary>
     public const double MmPerInch = 25.4;
 
-    /// <summary>每英寸磅数。</summary>
+    /// <summary>
+    /// 每英寸磅数。
+    /// </summary>
     public const double PointsPerInch = 72;
 
     /// <summary>
