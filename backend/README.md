@@ -79,7 +79,7 @@ dotnet run -c Release --project backend/tests/LabelService.Benchmarks -- --gate 
   ```
 
 - **数据目录**：配置 `LabelService:Data:Directory`，默认程序目录下的 `data/`（本地 `dotnet run` 时在 `backend/src/LabelService.Api/bin/Debug/net10.0/data/`）。不管用哪种数据库都要有：上传的素材、JWT 签名密钥放在这里；SQLite 时还有 `label.db`、`label-log.db`。
-- **升级**：启动时自动建库、执行迁移。SQLite：已有数据的库升级前先快照到 `backups/`，失败自动恢复（`Infrastructure/Persistence/DatabaseUpgrade.cs`），一期早期的旧库把模板分类和调用方授权换算成业务分组（`Persistence/Sqlite/LegacyUpgrade.cs`）。SQL Server、PostgreSQL：每个迁移在事务里执行，失败自动回滚、服务不启动。
+- **升级**：启动时自动建库、执行迁移。SQLite：每次初始化或升级（含没有迁移记录的库）均先快照到 `backups/`，失败自动恢复（`Infrastructure/Persistence/DatabaseUpgrade.cs`），一期早期的旧库把模板分类和调用方授权换算成业务分组（`Persistence/Sqlite/LegacyUpgrade.cs`）。SQL Server、PostgreSQL：每个迁移在事务里执行，失败自动回滚、服务不启动。
 - **改表结构**：改领域层的实体、`Infrastructure/Persistence/Configurations/` 后，给三种数据库各生成一次迁移，不要手改迁移文件和快照。检查程序会核对六套迁移（主库、日志库各三种）都和模型一致。
 
   ```powershell
@@ -100,3 +100,5 @@ dotnet run -c Release --project backend/tests/LabelService.Benchmarks -- --gate 
 - **调用方**：数据库 `api_client` 表（Key 只存 SHA-256）加上配置文件 `LabelService:Auth:Clients`，启动时加载进内存（`Application/ApiClients/ApiKeyAuthenticator.cs`）；新建、改权限、启停、重置 Key 后立即生效。新 Key 正式环境前缀 `lbl_live_`，其他环境 `lbl_test_`。
 - **调用日志**：日志库的 `render_log` 表（配置 `LabelService:RenderLog`：队列上限、每批条数、保留天数，默认 180 天）。请求结束时投递到队列，后台服务按批写入，队列满丢弃并计入指标 `label_log_dropped_total`，写入失败只记警告。
 - **管理接口**：`/api/admin`，接口清单见 `docs/admin-api.md`，登录和权限见 ADR 0006。首次启动建 `admin` 账号（开发环境密码 `admin123`，首次登录必须改）。配置 `LabelService:Admin:SigningKey`（Base64，≥ 32 字节）指定 JWT 签名密钥，不配置时生成在数据目录的 `admin-signing.key`。
+
+隔离功能整合补充：日志命名空间源码必须随 Git 纳入；源码检查会拦截宽泛的 `logs/` 排除。真实数据库回归给主库和日志库配置同一个临时数据库，避免访问其他日志库。SQLite 初始化失败后恢复迁移前快照，并拒绝启动；完整回归包含无迁移历史和首次空库场景。

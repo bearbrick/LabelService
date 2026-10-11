@@ -152,7 +152,7 @@ a { color: var(--blue); text-decoration: none; }
 
 .project-select { max-width: 100%; }
 
-.project-select .biz-name { max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
+.project-select .project-name { max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
 
 .version { font-size: 9px; letter-spacing: 1px; color: #aec3e7; border: 1px solid #ffffff30; border-radius: 3px; padding: 3px 6px; white-space: nowrap; }
 

@@ -2,6 +2,7 @@
  * 前端检查程序：用 Node 直接运行（类型擦除），检查不依赖浏览器的模块。任何一项失败抛异常，退出码非 0。
  * 运行：npm run check
  */
+import { checkAvailableLayouts } from './available-layouts.ts'
 import sampleJson from '../src/samples/box-label.json' with { type: 'json' }
 import { alignElements, distributeElements, moveAbove, reorder } from '../src/editor/arrange.ts'
 import { encode, moduleDots } from '../src/editor/barcode.ts'
@@ -324,4 +325,5 @@ checkSampleTemplate()
 checkLayouts()
 checkSource()
 
+await checkAvailableLayouts(check)
 console.log(`前端检查全部通过：${passed} 项`)

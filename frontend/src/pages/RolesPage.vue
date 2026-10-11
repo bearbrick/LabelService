@@ -128,8 +128,8 @@ async function remove(role: Role): Promise<void> {
         <button class="btn primary" type="button" @click="Object.assign(form, { open: true, name: '', description: '', copyFrom: '', error: '' })"><AppIcon name="plus" small />新建角色</button>
       </div>
       <div class="table-box">
-        <div class="tw">
-          <table class="dt matrix">
+        <div class="tw" tabindex="0" role="region" aria-label="角色权限表格">
+          <table class="dt matrix" :style="{ minWidth: `${(catalog.roles.length + 1) * 160}px` }">
             <thead>
               <tr>
                 <th>权限</th>
