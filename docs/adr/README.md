@@ -47,3 +47,4 @@
 | [0008](0008-deployment.md) | 部署：Docker 或 Windows 服务，单实例，每日 VACUUM INTO 备份 | 已采纳 |
 | [0009](0009-metrics-export.md) | 指标导出：自己实现 Prometheus 文本格式，暂不引入 OpenTelemetry 包 | 已采纳 |
 | [0010](0010-layered-architecture-and-databases.md) | 后端分层（领域驱动设计）与多数据库支持 | 已采纳 |
+| [0011](0011-customer-uploaded-fonts.md) | 字体由客户上传，发布包不再带字体 | 已采纳（发布包一条待确认） |
