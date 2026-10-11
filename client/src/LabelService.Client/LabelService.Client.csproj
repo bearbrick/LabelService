@@ -18,7 +18,7 @@
   </PropertyGroup>
 
   <!--
-    强名称签名（T-011）：密钥不进仓库（R7），发布时由 client/build/pack.ps1 传入 -p:LabelServiceStrongNameKey=密钥文件。
+    强名称签名：密钥不进仓库（R7），发布时由 client/build/pack.ps1 传入 -p:LabelServiceStrongNameKey=密钥文件。
     签名构建去掉 InternalsVisibleTo（签名的程序集要求友元也带公钥），所以检查程序只跑不签名的构建。
   -->
   <PropertyGroup Condition="'$(LabelServiceStrongNameKey)' != ''">

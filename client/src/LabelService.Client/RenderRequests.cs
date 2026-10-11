@@ -5,13 +5,19 @@ namespace LabelService.Client;
 /// </summary>
 public enum LabelFormat
 {
-    /// <summary>PDF，一张标签一页。</summary>
+    /// <summary>
+    /// PDF，一张标签一页。
+    /// </summary>
     Pdf,
 
-    /// <summary>PNG 图片。</summary>
+    /// <summary>
+    /// PNG 图片。
+    /// </summary>
     Png,
 
-    /// <summary>ZPL 指令，可直接发给斑马等标签打印机。</summary>
+    /// <summary>
+    /// ZPL 指令，可直接发给斑马等标签打印机。
+    /// </summary>
     Zpl,
 }
 
@@ -20,10 +26,14 @@ public enum LabelFormat
 /// </summary>
 public enum BatchOutput
 {
-    /// <summary>合并成一个文件：PDF 多页、ZPL 拼接。</summary>
+    /// <summary>
+    /// 合并成一个文件：PDF 多页、ZPL 拼接。
+    /// </summary>
     Merge,
 
-    /// <summary>每张一个文件打包成 ZIP。PNG 只能用这种方式。</summary>
+    /// <summary>
+    /// 每张一个文件打包成 ZIP。PNG 只能用这种方式。
+    /// </summary>
     Zip,
 }
 
@@ -50,37 +60,49 @@ public sealed class RenderRequest
         Format = format;
     }
 
-    /// <summary>模板编码。</summary>
+    /// <summary>
+    /// 模板编码。
+    /// </summary>
     public string TemplateCode
     {
         get; set;
     }
 
-    /// <summary>模板版本号，不设则用最新发布版本。</summary>
+    /// <summary>
+    /// 模板版本号，不设则用最新发布版本。
+    /// </summary>
     public int? Version
     {
         get; set;
     }
 
-    /// <summary>输出格式。</summary>
+    /// <summary>
+    /// 输出格式。
+    /// </summary>
     public LabelFormat Format
     {
         get; set;
     }
 
-    /// <summary>203、300 或 600，不设则用模板设置。</summary>
+    /// <summary>
+    /// 203、300 或 600，不设则用模板设置。
+    /// </summary>
     public int? Dpi
     {
         get; set;
     }
 
-    /// <summary>仅 PNG 有效：输出黑白图。</summary>
+    /// <summary>
+    /// 仅 PNG 有效：输出黑白图。
+    /// </summary>
     public bool Mono
     {
         get; set;
     }
 
-    /// <summary>份数，1–100。PNG 只能 1 份；用了 <see cref="Layout"/> 时份数就是铺几个格子，PNG 也可以多份。</summary>
+    /// <summary>
+    /// 份数，1–100。PNG 只能 1 份；用了 <see cref="Layout"/> 时份数就是铺几个格子，PNG 也可以多份。
+    /// </summary>
     public int Copies { get; set; } = 1;
 
     /// <summary>
@@ -134,37 +156,49 @@ public sealed class BatchRenderRequest
         Output = format == LabelFormat.Png ? BatchOutput.Zip : BatchOutput.Merge;
     }
 
-    /// <summary>模板编码。</summary>
+    /// <summary>
+    /// 模板编码。
+    /// </summary>
     public string TemplateCode
     {
         get; set;
     }
 
-    /// <summary>模板版本号，不设则用最新发布版本。</summary>
+    /// <summary>
+    /// 模板版本号，不设则用最新发布版本。
+    /// </summary>
     public int? Version
     {
         get; set;
     }
 
-    /// <summary>输出格式。</summary>
+    /// <summary>
+    /// 输出格式。
+    /// </summary>
     public LabelFormat Format
     {
         get; set;
     }
 
-    /// <summary>203、300 或 600，不设则用模板设置。</summary>
+    /// <summary>
+    /// 203、300 或 600，不设则用模板设置。
+    /// </summary>
     public int? Dpi
     {
         get; set;
     }
 
-    /// <summary>仅 PNG 有效：输出黑白图。</summary>
+    /// <summary>
+    /// 仅 PNG 有效：输出黑白图。
+    /// </summary>
     public bool Mono
     {
         get; set;
     }
 
-    /// <summary>输出方式。PNG 默认且只能用 Zip，其余默认 Merge。用了 <see cref="Layout"/> 时不起作用（PDF 一个文件，PNG 多页打包 ZIP）。</summary>
+    /// <summary>
+    /// 输出方式。PNG 默认且只能用 Zip，其余默认 Merge。用了 <see cref="Layout"/> 时不起作用（PDF 一个文件，PNG 多页打包 ZIP）。
+    /// </summary>
     public BatchOutput Output
     {
         get; set;
@@ -186,10 +220,14 @@ public sealed class BatchRenderRequest
         get; set;
     }
 
-    /// <summary>所有条目共用的字段，条目里的同名字段覆盖它。</summary>
+    /// <summary>
+    /// 所有条目共用的字段，条目里的同名字段覆盖它。
+    /// </summary>
     public IDictionary<string, object?> Common { get; } = new Dictionary<string, object?>(StringComparer.Ordinal);
 
-    /// <summary>条目，输出顺序和这里一致。</summary>
+    /// <summary>
+    /// 条目，输出顺序和这里一致。
+    /// </summary>
     public IList<BatchItem> Items { get; } = new List<BatchItem>();
 
     /// <summary>
@@ -222,10 +260,14 @@ public sealed class BatchRenderRequest
 /// </summary>
 public sealed class BatchItem
 {
-    /// <summary>这一条的字段数据。</summary>
+    /// <summary>
+    /// 这一条的字段数据。
+    /// </summary>
     public IDictionary<string, object?> Data { get; } = new Dictionary<string, object?>(StringComparer.Ordinal);
 
-    /// <summary>份数，1–100。</summary>
+    /// <summary>
+    /// 份数，1–100。
+    /// </summary>
     public int Copies { get; set; } = 1;
 
     /// <summary>

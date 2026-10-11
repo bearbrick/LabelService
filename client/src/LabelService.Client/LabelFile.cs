@@ -22,40 +22,54 @@ public sealed class LabelFile
         Format = format;
     }
 
-    /// <summary>文件内容。</summary>
+    /// <summary>
+    /// 文件内容。
+    /// </summary>
     public byte[] Content
     {
         get;
     }
 
-    /// <summary>Content-Type，如 image/png、application/pdf、application/zip。</summary>
+    /// <summary>
+    /// Content-Type，如 image/png、application/pdf、application/zip。
+    /// </summary>
     public string ContentType
     {
         get;
     }
 
-    /// <summary>服务端建议的文件名，如 BOX_LABEL_20261008.pdf。</summary>
+    /// <summary>
+    /// 服务端建议的文件名，如 BOX_LABEL_20261008.pdf。
+    /// </summary>
     public string FileName
     {
         get;
     }
 
-    /// <summary>请求的输出格式。批量 Zip 时内容是 ZIP 包，<see cref="IsZip"/> 为 true。</summary>
+    /// <summary>
+    /// 请求的输出格式。批量 Zip 时内容是 ZIP 包，<see cref="IsZip"/> 为 true。
+    /// </summary>
     public LabelFormat Format
     {
         get;
     }
 
-    /// <summary>内容是否是 ZIP 包。</summary>
+    /// <summary>
+    /// 内容是否是 ZIP 包。
+    /// </summary>
     public bool IsZip => ContentType.StartsWith("application/zip", StringComparison.OrdinalIgnoreCase);
 
-    /// <summary>实际使用的模板版本号（X-Template-Version）。</summary>
+    /// <summary>
+    /// 实际使用的模板版本号（X-Template-Version）。
+    /// </summary>
     public int? TemplateVersion
     {
         get; internal set;
     }
 
-    /// <summary>文件里的标签张数，含份数（X-Label-Count）。</summary>
+    /// <summary>
+    /// 文件里的标签张数，含份数（X-Label-Count）。
+    /// </summary>
     public int LabelCount
     {
         get; internal set;
@@ -69,34 +83,46 @@ public sealed class LabelFile
         get; internal set;
     }
 
-    /// <summary>实际使用的 DPI（X-Label-Dpi）。</summary>
+    /// <summary>
+    /// 实际使用的 DPI（X-Label-Dpi）。
+    /// </summary>
     public int Dpi
     {
         get; internal set;
     }
 
-    /// <summary>链路 ID（X-Trace-Id），反馈问题时提供给服务方。</summary>
+    /// <summary>
+    /// 链路 ID（X-Trace-Id），反馈问题时提供给服务方。
+    /// </summary>
     public string? TraceId
     {
         get; internal set;
     }
 
-    /// <summary>本次调用的 X-Request-Id，由 SDK 生成。</summary>
+    /// <summary>
+    /// 本次调用的 X-Request-Id，由 SDK 生成。
+    /// </summary>
     public string? RequestId
     {
         get; internal set;
     }
 
-    /// <summary>服务端处理总耗时（Server-Timing 里的 total）。</summary>
+    /// <summary>
+    /// 服务端处理总耗时（Server-Timing 里的 total）。
+    /// </summary>
     public TimeSpan? ServerDuration
     {
         get; internal set;
     }
 
-    /// <summary>服务端各阶段耗时（毫秒），键是阶段名：auth、tpl、validate、layout、draw、encode、total。</summary>
+    /// <summary>
+    /// 服务端各阶段耗时（毫秒），键是阶段名：auth、tpl、validate、layout、draw、encode、total。
+    /// </summary>
     public IReadOnlyDictionary<string, double> ServerTiming { get; internal set; } = new Dictionary<string, double>();
 
-    /// <summary>渲染警告（X-Label-Warnings），如 FONT_FALLBACK:SimSun。</summary>
+    /// <summary>
+    /// 渲染警告（X-Label-Warnings），如 FONT_FALLBACK:SimSun。
+    /// </summary>
     public IReadOnlyList<string> Warnings { get; internal set; } = new string[0];
 
     /// <summary>
@@ -145,6 +171,10 @@ public sealed class LabelFile
         return Encoding.UTF8.GetString(Content);
     }
 
+    /// <summary>
+    /// 文件所在的目录不存在时创建它。
+    /// </summary>
+    /// <param name="path">文件路径（相对路径按当前目录算）。</param>
     private static void EnsureDirectory(string path)
     {
         var directory = Path.GetDirectoryName(Path.GetFullPath(path));
