@@ -52,6 +52,7 @@ const form = reactive({
    */
   order: 'rows' as FillOrder,
 })
+
 /**
  * 按当前参数排列是否放得下（放不下时提示，按钮不可用）。
  */

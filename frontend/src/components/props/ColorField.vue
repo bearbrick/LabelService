@@ -7,6 +7,7 @@
  * 颜色值 #RRGGBB（v-model）；没设颜色时为 undefined。
  */
 const model = defineModel<string | undefined>()
+
 /**
  * 组件事件。
  */

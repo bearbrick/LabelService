@@ -81,6 +81,7 @@ export type DraftSaver = (template: LabelTemplate) => Promise<void>
  * 当前注册的画布；设计器没打开时为 null。
  */
 let canvas: CanvasController | null = null
+
 /**
  * 提示消息的自增 ID。
  */
@@ -199,14 +200,17 @@ export const designer = reactive({
 export const selectedElements = computed(() =>
   designer.selection.map((id) => designer.template.elements.find((element) => element.id === id)).filter((element): element is LabelElement => !!element),
 )
+
 /**
  * 只选中一个元素时是它，否则为 null（属性面板用）。
  */
 export const selectedElement = computed(() => (selectedElements.value.length === 1 ? selectedElements.value[0] : null))
+
 /**
  * 选中的元素是否都已锁定（工具栏的锁定按钮显示状态）。
  */
 export const allSelectedLocked = computed(() => selectedElements.value.length > 0 && selectedElements.value.every((element) => element.locked))
+
 /**
  * 模板的静态检查结果（未定义的绑定、没用到的字段、不能导出的问题）。
  */

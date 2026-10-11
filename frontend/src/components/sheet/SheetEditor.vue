@@ -32,6 +32,7 @@ const props = defineProps<{
    */
   readOnly: boolean
 }>()
+
 /**
  * 组件事件。
  */
@@ -41,10 +42,12 @@ const emit = defineEmits<{
    */
   save: []
 }>()
+
 /**
  * 画布组件（工具栏的缩放按钮调它）。
  */
 const canvas = ref<InstanceType<typeof SheetCanvas> | null>(null)
+
 /**
  * 选中的格子数。
  * @returns 个数。

@@ -15,17 +15,90 @@ import { confirmBox, showSecret } from '../stores/dialogs.ts'
 import { go } from '../stores/router.ts'
 import { refreshMe, session } from '../stores/session.ts'
 
+/**
+ * 全部用户。
+ */
 const users = ref<User[]>([])
-const filter = reactive({ q: '', roleId: '', status: '' })
-const form = reactive({ open: false, id: 0, account: '', name: '', roleId: 0, allBusinesses: false, businessIds: [] as number[], error: '', busy: false })
+
+/**
+ * 列表的筛选条件。
+ */
+const filter = reactive({
+  /**
+   * 搜索：姓名或账号。
+   */
+  q: '',
+  /**
+   * 按角色筛选（角色 ID 的文本，空表示全部）。
+   */
+  roleId: '',
+  /**
+   * 按状态筛选：active、disabled，空表示全部。
+   */
+  status: '',
+})
+
+/**
+ * 新建或编辑用户的表单。
+ */
+const form = reactive({
+  /**
+   * 编辑对话框是否打开。
+   */
+  open: false,
+  /**
+   * 编辑的用户 ID；0 表示新建。
+   */
+  id: 0,
+  /**
+   * 账号（只在新建时填）。
+   */
+  account: '',
+  /**
+   * 姓名。
+   */
+  name: '',
+  /**
+   * 角色 ID。
+   */
+  roleId: 0,
+  /**
+   * 能访问全部业务分组。
+   */
+  allBusinesses: false,
+  /**
+   * 能访问的业务分组 ID。
+   */
+  businessIds: [] as number[],
+  /**
+   * 保存失败的原因。
+   */
+  error: '',
+  /**
+   * 正在保存。
+   */
+  busy: false,
+})
+
+/**
+ * 按筛选条件过滤后的用户。
+ */
 const list = computed(() => {
   const q = filter.q.toLowerCase()
   return users.value.filter((u) => (!q || u.name.toLowerCase().includes(q) || u.account.includes(q)) && (!filter.roleId || u.roleId === Number(filter.roleId)) && (!filter.status || u.status === filter.status))
 })
+
+/**
+ * 编辑的是不是自己（不能改自己的角色）。
+ */
 const isSelf = computed(() => form.id === session.me?.id)
 
 onMounted(reload)
 
+/**
+ * 重新读取用户列表。
+ * @returns 读取结束时完成。
+ */
 async function reload(): Promise<void> {
   try {
     users.value = await listUsers()
@@ -34,16 +107,29 @@ async function reload(): Promise<void> {
   }
 }
 
+/**
+ * 打开编辑对话框；新建时默认选第一个不是系统管理员的角色。
+ * @param u 要编辑的用户；null 表示新建。
+ */
 function edit(u: User | null): void {
   Object.assign(form, u
     ? { open: true, id: u.id, account: u.account, name: u.name, roleId: u.roleId, allBusinesses: u.allBusinesses, businessIds: [...u.businessIds], error: '' }
     : { open: true, id: 0, account: '', name: '', roleId: catalog.roles.find((r) => !r.allPermissions)?.id ?? catalog.roles[0]?.id ?? 0, allBusinesses: false, businessIds: [], error: '' })
 }
 
+/**
+ * 临时密码框里的提示。
+ * @param name 用户姓名。
+ * @returns 提示文字。
+ */
 function tempHint(name: string): string {
   return `临时密码只显示这一次。请当面或通过安全渠道告诉 ${name}，首次登录时必须修改。`
 }
 
+/**
+ * 保存用户：新建时显示临时密码；改的是自己时刷新当前用户。
+ * @returns 保存结束时完成。
+ */
 async function save(): Promise<void> {
   form.busy = true
   form.error = ''
@@ -66,6 +152,11 @@ async function save(): Promise<void> {
   }
 }
 
+/**
+ * 重置密码（确认后），显示新的临时密码。
+ * @param u 用户。
+ * @returns 操作结束时完成。
+ */
 async function reset(u: User): Promise<void> {
   if (!(await confirmBox('重置密码', `给 ${u.name} 生成新的临时密码，旧密码立即失效，同时解除登录锁定。`, '重置'))) return
   try {
@@ -77,6 +168,11 @@ async function reset(u: User): Promise<void> {
   }
 }
 
+/**
+ * 启用或停用用户（停用前确认）。
+ * @param u 用户。
+ * @returns 操作结束时完成。
+ */
 async function toggle(u: User): Promise<void> {
   const enable = u.status !== 'active'
   if (!enable && !(await confirmBox('停用用户', `停用后 ${u.name} 立即不能登录和操作。`, '停用', true))) return

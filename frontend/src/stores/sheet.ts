@@ -83,6 +83,7 @@ export const sheet = reactive({
  * 撤销历史（快照是版式和启用状态）。
  */
 const history = new History()
+
 /**
  * 没有打开版式时的检查结果。
  */
@@ -92,6 +93,7 @@ const empty = { messages: [] as string[], badSlots: new Set<number>() }
  * 版式检查的结果（越界、重叠等），画布标红、不能保存。
  */
 export const problems = computed(() => (sheet.layout ? checkLayout(sheet.layout) : empty))
+
 /**
  * 有没有未保存的改动（新建的版式总是有）。
  */

@@ -23,22 +23,27 @@ defineProps<{
  * 正在编辑的版式（这个面板只在打开版式后显示）。
  */
 const layout = computed(() => sheet.layout!)
+
 /**
  * 只选中一个格子时是它的下标，否则为 null。
  */
 const selected = computed(() => (sheet.selection.length === 1 ? sheet.selection[0] : null))
+
 /**
  * 选中的格子；没有只选中一个时为 null。
  */
 const slot = computed(() => (selected.value === null ? null : layout.value.slots[selected.value]))
+
 /**
  * 预览结果：PNG 直接显示，PDF 用浏览器自带的查看器显示在对话框里，都可以下载。
  */
 const preview = ref<{ url: string; kind: 'png' | 'pdf'; title: string; fileName: string } | null>(null)
+
 /**
  * 上传批量数据用的文件输入框。
  */
 const fileInput = ref<HTMLInputElement | null>(null)
+
 /**
  * 正在请求预览或测试页。
  */

@@ -15,14 +15,17 @@ import ModalDialog from './ModalDialog.vue'
  * 模板编码的规则：字母开头，只含字母、数字、下划线、连字符，最长 64 个字符。
  */
 const CODE_PATTERN = /^[A-Za-z][A-Za-z0-9_-]{0,63}$/
+
 /**
  * 启用的画布预设。
  */
 const presets = computed(() => catalog.presets.filter((preset) => preset.enabled))
+
 /**
  * 默认选中的第一个预设；没有预设时为 undefined（用自定义尺寸）。
  */
 const first = presets.value[0]
+
 /**
  * 表单。
  */

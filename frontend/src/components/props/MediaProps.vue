@@ -18,6 +18,7 @@ const props = defineProps<{
    */
   element: ImageElement | IconElement
 }>()
+
 /**
  * 图片适应方式的按钮。
  */
@@ -31,10 +32,12 @@ const FITS: ReadonlyArray<{ value: ImageFit; label: string }> = [
  * 是图片时是它，否则为 null。
  */
 const image = computed(() => (props.element.type === 'image' ? props.element : null))
+
 /**
  * 是图标时是它，否则为 null。
  */
 const icon = computed(() => (props.element.type === 'icon' ? props.element : null))
+
 /**
  * 图片类型的字段（图片来源可以选）。
  */

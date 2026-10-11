@@ -20,10 +20,12 @@ const emit = defineEmits<{
    */
   publish: []
 }>()
+
 /**
  * 打开的模板的概要。
  */
 const detail = computed(() => workspace.detail!)
+
 /**
  * 草稿和最新发布版本不一样（有草稿或有还没保存的修改）。
  */

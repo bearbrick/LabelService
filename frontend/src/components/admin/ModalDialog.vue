@@ -22,6 +22,7 @@ const props = defineProps<{
    */
   width?: string
 }>()
+
 /**
  * 组件事件。
  */

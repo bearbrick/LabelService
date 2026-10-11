@@ -11,6 +11,7 @@ import type { Box } from './geometry.ts'
  * 对齐方式：左、水平居中、右、上、垂直居中、下。
  */
 export type AlignKind = 'left' | 'hcenter' | 'right' | 'top' | 'vcenter' | 'bottom'
+
 /**
  * 叠放顺序操作：置于顶层、置于底层、上移一层、下移一层。
  */

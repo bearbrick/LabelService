@@ -15,6 +15,7 @@ const props = defineProps<{
    */
   small?: boolean
 }>()
+
 /**
  * 图标的 SVG 内容；名字不存在时为空。
  */

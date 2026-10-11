@@ -23,6 +23,7 @@ export const PAGES = [
   'roles',
   'profile',
 ] as const
+
 /**
  * 页面名。
  */
@@ -32,6 +33,7 @@ export type Page = (typeof PAGES)[number]
  * 模板工作区的页签：设计、数据源、接口调试、版本记录。
  */
 export const WORKSPACE_VIEWS = ['designer', 'fields', 'api', 'versions'] as const
+
 /**
  * 模板工作区的页签名。
  */

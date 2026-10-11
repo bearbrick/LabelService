@@ -21,6 +21,7 @@ const props = defineProps<{
    */
   collapsed: boolean
 }>()
+
 /**
  * 组件事件。
  */
@@ -35,6 +36,7 @@ const emit = defineEmits<{
  * 搜索框的内容（按名称或编码过滤）。
  */
 const query = ref('')
+
 /**
  * 每个业务分组是否展开（分组 ID → 展开），新出现的分组默认展开。
  */

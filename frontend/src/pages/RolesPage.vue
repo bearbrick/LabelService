@@ -14,9 +14,45 @@ import { confirmBox } from '../stores/dialogs.ts'
 import { go } from '../stores/router.ts'
 import { refreshMe, session } from '../stores/session.ts'
 
+/**
+ * 权限点目录。
+ */
 const permissions = ref<PermissionInfo[]>([])
+
+/**
+ * 权限点的分组（矩阵按它分栏）。
+ */
 const groups = computed(() => [...new Set(permissions.value.map((p) => p.group))])
-const form = reactive({ open: false, name: '', description: '', copyFrom: '', error: '', busy: false })
+
+/**
+ * 新建角色的表单。
+ */
+const form = reactive({
+  /**
+   * 新建角色的对话框是否打开。
+   */
+  open: false,
+  /**
+   * 角色名称。
+   */
+  name: '',
+  /**
+   * 说明。
+   */
+  description: '',
+  /**
+   * 从哪个角色复制权限（角色 ID 的文本）；空表示不复制。
+   */
+  copyFrom: '',
+  /**
+   * 新建失败的原因。
+   */
+  error: '',
+  /**
+   * 正在新建。
+   */
+  busy: false,
+})
 
 onMounted(async () => {
   try {
@@ -26,6 +62,13 @@ onMounted(async () => {
   }
 })
 
+/**
+ * 勾选或取消一个权限点，立即保存；改的是自己的角色时刷新当前用户。失败时恢复原状。
+ * @param role 角色。
+ * @param key 权限点。
+ * @param checked 是否勾选。
+ * @returns 保存结束时完成。
+ */
 async function toggle(role: Role, key: string, checked: boolean): Promise<void> {
   const next = checked ? [...role.permissions, key] : role.permissions.filter((p) => p !== key)
   try {
@@ -38,6 +81,10 @@ async function toggle(role: Role, key: string, checked: boolean): Promise<void> 
   }
 }
 
+/**
+ * 新建角色：选了复制来源时复制它的权限，否则没有权限。
+ * @returns 新建结束时完成。
+ */
 async function create(): Promise<void> {
   form.busy = true
   form.error = ''
@@ -52,6 +99,11 @@ async function create(): Promise<void> {
   }
 }
 
+/**
+ * 删除角色（确认后；内置角色、有人在用的角色服务端拒绝）。
+ * @param role 角色。
+ * @returns 操作结束时完成。
+ */
 async function remove(role: Role): Promise<void> {
   if (!(await confirmBox('删除角色', `确定删除角色“${role.name}”？`, '删除', true))) return
   try {

@@ -14,6 +14,7 @@ import AppIcon from './AppIcon.vue'
  * 字段类型的选项。
  */
 const FIELD_TYPES: FieldType[] = ['string', 'number', 'date', 'image']
+
 /**
  * 快速添加字段的输入。
  */
@@ -31,10 +32,12 @@ const quick = reactive({
    */
   error: '',
 })
+
 /**
  * 展开编辑的字段 key。
  */
 const openKey = ref<string | null>(null)
+
 /**
  * 被元素引用的字段 key。
  */

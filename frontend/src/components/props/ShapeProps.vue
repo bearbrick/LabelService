@@ -18,6 +18,7 @@ const props = defineProps<{
    */
   element: LineElement | RectElement
 }>()
+
 /**
  * 是矩形时是它，否则为 null（圆角、填充只对矩形）。
  */

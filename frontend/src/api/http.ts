@@ -7,6 +7,7 @@
  * 存登录令牌的键名（localStorage 或 sessionStorage）。
  */
 const TOKEN_KEY = 'label-admin.token'
+
 /**
  * 管理接口的路径前缀。
  */
@@ -48,6 +49,7 @@ export class ApiError extends Error {
  * 当前的登录令牌；没登录时为 null。
  */
 let token: string | null = readToken()
+
 /**
  * 登录失效时的处理函数（由 session 注册）。
  */

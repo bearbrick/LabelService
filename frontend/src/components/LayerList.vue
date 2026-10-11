@@ -12,14 +12,17 @@ import AppIcon from './AppIcon.vue'
  * 图层列表：上层的在前（模板里后面的元素在上层）。
  */
 const topFirst = computed(() => [...designer.template.elements].reverse())
+
 /**
  * 正在拖动的元素 ID。
  */
 const dragging = ref<string | null>(null)
+
 /**
  * 拖动经过的元素 ID（显示放置位置）。
  */
 const over = ref<string | null>(null)
+
 /**
  * 正在重命名的元素 ID。
  */

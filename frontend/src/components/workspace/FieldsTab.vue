@@ -14,14 +14,17 @@ import AppIcon from '../AppIcon.vue'
  * 字段类型的选项。
  */
 const FIELD_TYPES: FieldType[] = ['string', 'number', 'date', 'image']
+
 /**
  * 每行 key 的错误（行号 → 原因）。
  */
 const keyErrors = reactive<Record<number, string>>({})
+
 /**
  * 按字段生成的调用样例（单张生成的请求体）。
  */
 const requestJson = computed(() => JSON.stringify(sampleRequest(designer.template), null, 2))
+
 /**
  * 模板的字段（表格直接编辑它们）。
  */

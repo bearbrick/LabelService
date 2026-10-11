@@ -19,6 +19,7 @@ const props = defineProps<{
    */
   types?: FieldType[]
 }>()
+
 /**
  * 组件事件。
  */
@@ -28,6 +29,7 @@ const emit = defineEmits<{
    */
   pick: [key: string]
 }>()
+
 /**
  * 可选的字段。
  */

@@ -10,14 +10,17 @@ import { addSlotAt, moveSlots, problems, select, sheet } from '../../stores/shee
  * 画布的外层容器。
  */
 const wrap = ref<HTMLElement | null>(null)
+
 /**
  * Konva 的容器。
  */
 const container = ref<HTMLDivElement | null>(null)
+
 /**
  * 当前缩放比例（右下角显示）。
  */
 const zoom = ref(1)
+
 /**
  * 拼版画布；挂载后创建。
  */

@@ -32,12 +32,14 @@ export interface PreviewItem {
  * @returns 版式列表。
  */
 export const listLayouts = (slotWidth?: number, slotHeight?: number) => api<LayoutView[]>('GET', `/layouts${query({ slotWidth, slotHeight })}`)
+
 /**
  * 取一个版式。
  * @param code 版式编码。
  * @returns 版式。
  */
 export const getLayout = (code: string) => api<LayoutView>('GET', path(code))
+
 /**
  * 新建版式；格子越界、重叠等问题时 400，details 逐条列出（带格子序号）。
  * @param layout 版式 JSON。
@@ -45,6 +47,7 @@ export const getLayout = (code: string) => api<LayoutView>('GET', path(code))
  * @returns 新版式。
  */
 export const createLayout = (layout: SheetLayout, enabled = true) => api<LayoutView>('POST', '/layouts', { layout, enabled })
+
 /**
  * 修改或停用版式（编码不能改），立即生效。
  * @param layout 版式 JSON。
@@ -52,6 +55,7 @@ export const createLayout = (layout: SheetLayout, enabled = true) => api<LayoutV
  * @returns 修改后的版式。
  */
 export const updateLayout = (layout: SheetLayout, enabled: boolean) => api<LayoutView>('PUT', path(layout.code), { layout, enabled })
+
 /**
  * 删除版式。
  * @param code 版式编码。

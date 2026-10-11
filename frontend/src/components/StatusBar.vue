@@ -10,6 +10,7 @@ const cursor = computed(() => {
   const format = (value: number | null) => (value === null ? '—' : value.toFixed(1))
   return `X ${format(designer.ui.cursorX)} · Y ${format(designer.ui.cursorY)} mm`
 })
+
 /**
  * 草稿的保存状态：只读、保存失败、正在保存、已保存的时间。
  */

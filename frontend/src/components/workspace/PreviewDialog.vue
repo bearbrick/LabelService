@@ -17,6 +17,7 @@ import ModalDialog from '../admin/ModalDialog.vue'
  * 画布和服务端位置偏差的上限，mm（验收标准）。
  */
 const LIMIT_MM = 0.2
+
 /**
  * 组件事件。
  */
@@ -26,6 +27,7 @@ const emit = defineEmits<{
    */
   close: []
 }>()
+
 /**
  * 对话框状态。
  */
@@ -80,22 +82,27 @@ const state = reactive({
  * 模板的分辨率（画布按它对齐条码模块）。
  */
 const templateDpi = computed(() => designer.template.page.dpi ?? 300)
+
 /**
  * 能不能和画布对比：在设计页打开，且按模板的 DPI 预览。
  */
 const canCompare = computed(() => route.view === 'designer' && state.dpi === templateDpi.value)
+
 /**
  * 不能对比时的原因。
  */
 const compareHint = computed(() => (route.view !== 'designer' ? '在设计页打开预览才能对比' : canCompare.value ? '' : `按模板的 ${templateDpi.value} dpi 预览才能对比`))
+
 /**
  * 偏差最大的元素（只算两边都有内容的）。
  */
 const worst = computed(() => state.offsets.find((item) => Number.isFinite(item.maxMm)))
+
 /**
  * 偏差超过上限的元素。
  */
 const failed = computed(() => state.offsets.filter((item) => item.maxMm > LIMIT_MM))
+
 /**
  * 预览图的显示宽度：实际大小，最宽 760 像素。
  */

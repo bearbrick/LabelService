@@ -14,10 +14,62 @@ import { confirmBox } from '../stores/dialogs.ts'
 import { go, goBiz } from '../stores/router.ts'
 import { can, session } from '../stores/session.ts'
 
+/**
+ * 标识色的候选，新建分组时按顺序轮流取。
+ */
 const COLORS = ['#00939a', '#5b6cd6', '#c77c02', '#b24c8e', '#3d8c40', '#d2553f', '#6b7a89']
+
+/**
+ * 用户（显示负责人，没有 sys.user 权限时为空）。
+ */
 const users = ref<User[]>([])
+
+/**
+ * 调用方（显示授权了哪些调用方，没有 api.manage 权限时为空）。
+ */
 const clients = ref<ApiClient[]>([])
-const form = reactive({ open: false, id: 0, code: '', name: '', description: '', ownerUserId: null as number | null, color: COLORS[0], error: '', busy: false })
+
+/**
+ * 新建或编辑分组的表单。
+ */
+const form = reactive({
+  /**
+   * 编辑对话框是否打开。
+   */
+  open: false,
+  /**
+   * 编辑的分组 ID；0 表示新建。
+   */
+  id: 0,
+  /**
+   * 分组编码。
+   */
+  code: '',
+  /**
+   * 名称。
+   */
+  name: '',
+  /**
+   * 说明。
+   */
+  description: '',
+  /**
+   * 负责人的用户 ID；不指定时为 null。
+   */
+  ownerUserId: null as number | null,
+  /**
+   * 标识色。
+   */
+  color: COLORS[0],
+  /**
+   * 保存失败的原因。
+   */
+  error: '',
+  /**
+   * 正在保存。
+   */
+  busy: false,
+})
 
 onMounted(async () => {
   try {
@@ -28,22 +80,40 @@ onMounted(async () => {
   }
 })
 
+/**
+ * 负责人的姓名。
+ * @param id 用户 ID；没有时为 null。
+ * @returns 姓名；不知道时为 —。
+ */
 function ownerName(id: number | null): string {
   if (!id) return '—'
   if (id === session.me?.id) return session.me.name
   return users.value.find((u) => u.id === id)?.name ?? '—'
 }
 
+/**
+ * 授权了这个分组的调用方（含授权全部业务的）。
+ * @param id 分组 ID。
+ * @returns 调用方。
+ */
 function clientsOf(id: number): ApiClient[] {
   return clients.value.filter((c) => c.allBusinesses || c.businessIds.includes(id))
 }
 
+/**
+ * 打开编辑对话框；新建时负责人默认是自己，颜色按顺序取。
+ * @param b 要编辑的分组；null 表示新建。
+ */
 function edit(b: Business | null): void {
   Object.assign(form, b
     ? { open: true, id: b.id, code: b.code, name: b.name, description: b.description, ownerUserId: b.ownerUserId, color: b.color, error: '' }
     : { open: true, id: 0, code: '', name: '', description: '', ownerUserId: session.me?.id ?? null, color: COLORS[catalog.businesses.length % COLORS.length], error: '' })
 }
 
+/**
+ * 保存分组并刷新列表。
+ * @returns 保存结束时完成。
+ */
 async function save(): Promise<void> {
   form.busy = true
   form.error = ''
@@ -61,6 +131,11 @@ async function save(): Promise<void> {
   }
 }
 
+/**
+ * 删除分组（确认后；分组里还有模板时服务端拒绝）。
+ * @param b 分组。
+ * @returns 操作结束时完成。
+ */
 async function remove(b: Business): Promise<void> {
   if (!(await confirmBox('删除业务分组', `确定删除“${b.name}”？分组里还有模板时不能删除。`, '删除', true))) return
   try {

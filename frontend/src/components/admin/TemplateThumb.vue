@@ -30,6 +30,7 @@ const props = defineProps<{
    */
   alt: string
 }>()
+
 /**
  * 缩略图的 blob URL；还没下载完或没有缩略图时为空。
  */

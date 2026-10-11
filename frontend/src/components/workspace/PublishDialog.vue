@@ -19,10 +19,12 @@ const emit = defineEmits<{
    */
   close: []
 }>()
+
 /**
  * 服务端的检查结果；还没检查完时为 null。
  */
 const check = ref<PublishCheck | null>(null)
+
 /**
  * 对话框状态。
  */
@@ -44,6 +46,7 @@ const state = reactive({
    */
   error: '',
 })
+
 /**
  * 发布后的版本号。
  */

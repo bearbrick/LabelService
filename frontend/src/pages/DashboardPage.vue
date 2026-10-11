@@ -14,8 +14,19 @@ import { dialogs } from '../stores/dialogs.ts'
 import { go, goBiz } from '../stores/router.ts'
 import { can, session } from '../stores/session.ts'
 
+/**
+ * 工作台的统计；还没读到时为 null。
+ */
 const data = ref<Dashboard | null>(null)
+
+/**
+ * 读取失败的原因。
+ */
 const error = ref('')
+
+/**
+ * 鼠标停在柱状图的第几天（显示提示框）；-1 表示没有。
+ */
 const hover = ref(-1)
 
 onMounted(async () => {
@@ -27,15 +38,25 @@ onMounted(async () => {
   }
 })
 
+/**
+ * 按时间段的问候语。
+ */
 const greeting = computed(() => {
   const h = new Date().getHours()
   return h < 6 ? '夜深了' : h < 11 ? '早上好' : h < 13 ? '中午好' : h < 18 ? '下午好' : '晚上好'
 })
+
+/**
+ * 今天的日期和星期。
+ */
 const todayText = computed(() => {
   const d = new Date()
   return `${d.getFullYear()} 年 ${d.getMonth() + 1} 月 ${d.getDate()} 日 星期${'日一二三四五六'[d.getDay()]}`
 })
 
+/**
+ * 顶部的指标卡：模板数、待发布改动；有调用统计时再加今日调用、成功率、单张 P95。
+ */
 const kpis = computed(() => {
   const t = data.value?.templates
   const today = data.value?.today
@@ -55,17 +76,32 @@ const kpis = computed(() => {
   return list
 })
 
+/**
+ * 近 14 天调用量的柱状图（成功、失败分开）。
+ */
 const chart = computed(() => barChart((data.value?.days ?? []).map((d) => ({ date: d.date, ok: d.total - d.errors, fail: d.errors }))))
+
+/**
+ * 调用最多的模板，带名称和相对比例（条形长度）。
+ */
 const top = computed(() => {
   const list = data.value?.topTemplates ?? []
   const max = Math.max(1, ...list.map((r) => r.labels))
   return list.map((r) => ({ ...r, name: catalog.templates.find((t) => t.code === r.code)?.name ?? r.code, pct: (r.labels / max) * 100 }))
 })
+
+/**
+ * 平均耗时最高的模板，带名称和相对比例（以 100 ms 为最小刻度）。
+ */
 const slow = computed(() => {
   const list = data.value?.slowTemplates ?? []
   const max = Math.max(100, ...list.map((r) => r.averageMs))
   return list.map((r) => ({ ...r, name: catalog.templates.find((t) => t.code === r.code)?.name ?? r.code, pct: (r.averageMs / max) * 100 }))
 })
+
+/**
+ * 待处理事项：有未发布改动的模板、从未发布的模板、今天的失败调用。
+ */
 const todos = computed(() => {
   const items: { tag: string; cls: string; text: string; action: string; run: () => void }[] = []
   const changed = catalog.templates.filter((t) => t.latestVersion > 0 && t.hasDraft)

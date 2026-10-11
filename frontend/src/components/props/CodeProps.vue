@@ -18,18 +18,22 @@ const props = defineProps<{
    */
   element: BarcodeElement | QrCodeElement
 }>()
+
 /**
  * 一维码可选的码制。
  */
 const LINEAR = ['code128', 'code39', 'ean13', 'ean8', 'upca', 'itf14', 'gs1-128'] as const
+
 /**
  * 二维码可选的码制。
  */
 const MATRIX = ['qr', 'datamatrix', 'pdf417'] as const
+
 /**
  * QR 纠错级别的按钮。
  */
 const LEVELS: ErrorCorrectionLevel[] = ['L', 'M', 'Q', 'H']
+
 /**
  * 一维码在框内水平对齐的按钮。
  */
@@ -43,10 +47,12 @@ const ALIGNS: ReadonlyArray<{ value: TextAlign; icon: string; label: string }> =
  * 是一维码时是它，否则为 null。
  */
 const barcode = computed(() => (props.element.type === 'barcode' ? props.element : null))
+
 /**
  * 是二维码时是它，否则为 null。
  */
 const matrix = computed(() => (props.element.type === 'qrcode' ? props.element : null))
+
 /**
  * 码制下拉框的选项（按元素类型）。
  */

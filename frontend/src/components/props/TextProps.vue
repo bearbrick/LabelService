@@ -34,6 +34,7 @@ const H_ALIGNS: ReadonlyArray<{ value: TextAlign; icon: string; label: string }>
   { value: 'center', icon: 'alignTextC', label: '居中' },
   { value: 'right', icon: 'alignTextR', label: '右对齐' },
 ]
+
 /**
  * 垂直对齐的按钮。
  */

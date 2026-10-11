@@ -79,6 +79,7 @@ export interface Bar {
  * 图表尺寸：viewBox 宽高 W、H，左右上下留白 L、R、T、B。
  */
 export const CHART = { W: 700, H: 240, L: 44, R: 12, T: 14, B: 28 } as const
+
 /**
  * 星期几的中文写法，按 Date.getDay() 取。
  */

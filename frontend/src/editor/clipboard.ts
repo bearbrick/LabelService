@@ -8,6 +8,7 @@ import type { LabelElement } from '../model/template.ts'
  * localStorage 里的键名。
  */
 const STORAGE_KEY = 'label-designer.clipboard'
+
 /**
  * 内存里的副本（本地存储不可用时用）。
  */

@@ -21,18 +21,22 @@ defineEmits<{
  * 顶栏的下拉菜单：业务、资源、接口、日志、权限管理、用户。
  */
 type MenuKey = 'biz' | 'res' | 'api' | 'log' | 'sys' | 'user'
+
 /**
  * 展开的下拉菜单；都收起时为 null。
  */
 const menu = ref<MenuKey | null>(null)
+
 /**
  * 当前用户（顶栏只在登录后显示）。
  */
 const me = computed(() => session.me!)
+
 /**
  * 模板库正在看的业务分组；看全部或不在模板库时为 null。
  */
 const currentBiz = computed(() => (route.page === 'templates' && route.biz !== 'all' ? businessOf(route.biz) : null))
+
 /**
  * 用户菜单里显示的业务范围。
  */

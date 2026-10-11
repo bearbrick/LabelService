@@ -80,6 +80,7 @@ export interface SheetStageHost {
  * 最小缩放：实际大小的 15%。
  */
 const MIN_SCALE = BASE_PX_PER_MM * 0.15
+
 /**
  * 最大缩放：实际大小的 600%。
  */

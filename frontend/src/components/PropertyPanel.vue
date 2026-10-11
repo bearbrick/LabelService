@@ -33,14 +33,17 @@ import TextProps from './props/TextProps.vue'
  * 模板的纸张尺寸（画布属性直接改它，改完调 onPage）。
  */
 const page = computed(() => designer.template.page)
+
 /**
  * 启用的画布预设。
  */
 const presets = computed(() => catalog.presets.filter((preset) => preset.enabled))
+
 /**
  * 选中元素的绘制提示（如条码过密）。
  */
 const metric = computed(() => (selectedElement.value ? designer.metrics[selectedElement.value.id] : undefined))
+
 /**
  * 选中元素的 JSON（只读展示）。
  */

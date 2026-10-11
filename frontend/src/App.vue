@@ -58,14 +58,17 @@ const PAGES: Record<Page, { component: Component; permission?: string }> = {
  * 窄屏时左侧模板树是否展开。
  */
 const navOpen = ref(false)
+
 /**
  * 首次登录或重置密码后必须先改密码（只显示个人设置页）。
  */
 const mustChange = computed(() => !!session.me?.mustChangePassword)
+
 /**
  * 当前要显示的页面。
  */
 const current = computed(() => (mustChange.value ? PAGES.profile : PAGES[route.page]))
+
 /**
  * 当前用户有没有权限看当前页面。
  */
