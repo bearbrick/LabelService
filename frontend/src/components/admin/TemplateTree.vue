@@ -151,6 +151,7 @@ ${t.code} · ${sizeText(t)}`"
       <button v-if="can('log.view')" class="module-row" type="button" @click="page('oplogs')"><AppIcon name="logs" /><span class="nm">操作日志</span></button>
       <button v-if="can('sys.user')" class="module-row" type="button" @click="page('users')"><AppIcon name="users" /><span class="nm">用户管理</span></button>
       <button v-if="can('sys.role')" class="module-row" type="button" @click="page('roles')"><AppIcon name="shield" /><span class="nm">角色权限</span></button>
+      <button v-if="can('sys.settings')" class="module-row" type="button" @click="page('settings')"><AppIcon name="gear" /><span class="nm">系统信息</span></button>
     </div>
     <div class="sidebar-footer">
       <span><AppIcon name="box" small />{{ catalog.templates.length }} 个模板 · {{ catalog.businesses.length }} 个业务</span>

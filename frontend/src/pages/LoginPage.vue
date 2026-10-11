@@ -1,12 +1,15 @@
 <script setup lang="ts">
 /**
  * 登录页：账号密码登录，可选 7 天内自动登录。连续输错 5 次锁定 15 分钟（服务端控制）。
+ * 左栏顶部是公司 Logo 和系统名称，登录框下面是版权信息和技术支持（系统信息页设置）。
  */
 import { reactive } from 'vue'
 import { errorText } from '../api/http.ts'
 import AppIcon from '../components/AppIcon.vue'
+import BrandMark from '../components/admin/BrandMark.vue'
 import { toast } from '../stores/designer.ts'
 import { session, signIn } from '../stores/session.ts'
+import { system } from '../stores/system.ts'
 
 /**
  * 登录表单。
@@ -57,13 +60,22 @@ async function submit(): Promise<void> {
     form.busy = false
   }
 }
+
+/**
+ * 点“忘记密码”时的提示；设置了技术支持时带上联系方式。
+ * @returns 提示文字。
+ */
+function forgotText(): string {
+  const support = system.info.support ? `（技术支持：${system.info.support}）` : ''
+  return `请联系系统管理员在“用户管理”里重置密码${support}`
+}
 </script>
 
 <template>
   <div class="login-page">
     <div class="login-shell">
       <div class="login-intro">
-        <div class="brand"><AppIcon name="brand" /><b>标签服务</b></div>
+        <BrandMark :info="system.info" />
         <span class="eyebrow">LABEL SERVICE · 内部工具</span>
         <h1>标签和唛头在网页上设计，<br />业务系统一个接口生成</h1>
         <p>拖拽设计模板，定义数据字段，发布后 MES、WMS、ERP 用模板编码加数据调用，拿回 PDF、PNG 或 ZPL 文件。</p>
@@ -72,7 +84,7 @@ async function submit(): Promise<void> {
       <form class="login-form" novalidate @submit.prevent="submit">
         <span class="eyebrow">ACCOUNT LOGIN</span>
         <h2>登录</h2>
-        <p>使用标签服务的账号登录。</p>
+        <p>使用{{ system.info.systemName }}的账号登录。</p>
         <div v-if="session.notice" class="notice warn"><AppIcon name="alert" /><div>{{ session.notice }}</div></div>
         <label class="lbl">账号<input id="lg-account" v-model.trim="form.account" class="inp" autocomplete="username" placeholder="请输入账号" @input="form.error = ''" /></label>
         <label class="lbl"
@@ -84,11 +96,15 @@ async function submit(): Promise<void> {
         </label>
         <div class="login-row">
           <label class="check"><input id="lg-remember" v-model="form.remember" type="checkbox" />7 天内自动登录</label>
-          <button class="link" type="button" @click="toast('请联系系统管理员在“用户管理”里重置密码')">忘记密码？</button>
+          <button class="link" type="button" @click="toast(forgotText())">忘记密码？</button>
         </div>
         <div v-if="form.error" class="form-err" role="alert" style="margin-bottom: 10px">{{ form.error }}</div>
         <button class="btn primary block" type="submit" :disabled="form.busy">{{ form.busy ? '登录中…' : '登录' }}</button>
       </form>
     </div>
+    <footer v-if="system.info.copyright || system.info.support" class="login-foot">
+      <span v-if="system.info.copyright">{{ system.info.copyright }}</span>
+      <span v-if="system.info.support">技术支持：{{ system.info.support }}</span>
+    </footer>
   </div>
 </template>
