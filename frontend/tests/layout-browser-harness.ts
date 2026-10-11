@@ -58,7 +58,7 @@ export function viewports(host: HTMLElement) {
       viewport.resize(); sheet.resize()
     },
     fit: () => { viewport.zoomFit(); sheet.fit() },
-    zoom: () => { viewport.zoomBy(1.25); sheet.zoomBy(1.25) },
+    zoom: () => { viewport.zoomBy(1.25); sheet.zoomTo(sheet.zoom * 1.25) },
     pan: () => wraps.forEach(({ wrap }) => wrap.dispatchEvent(new WheelEvent('wheel', { deltaX: 20, deltaY: 15, bubbles: true, cancelable: true }))),
     requestFit: () => { template.page.width = 70; template.page.height = 40; viewport.requestFit() },
     dispose: () => { viewport.destroy(); sheet.destroy(); wraps.forEach(({ wrap }) => wrap.remove()) },
