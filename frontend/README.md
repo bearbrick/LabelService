@@ -99,5 +99,6 @@ npm run build     # 类型检查（vue-tsc）+ 打包
 - 服务端预览（T-016）：模板工作区的“服务端预览”把当前内容（不用先保存）发给 `POST /api/admin/preview`；在设计页打开、按模板 DPI 预览时可以“和画布对比”，叠加显示并逐个元素量位置偏差（`editor/compare.ts`），示例箱标最大 0.085 mm。
 - `src/model/layout.ts` 是后端 `Contracts/Layouts/SheetLayout.cs` 的镜像（ADR 0005），后端检查程序按属性名核对；越界、重叠的规则和容差（0.05 mm）和服务端保存前的检查一致。
 - 拼版画布的格子画的是服务端缩略图（一张位图），24 个格子一帧约 0.5 ms，和模板有多少元素无关。对齐、分布直接用 `editor/arrange.ts`（它接受任意矩形），吸附用 `editor/snapping.ts`，撤销用 `editor/history.ts`。
+- 窗口大小：管理页面在 768px 宽以上都能用（900px 以下模板树收进顶栏左边的按钮）；设计器和拼版设计器要 1100px 以上，更窄时显示“窗口太窄”的提示。窗口窄于 1440px 时打开设计器会自动收起模板树（面包屑前的按钮可以再展开）；画布停在“适应窗口”的状态时随窗口大小重新适应，手动缩放或平移过就保持不变。名称太长时省略显示，鼠标停在上面看完整名称。
 - 不引用 `frontend/` 以外的文件（后端检查程序会拦）。
 - 注释（AGENTS.md R5）：每个模块级的函数、常量、接口和类型（含属性）、store 的状态、组件的 props 和 emits 都写多行 JSDoc，函数写 `@param`、`@returns`；`npm run check` 用 `tests/docs.ts` 核对。`src/` 下的文件不超过 500 行，同样由 `npm run check` 核对。
