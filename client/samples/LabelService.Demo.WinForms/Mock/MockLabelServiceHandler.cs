@@ -60,6 +60,7 @@ internal sealed class MockLabelServiceHandler : HttpMessageHandler
         var started = Stopwatch.GetTimestamp();
         await Task.Delay(random.Next(15, 45), cancellationToken).ConfigureAwait(false);
         var requestId = request.Headers.TryGetValues("X-Request-Id", out var ids) ? ids.First() : Guid.NewGuid().ToString("N");
+        // 模拟网络抖动：同一个调用（X-Request-Id）第一次返回 503，SDK 重试时带的是同一个 ID，第二次就成功。
         if (Flaky && failedOnce.TryAdd(requestId, true))
         {
             return new HttpResponseMessage(HttpStatusCode.ServiceUnavailable) { Content = new StringContent("Service Unavailable") };
@@ -71,6 +72,7 @@ internal sealed class MockLabelServiceHandler : HttpMessageHandler
             return Error(HttpStatusCode.Unauthorized, "UNAUTHORIZED", "API Key 缺失或无效");
         }
 
+        // 按路径分发：字段定义、单张生成、批量生成。
         var path = request.RequestUri!.AbsolutePath;
         if (request.Method == HttpMethod.Get && path.StartsWith("/api/v1/templates/", StringComparison.Ordinal) && path.EndsWith("/schema", StringComparison.Ordinal))
         {
@@ -138,6 +140,7 @@ internal sealed class MockLabelServiceHandler : HttpMessageHandler
         var labels = new List<(Dictionary<string, string> Data, int Copies)>();
         var errors = new List<Dictionary<string, object>>();
         var index = 0;
+        // 每条合并公共字段后校验必填，错误明细带条目序号，全部通过才生成。
         foreach (var item in body.GetProperty("items").EnumerateArray())
         {
             var data = new Dictionary<string, string>(common, StringComparer.Ordinal);

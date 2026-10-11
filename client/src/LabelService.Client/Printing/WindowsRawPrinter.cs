@@ -33,6 +33,7 @@ public static class WindowsRawPrinter
             throw new ArgumentNullException(nameof(content));
         }
 
+        // 打开打印机 → 开始作业（RAW，不经过驱动渲染）→ 开始一页 → 写数据 → 逐层结束；每一步失败都带上 Win32 错误码。
         if (!NativeMethods.OpenPrinter(printerName, out var printer, IntPtr.Zero))
         {
             throw new Win32Exception(Marshal.GetLastWin32Error(), $"无法打开打印机 {printerName}。");
@@ -53,6 +54,7 @@ public static class WindowsRawPrinter
                     throw new Win32Exception(Marshal.GetLastWin32Error(), "StartPagePrinter 失败。");
                 }
 
+                // WritePrinter 要非托管内存，复制过去，用完释放。
                 var buffer = Marshal.AllocCoTaskMem(content.Length);
                 try
                 {

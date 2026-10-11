@@ -63,6 +63,7 @@ internal sealed partial class MainForm
         batchCount.ValueChanged += (_, _) => renderBatch.Text = $"批量生成 {batchCount.Value} 条";
         codeBatch.CheckedChanged += (_, _) => UpdateCode();
         zoom.SelectedIndexChanged += (_, _) => LayoutPreview();
+        // 左边任何设置变化都重新生成调用代码。
         foreach (var control in new Control[] { baseAddress, timeout, retries, templateCode, dpi, copies, batchCount, incrementKey, png, pdf, zpl })
         {
             control.TextChanged += (_, _) => UpdateCode();
@@ -204,6 +205,7 @@ internal sealed partial class MainForm
                 Dpi = SelectedDpi,
                 Output = SelectedFormat == LabelFormat.Png ? BatchOutput.Zip : BatchOutput.Merge,
             };
+            // 递增字段以外的值都是公共字段；每条只设置递增后的值。
             var increment = incrementKey.SelectedItem as string;
             var values = FieldValues();
             foreach (var (key, type, value) in values.Where(field => field.Key != increment))
@@ -296,6 +298,7 @@ internal sealed partial class MainForm
     /// <param name="e">SDK 的调用记录。</param>
     private void AddLog(CallCompletedEventArgs e)
     {
+        // 单张服务端超过 100 ms 标为慢调用；重试过的写明次数。
         var slow = e.Operation == "Render" && e.ServerDuration?.TotalMilliseconds > 100;
         var result = e.StatusCode is null ? e.ErrorCode ?? "—" : $"{e.StatusCode} {(e.ErrorCode ?? "OK")}";
         var note = slow ? "慢调用（服务端超过 100 ms）" : e.Attempts > 1 ? $"重试 {e.Attempts - 1} 次后{(e.ErrorCode is null ? "成功" : "仍失败")}" : "";

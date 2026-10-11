@@ -41,6 +41,7 @@ internal static class MockDocuments
         foreach (var (data, copies) in labels)
         {
             using var bitmap = Draw(template, dpi, data);
+            // 每行按 8 个像素一个字节打包，暗的像素是 1（黑点），写成十六进制。
             var bytesPerRow = (bitmap.Width + 7) / 8;
             var hex = new StringBuilder(bytesPerRow * bitmap.Height * 2);
             var locked = bitmap.LockBits(new Rectangle(0, 0, bitmap.Width, bitmap.Height), ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
@@ -66,6 +67,7 @@ internal static class MockDocuments
                 }
             }
 
+            // 一张标签一段 ^XA…^XZ：纸宽、纸长、^GFA 位图、份数。
             var total = bytesPerRow * bitmap.Height;
             zpl.Append("^XA^PW").Append(bitmap.Width).Append("^LL").Append(bitmap.Height)
                 .Append("^FO0,0^GFA,").Append(total).Append(',').Append(total).Append(',').Append(bytesPerRow).Append(',')
@@ -96,6 +98,7 @@ internal static class MockDocuments
             }
         }
 
+        // 手写一个最小的 PDF：目录、页树，每页一个内容流和一张 JPEG 图片，最后是交叉引用表。
         var width = template.Width / 25.4 * 72;
         var height = template.Height / 25.4 * 72;
         using var pdf = new MemoryStream();
@@ -166,6 +169,7 @@ internal static class MockDocuments
         g.DrawString(template.Name, title, Brushes.Black, Mm(4), Mm(3));
         g.DrawString("模拟服务 · 示意图", small, Brushes.Gray, bitmap.Width - g.MeasureString("模拟服务 · 示意图", small).Width - Mm(4), Mm(4));
 
+        // 字段值两列排列。
         var y = Mm(11 * scale);
         var column = 0;
         foreach (var field in template.Fields)
@@ -180,6 +184,7 @@ internal static class MockDocuments
             }
         }
 
+        // 下面画一个示意条码：取第一个带数字的字段值，按字节的位画粗细不同的条（不是真的条码）。
         var code = template.Fields.Select(field => data.TryGetValue(field.Key, out var value) ? value : "").FirstOrDefault(value => value.Any(char.IsDigit)) ?? template.Code;
         var barTop = y + Mm(6 * scale);
         var barHeight = Math.Max(Mm(8), bitmap.Height - barTop - Mm(10 * scale));

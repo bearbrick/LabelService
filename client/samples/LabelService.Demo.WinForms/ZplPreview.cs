@@ -88,6 +88,7 @@ internal static class ZplPreview
             position = 0;
         }
 
+        // 逐个字符解释压缩写法：G–Y、g–z 累计重复次数，逗号、感叹号补满本行，冒号复制上一行，十六进制字符按重复次数写入。
         foreach (var ch in data)
         {
             if (rows.Count >= height)

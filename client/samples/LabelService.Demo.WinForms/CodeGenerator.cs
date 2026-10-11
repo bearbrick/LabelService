@@ -101,6 +101,7 @@ internal static class CodeGenerator
         code.AppendLine("{");
         code.AppendLine("    private static async Task Main()");
         code.AppendLine("    {");
+        // 生成的代码：建客户端（Key 从环境变量读）→ 单张或批量调用 → 保存文件 → 捕获 LabelServiceException。
         code.AppendLine("        // 应用内只建一个客户端实例，多线程共享。API Key 放配置文件或环境变量，不要写进代码。");
         code.AppendLine("        var client = new LabelServiceClient(new LabelServiceClientOptions");
         code.AppendLine("        {");
