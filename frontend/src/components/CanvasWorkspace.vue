@@ -101,6 +101,7 @@ function paintRulers(): void {
       label: color('--ink-2', '#566174'),
       cursor: color('--blue', '#1555d4'),
     }
+    // 标尺要的视图状态：纸张原点、缩放、纸张尺寸、选中元素的范围、光标位置。
     const view = {
       originX: stage.origin.x,
       originY: stage.origin.y,

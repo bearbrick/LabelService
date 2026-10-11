@@ -207,6 +207,7 @@ async function send(): Promise<void> {
     const response = await testRender(parsed.value)
     const blob = await response.blob()
     const type = response.headers.get('content-type') ?? ''
+    // 服务端耗时取 Server-Timing 各阶段之和；按内容类型决定怎么显示结果。
     const serverMs = [...(response.headers.get('server-timing') ?? '').matchAll(/dur=([\d.]+)/g)].reduce((sum, match) => sum + Number(match[1]), 0)
     const kind = type.includes('png') ? 'png' : type.includes('pdf') ? 'pdf' : 'zpl'
     state.result = {
@@ -220,6 +221,7 @@ async function send(): Promise<void> {
       text: kind === 'zpl' ? await blob.text() : '',
     }
   } catch (error) {
+    // 失败时显示状态和错误码，逐条问题里去掉和说明重复的那条。
     const status = error instanceof ApiError ? `${error.status} ${error.code}` : '请求失败'
     const text = error instanceof ApiError ? [error.message, ...error.details.filter((item) => !item.includes(error.message))].join('\n') : errorText(error)
     state.result = { ok: false, status, ms: `往返 ${(performance.now() - started).toFixed(0)} ms`, size: '', headers: [], url: '', kind: 'error', text }

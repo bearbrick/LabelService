@@ -91,6 +91,7 @@ export function paintRuler(canvas: HTMLCanvasElement, horizontal: boolean, view:
   const width = canvas.clientWidth
   const height = canvas.clientHeight
   if (!width || !height) return
+  // 画布的像素尺寸跟着 CSS 尺寸和设备像素比，高分屏上刻度也清晰。
   if (canvas.width !== Math.round(width * ratio) || canvas.height !== Math.round(height * ratio)) {
     canvas.width = Math.round(width * ratio)
     canvas.height = Math.round(height * ratio)
@@ -102,6 +103,7 @@ export function paintRuler(canvas: HTMLCanvasElement, horizontal: boolean, view:
   context.fillStyle = colors.background
   context.fillRect(0, 0, width, height)
 
+  // 横、竖两条标尺共用一套代码：沿标尺方向的是“长度”，垂直方向的是“厚度”。
   const origin = horizontal ? view.originX : view.originY
   const length = horizontal ? width : height
   const thickness = horizontal ? height : width
@@ -117,12 +119,14 @@ export function paintRuler(canvas: HTMLCanvasElement, horizontal: boolean, view:
     else context.fillRect(0, view.highlight.y, width, view.highlight.height)
   }
 
+  // 按当前缩放选刻度间距：小刻度不密于 5 像素，带数字的大刻度不密于 44 像素。
   const minor = MINOR_STEPS.find((step) => step * scale >= 5) ?? 100
   const major = MAJOR_STEPS.find((step) => step * scale >= 44) ?? 500
   const end = (length - origin) / scale
   context.strokeStyle = colors.tick
   context.lineWidth = 1
   context.beginPath()
+  // 从画布左（上）边对应的毫米数开始画，大刻度画满厚度，半格画 8 像素，其余 4 像素。
   for (let mm = Math.floor(-origin / scale / minor) * minor; mm <= end; mm += minor) {
     const position = Math.round(origin + mm * scale) + 0.5
     const isMajor = Math.abs(mm / major - Math.round(mm / major)) < 1e-6
@@ -141,6 +145,7 @@ export function paintRuler(canvas: HTMLCanvasElement, horizontal: boolean, view:
   context.fillStyle = colors.label
   context.font = '10px Consolas, "Cascadia Code", monospace'
   context.textBaseline = 'top'
+  // 大刻度旁边写毫米数；竖标尺的数字逆时针转 90°。
   for (let mm = Math.floor(-origin / scale / major) * major; mm <= end; mm += major) {
     const position = origin + mm * scale
     const label = String(Math.round(mm * 10) / 10)
@@ -156,6 +161,7 @@ export function paintRuler(canvas: HTMLCanvasElement, horizontal: boolean, view:
     }
   }
 
+  // 光标位置画一条细线。
   const cursor = horizontal ? view.cursorX : view.cursorY
   if (cursor !== null) {
     const position = Math.round(origin + cursor * scale) + 0.5

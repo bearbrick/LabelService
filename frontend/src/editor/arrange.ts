@@ -58,6 +58,7 @@ const boxOf = (element: Movable): Box => ({ x: element.x, y: element.y, width: e
  */
 export function alignElements(selected: readonly Movable[], kind: AlignKind, page: { width: number; height: number }): void {
   if (!selected.length) return
+  // 参照物：只选一个时是画布，多个时是选区的外框。
   const reference = selected.length === 1 ? { x: 0, y: 0, width: page.width, height: page.height } : unionBox(selected.map(boxOf))!
   for (const element of selected) {
     if (element.locked) continue

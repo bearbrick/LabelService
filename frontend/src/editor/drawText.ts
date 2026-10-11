@@ -104,6 +104,7 @@ export function drawText(group: Konva.Group, element: TextElement, context: Draw
     letterSpacing: style.letterSpacing ?? 0,
     lineHeight: style.lineHeight,
   }
+  // 自动缩小：原字号放不下时，在最小字号和原字号之间二分查找能放下的最大字号（14 次足够精确到 0.01 mm）。
   let fontSize = maxSize
   if (style.fit === 'shrink' && text) {
     const fits = (size: number) => {
@@ -126,6 +127,7 @@ export function drawText(group: Konva.Group, element: TextElement, context: Draw
     }
   }
 
+  // 超出元素框的部分裁掉（服务端也不打印）。
   const clip = new Konva.Group({ clip: { x: 0, y: 0, width, height }, listening: false })
   clip.add(textNode({
     ...base,
@@ -142,6 +144,7 @@ export function drawText(group: Konva.Group, element: TextElement, context: Draw
   }))
   group.add(clip)
 
+  // 按实际排版的尺寸判断有没有超出，给属性面板报告。
   const used = measure({ ...base, fontSize, width: style.fit === 'wrap' ? width : AUTO, wrap: style.fit === 'wrap' ? 'word' : 'none' })
   const overflow = (style.fit !== 'wrap' && used.width > width + 0.05) || used.height > height + 0.05
   if (fontSize < maxSize - 1e-3) {

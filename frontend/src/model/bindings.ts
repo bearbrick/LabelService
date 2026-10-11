@@ -113,6 +113,7 @@ export function formatValue(value: unknown, type: FieldType, format?: string): s
 export function formatNumber(value: number, format?: string): string {
   if (!Number.isFinite(value)) return String(value)
   if (!format) return String(value)
+  // 标准格式：N 千分位、F 固定小数、D 整数补零，后面的数字是位数。
   const standard = /^([NnFfDd])(\d{0,2})$/.exec(format)
   if (standard) {
     const kind = standard[1].toUpperCase()
@@ -122,6 +123,7 @@ export function formatNumber(value: number, format?: string): string {
     return kind === 'N' ? groupThousands(fixed) : fixed
   }
 
+  // 自定义格式：小数部分 0 是必须显示的位、# 是可选的位（末尾的 0 去掉）；整数部分 0 的个数是最少位数，有逗号时加千分位。
   const custom = /^([#0,]*)(?:\.([0#]*))?$/.exec(format)
   if (!custom) return String(value)
   const integerPattern = custom[1] ?? ''

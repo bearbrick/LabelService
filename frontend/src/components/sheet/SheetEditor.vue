@@ -64,12 +64,14 @@ function onKeyDown(event: KeyboardEvent): void {
   const typing = !!target && (['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName) || target.isContentEditable)
   const mod = event.ctrlKey || event.metaKey
   const key = event.key.toLowerCase()
+  // Ctrl+S 在输入框里也有效。
   if (mod && key === 's') {
     event.preventDefault()
     emit('save')
     return
   }
 
+  // 其余快捷键在打字或只读时不响应。
   if (typing || props.readOnly) return
   const actions: Array<[boolean, () => void]> = [
     [mod && !event.shiftKey && key === 'z', undo],
@@ -87,6 +89,7 @@ function onKeyDown(event: KeyboardEvent): void {
     return
   }
 
+  // 方向键微调选中的格子：每次 0.1 mm，按住 Shift 1 mm。
   const step = event.shiftKey ? 1 : 0.1
   const arrows: Record<string, [number, number]> = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] }
   if (arrows[event.key] && count()) {

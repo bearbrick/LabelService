@@ -390,9 +390,11 @@ export class SheetStage {
    * @param container Konva 的容器。
    */
   private bindEvents(container: HTMLDivElement): void {
+    // 点纸张或空白处取消选择（点格子由格子自己处理）。
     this.stage.on('mousedown touchstart', (event) => {
       if (event.target === this.stage || event.target === this.paper) this.host.select([])
     })
+    // Ctrl+滚轮以光标为基点缩放，普通滚轮平移。
     const onWheel = (event: WheelEvent) => {
       event.preventDefault()
       if (event.ctrlKey || event.metaKey) {
@@ -405,6 +407,7 @@ export class SheetStage {
       this.stage.batchDraw()
     }
 
+    // 从左侧拖入模板：允许放下，落点换成纸上的坐标交给 store。
     const onDragOver = (event: DragEvent) => event.preventDefault()
     const onDrop = (event: DragEvent) => {
       event.preventDefault()
@@ -412,6 +415,7 @@ export class SheetStage {
       this.host.dropped(point.x, point.y)
     }
 
+    // 容器尺寸变了就调整舞台尺寸。
     const observer = new ResizeObserver(() => this.resize())
     observer.observe(this.wrap)
     container.addEventListener('wheel', onWheel, { passive: false })

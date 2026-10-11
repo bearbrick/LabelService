@@ -159,6 +159,7 @@ function drawImage(group: Konva.Group, element: ImageElement, context: DrawConte
   const src = element.src ?? ''
   let url: string | null = null
   let label = ''
+  // 来源是素材时按 key 取下载好的文件；是字段时用字段的样例值（base64 或 data URL）。
   if (src.startsWith('asset:')) {
     url = context.assetSource(src.slice(6))
     label = url ? '' : '素材不存在'
@@ -177,6 +178,7 @@ function drawImage(group: Konva.Group, element: ImageElement, context: DrawConte
   const natural = imageSize(image)
   const { width, height } = element
   const attrs: Konva.ImageConfig = { image, listening: false }
+  // 按 fit 摆放：stretch 拉伸铺满，cover 等比放大后裁掉多余部分，contain（默认）等比缩小后居中。
   if (element.fit === 'stretch') {
     Object.assign(attrs, { x: 0, y: 0, width, height })
   } else if (element.fit === 'cover') {

@@ -48,6 +48,7 @@ export function drawBarcode(group: Konva.Group, element: BarcodeElement, context
     return
   }
 
+  // 模块宽度按框宽（扣掉左右留白）取整到打印点，和服务端一样；再按 align 决定条码在框里的起点。
   const { widths, modules } = encoded.code
   const dotsPerMm = context.dpi / 25.4
   const quiet = Math.max(0, element.quietZone ?? 0)
@@ -62,6 +63,7 @@ export function drawBarcode(group: Konva.Group, element: BarcodeElement, context
   const barsWidth = modules * module
   const align = element.align ?? 'left'
   const x0 = quiet + (align === 'center' ? (usable - barsWidth) / 2 : align === 'right' ? usable - barsWidth : 0)
+  // 文字在上方时条码往下让出一行文字的高度。
   const barY = showText && element.textPosition === 'top' ? textHeight : 0
   group.add(new Konva.Shape({
     fill: '#000000',
@@ -80,6 +82,7 @@ export function drawBarcode(group: Konva.Group, element: BarcodeElement, context
   }))
 
   if (showText) {
+    // 人眼可读文字以条码为中心，比条码宽时向两边伸出（不超出元素框）。
     const fontFamily = cssFontFamily(element.textStyle?.fontFamily)
     const textWidth = Math.max(barsWidth, Math.min(element.width, measure({ text: caption, fontSize: textSize, fontFamily }).width))
     group.add(textNode({
@@ -96,6 +99,7 @@ export function drawBarcode(group: Konva.Group, element: BarcodeElement, context
     }))
   }
 
+  // 报告给属性面板：过密时给出需要的最小宽度，否则给出实际的模块尺寸。
   if (dots < minDots) {
     const need = Math.ceil(((modules * minDots) / dotsPerMm + quiet * 2) * 10) / 10
     context.report(element.id, {
@@ -135,6 +139,7 @@ export function drawMatrix(group: Konva.Group, element: QrCodeElement, context: 
     return
   }
 
+  // 二维码的模块按框的短边取整到打印点，整体在框里居中。
   const { pixels, columns, rows } = encoded.code
   const dotsPerMm = context.dpi / 25.4
   const quiet = Math.max(0, element.quietZone ?? 0)

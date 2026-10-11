@@ -47,13 +47,16 @@ function onKeyDown(event: KeyboardEvent): void {
   const typing = !!target && (['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName) || target.isContentEditable)
   const mod = event.ctrlKey || event.metaKey
   const key = event.key.toLowerCase()
+  // Ctrl+S 在输入框里也有效：立即保存草稿。
   if (mod && key === 's') {
     event.preventDefault()
     void saveDraft().then((ok) => ok && toast(designer.readOnly ? '只读模板不保存' : '草稿已保存'))
     return
   }
 
+  // 其余快捷键在输入框里打字时不响应，免得和输入冲突。
   if (typing) return
+  // 快捷键表：按顺序找第一条匹配的执行（和快捷键说明对话框一致）。
   const actions: Array<[boolean, () => void]> = [
     [event.key === ' ', () => (designer.ui.spaceDown = true)],
     [mod && !event.shiftKey && key === 'z', undo],
@@ -80,6 +83,7 @@ function onKeyDown(event: KeyboardEvent): void {
     return
   }
 
+  // 方向键微调选中的元素：每次 0.1 mm，按住 Shift 1 mm。
   const step = event.shiftKey ? 1 : 0.1
   const arrows: Record<string, [number, number]> = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] }
   if (arrows[event.key] && designer.selection.length) {

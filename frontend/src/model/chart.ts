@@ -128,12 +128,14 @@ function roundTop(x: number, y: number, w: number, h: number, r: number): string
 export function barChart(days: readonly DayCount[]): { ticks: { v: number; y: number }[]; bars: Bar[] } {
   const { W, H, L, R, T, B } = CHART
   const base = H - B
+  // 纵轴：最大值分成 4 档左右，步长取 1、2、5 的整倍数，顶端取步长的整倍数。
   const max = Math.max(1, ...days.map((d) => d.ok + d.fail))
   const step = Math.max(1, niceStep(max / 4))
   const top = Math.ceil(max / step) * step
   const y = (v: number) => T + (base - T) * (1 - v / top)
   const ticks: { v: number; y: number }[] = []
   for (let v = 0; v <= top + 1e-9; v += step) ticks.push({ v, y: y(v) })
+  // 每天占一格，柱宽是格宽的 62%（最宽 26），两边留白相等。
   const slot = (W - L - R) / Math.max(1, days.length)
   const w = Math.min(26, slot * 0.62)
   const pad = (slot - w) / 2
@@ -141,6 +143,7 @@ export function barChart(days: readonly DayCount[]): { ticks: { v: number; y: nu
     const x = L + i * slot + pad
     const okTop = y(d.ok)
     const failTop = y(d.ok + d.fail)
+    // 只有成功时顶端圆角；有失败时成功部分是直角，失败部分叠在上面（隔 2 的缝）、顶端圆角，再少也至少 1.5 高。
     const okPath = d.ok ? (d.fail ? rectPath(x, okTop, w, base - okTop) : roundTop(x, okTop, w, base - okTop, 3)) : ''
     let failPath = ''
     if (d.fail) {
