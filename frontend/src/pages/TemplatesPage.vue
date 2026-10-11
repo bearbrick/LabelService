@@ -1,5 +1,7 @@
 <script setup lang="ts">
-/** 模板库：按业务分组的模板列表（卡片或表格），可筛选状态、排序；复制、删除模板。 */
+/**
+ * 模板库：按业务分组的模板列表（卡片或表格），可筛选状态、排序；复制、删除模板。
+ */
 import { computed, reactive } from 'vue'
 import { createTemplate, deleteTemplate, getTemplate } from '../api/admin.ts'
 import type { TemplateItem } from '../api/admin.ts'

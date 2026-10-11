@@ -83,7 +83,9 @@ function pixelsOf(source: CanvasImageSource, width: number, height: number): Pix
   return context.getImageData(0, 0, width, height)
 }
 
-/** 画布按服务端图片的像素尺寸导出，逐个元素量墨迹边界的差。画布要用样例值显示才可比。 */
+/**
+ * 画布按服务端图片的像素尺寸导出，逐个元素量墨迹边界的差。画布要用样例值显示才可比。
+ */
 async function compare(): Promise<void> {
   if (designer.ui.mode !== 'sample') designer.ui.mode = 'sample'
   // 等画布按新的显示方式同步完节点（导出时 toCanvas 会重新画，不依赖屏幕刷新）。

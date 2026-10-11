@@ -2,9 +2,19 @@
  * 后台页面的显示格式：时间、画布尺寸、文件大小。时间参数是 ISO 字符串（UTC），按本地时区显示。
  */
 
+/**
+ * 补成两位数。
+ * @param value 数字。
+ * @returns 如 08。
+ */
 const pad2 = (value: number) => String(value).padStart(2, '0')
 
-/** 相对时间：刚刚、N 分钟前、今天 HH:mm、M-dd HH:mm。 */
+/**
+ * 相对时间：刚刚、N 分钟前、今天 HH:mm、M-dd HH:mm。
+ * @param iso ISO 时间；没有时显示 —。
+ * @param now 当前时间（毫秒），检查程序里固定它。
+ * @returns 相对时间。
+ */
 export function fmtTime(iso: string | null | undefined, now = Date.now()): string {
   if (!iso) return '—'
   const time = Date.parse(iso)
@@ -19,7 +29,11 @@ export function fmtTime(iso: string | null | undefined, now = Date.now()): strin
   return `${date.getMonth() + 1}-${pad2(date.getDate())} ${pad2(date.getHours())}:${pad2(date.getMinutes())}`
 }
 
-/** 完整时间 yyyy-MM-dd HH:mm:ss。 */
+/**
+ * 完整时间 yyyy-MM-dd HH:mm:ss。
+ * @param iso ISO 时间；没有时显示 —。
+ * @returns 本地时间的完整写法。
+ */
 export function fmtDateTime(iso: string | null | undefined): string {
   if (!iso) return '—'
   const date = new Date(iso)
@@ -27,7 +41,11 @@ export function fmtDateTime(iso: string | null | undefined): string {
   return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())} ${pad2(date.getHours())}:${pad2(date.getMinutes())}:${pad2(date.getSeconds())}`
 }
 
-/** A4、A5、A6 纸张名（含横向、纵向），不是标准纸张返回空字符串。 */
+/**
+ * A4、A5、A6 纸张名（含横向、纵向），不是标准纸张返回空字符串。
+ * @param page 宽高，mm。
+ * @returns 如“A4 纵向”。
+ */
 export function paperName(page: { width: number; height: number }): string {
   const short = Math.min(page.width, page.height)
   const long = Math.max(page.width, page.height)
@@ -35,13 +53,21 @@ export function paperName(page: { width: number; height: number }): string {
   return paper ? paper[0] + (page.width > page.height ? ' 横向' : ' 纵向') : ''
 }
 
-/** 画布尺寸：A4 纵向 · 210 × 297 mm。 */
+/**
+ * 画布尺寸：A4 纵向 · 210 × 297 mm。
+ * @param page 宽高，mm。
+ * @returns 显示文本。
+ */
 export function sizeText(page: { width: number; height: number }): string {
   const name = paperName(page)
   return (name ? `${name} · ` : '') + `${page.width} × ${page.height} mm`
 }
 
-/** 文件大小：B、KB、MB。 */
+/**
+ * 文件大小：B、KB、MB。
+ * @param bytes 字节数。
+ * @returns 如 12.3 KB。
+ */
 export function fileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`

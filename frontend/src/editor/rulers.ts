@@ -1,33 +1,90 @@
 /**
  * 画布上方和左侧的毫米标尺：标出纸张范围、选中元素的范围和光标位置。
  */
+/**
+ * 画标尺需要的视图状态。
+ */
 export interface RulerView {
-  /** 纸张原点在画布上的屏幕坐标（px）。 */
+  /**
+   * 纸张原点在画布上的屏幕 x（px）。
+   */
   originX: number
+  /**
+   * 纸张原点在画布上的屏幕 y（px）。
+   */
   originY: number
-  /** 每 mm 多少像素。 */
+  /**
+   * 每 mm 多少像素。
+   */
   scale: number
+  /**
+   * 纸张宽度，mm。
+   */
   pageWidth: number
+  /**
+   * 纸张高度，mm。
+   */
   pageHeight: number
-  /** 选中元素的外框（屏幕 px），没有选中为 null。 */
+  /**
+   * 选中元素的外框（屏幕 px），没有选中为 null。
+   */
   highlight: { x: number; y: number; width: number; height: number } | null
-  /** 光标位置（mm），不在画布上为 null。 */
+  /**
+   * 光标 x（mm），不在画布上为 null。
+   */
   cursorX: number | null
+  /**
+   * 光标 y（mm），不在画布上为 null。
+   */
   cursorY: number | null
 }
 
+/**
+ * 标尺的颜色（取自当前主题的 CSS 变量）。
+ */
 export interface RulerColors {
+  /**
+   * 底色（纸张以外）。
+   */
   background: string
+  /**
+   * 纸张范围的底色。
+   */
   page: string
+  /**
+   * 选中元素范围的底色。
+   */
   highlight: string
+  /**
+   * 刻度线。
+   */
   tick: string
+  /**
+   * 刻度数字。
+   */
   label: string
+  /**
+   * 光标位置线。
+   */
   cursor: string
 }
 
+/**
+ * 小刻度的候选间距，mm：取屏幕上不小于 5 像素的最小一档。
+ */
 const MINOR_STEPS = [0.5, 1, 2, 5, 10, 20, 50, 100]
+/**
+ * 大刻度（带数字）的候选间距，mm：取屏幕上不小于 44 像素的最小一档。
+ */
 const MAJOR_STEPS = [5, 10, 20, 50, 100, 200, 500]
 
+/**
+ * 画一条标尺：底色、纸张范围、选中范围、刻度、数字、光标线（按设备像素比画清晰）。
+ * @param canvas 标尺的画布。
+ * @param horizontal true 画上方的横向标尺，false 画左侧的竖向标尺。
+ * @param view 视图状态。
+ * @param colors 颜色。
+ */
 export function paintRuler(canvas: HTMLCanvasElement, horizontal: boolean, view: RulerView, colors: RulerColors): void {
   const ratio = window.devicePixelRatio || 1
   const width = canvas.clientWidth

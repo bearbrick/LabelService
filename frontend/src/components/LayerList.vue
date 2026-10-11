@@ -1,5 +1,7 @@
 <script setup lang="ts">
-/** 图层：上面的在上层。单击选择（Shift 多选），拖动调整叠放顺序，双击重命名。 */
+/**
+ * 图层：上面的在上层。单击选择（Shift 多选），拖动调整叠放顺序，双击重命名。
+ */
 import { computed, nextTick, ref } from 'vue'
 import { ELEMENT_META } from '../model/elements.ts'
 import type { LabelElement } from '../model/template.ts'

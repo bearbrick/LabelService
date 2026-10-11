@@ -5,17 +5,34 @@
 import { usedKeys } from './bindings.ts'
 import type { LabelTemplate } from './template.ts'
 
+/**
+ * 模板检查的结果。
+ */
 export interface TemplateReport {
-  /** 绑定里引用了、但字段列表里没有的 key。 */
+  /**
+   * 绑定里引用了、但字段列表里没有的 key。
+   */
   undefinedKeys: string[]
-  /** 定义了、但没有元素引用的字段。 */
+  /**
+   * 定义了、但没有元素引用的字段。
+   */
   unusedFields: string[]
-  /** 不能导出的问题。 */
+  /**
+   * 不能导出的问题。
+   */
   errors: string[]
 }
 
+/**
+ * 字段 key 的规则：字母开头，只含字母、数字、下划线。
+ */
 export const FIELD_KEY_PATTERN = /^[A-Za-z][A-Za-z0-9_]*$/
 
+/**
+ * 检查模板：字段 key 格式和唯一性、元素 ID 唯一、画布尺寸、未定义的绑定、没被引用的字段。
+ * @param template 模板。
+ * @returns 检查结果；errors 为空时可以导出。
+ */
 export function checkTemplate(template: LabelTemplate): TemplateReport {
   const errors: string[] = []
   const keys = template.fields.map((field) => field.key)

@@ -1,5 +1,7 @@
 <script setup lang="ts">
-/** 素材与字体：图片素材（上传、改名、删除；内置素材只读），服务端已加载的字体。 */
+/**
+ * 素材与字体：图片素材（上传、改名、删除；内置素材只读），服务端已加载的字体。
+ */
 import { onMounted, ref } from 'vue'
 import { deleteAsset, listFonts, renameAsset } from '../api/admin.ts'
 import { errorText } from '../api/http.ts'

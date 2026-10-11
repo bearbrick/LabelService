@@ -7,21 +7,54 @@ import { roundMm } from '../model/units.ts'
 import { unionBox } from './geometry.ts'
 import type { Box } from './geometry.ts'
 
+/**
+ * 对齐方式：左、水平居中、右、上、垂直居中、下。
+ */
 export type AlignKind = 'left' | 'hcenter' | 'right' | 'top' | 'vcenter' | 'bottom'
+/**
+ * 叠放顺序操作：置于顶层、置于底层、上移一层、下移一层。
+ */
 export type OrderKind = 'front' | 'back' | 'up' | 'down'
 
-/** 能对齐、分布的对象：模板元素，或拼版设计器里格子所占的矩形。 */
+/**
+ * 能对齐、分布的对象：模板元素，或拼版设计器里格子所占的矩形。
+ */
 export interface Movable {
+  /**
+   * 左上角 x，mm。
+   */
   x: number
+  /**
+   * 左上角 y，mm。
+   */
   y: number
+  /**
+   * 宽度，mm。
+   */
   width: number
+  /**
+   * 高度，mm。
+   */
   height: number
+  /**
+   * 锁定的不移动。
+   */
   locked?: boolean
 }
 
+/**
+ * 取对象的矩形。
+ * @param element 对象。
+ * @returns 矩形。
+ */
 const boxOf = (element: Movable): Box => ({ x: element.x, y: element.y, width: element.width, height: element.height })
 
-/** 对齐。只选一个元素时对齐到画布，多个时对齐到选区外框。 */
+/**
+ * 对齐。只选一个元素时对齐到画布，多个时对齐到选区外框。
+ * @param selected 选中的对象（直接修改）。
+ * @param kind 对齐方式。
+ * @param page 画布尺寸（只选一个时对齐到它）。
+ */
 export function alignElements(selected: readonly Movable[], kind: AlignKind, page: { width: number; height: number }): void {
   if (!selected.length) return
   const reference = selected.length === 1 ? { x: 0, y: 0, width: page.width, height: page.height } : unionBox(selected.map(boxOf))!
@@ -53,7 +86,11 @@ export function alignElements(selected: readonly Movable[], kind: AlignKind, pag
   }
 }
 
-/** 等间距分布，至少 3 个元素。首尾两个不动，中间的按相等间隙排开。 */
+/**
+ * 等间距分布，至少 3 个元素。首尾两个不动，中间的按相等间隙排开。
+ * @param selected 选中的对象（直接修改）。
+ * @param axis h 水平分布，v 垂直分布。
+ */
 export function distributeElements(selected: readonly Movable[], axis: 'h' | 'v'): void {
   if (selected.length < 3) return
   const position = axis === 'h' ? 'x' : 'y'
@@ -71,7 +108,13 @@ export function distributeElements(selected: readonly Movable[], axis: 'h' | 'v'
   }
 }
 
-/** 调整叠放顺序，返回新数组（数组后面的在上层）。 */
+/**
+ * 调整叠放顺序，返回新数组（数组后面的在上层）。
+ * @param elements 全部元素。
+ * @param ids 要调整的元素 ID。
+ * @param kind 操作。
+ * @returns 调整后的新数组。
+ */
 export function reorder(elements: readonly LabelElement[], ids: ReadonlySet<string>, kind: OrderKind): LabelElement[] {
   const list = [...elements]
   switch (kind) {
@@ -94,7 +137,13 @@ export function reorder(elements: readonly LabelElement[], ids: ReadonlySet<stri
   }
 }
 
-/** 图层面板拖动：把元素放到目标元素的上一层（数组中紧随其后），返回新数组。 */
+/**
+ * 图层面板拖动：把元素放到目标元素的上一层（数组中紧随其后），返回新数组。
+ * @param elements 全部元素。
+ * @param movingId 拖动的元素 ID。
+ * @param targetId 放到哪个元素上面；找不到时放到最上层。
+ * @returns 调整后的新数组。
+ */
 export function moveAbove(elements: readonly LabelElement[], movingId: string, targetId: string): LabelElement[] {
   if (movingId === targetId) return [...elements]
   const moving = elements.find((element) => element.id === movingId)

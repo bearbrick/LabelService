@@ -1,5 +1,7 @@
 <script setup lang="ts">
-/** 图片和图标的属性。 */
+/**
+ * 图片和图标的属性。
+ */
 import { computed } from 'vue'
 import { LABEL_ICONS } from '../../model/icons.ts'
 import type { IconElement, ImageElement, ImageFit } from '../../model/template.ts'

@@ -1,5 +1,7 @@
 <script setup lang="ts">
-/** 接口调试页：选一个已发布的模板，模拟业务系统调用开放接口。 */
+/**
+ * 接口调试页：选一个已发布的模板，模拟业务系统调用开放接口。
+ */
 import { computed, ref, watch } from 'vue'
 import AppIcon from '../components/AppIcon.vue'
 import ApiTestPanel from '../components/admin/ApiTestPanel.vue'

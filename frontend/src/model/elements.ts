@@ -6,16 +6,31 @@ import { ELEMENT_LABELS, STROKE_DEFAULT_WIDTH, TEXT_DEFAULTS } from './template.
 import type { ElementType, FieldDefinition, LabelElement, TextStyle } from './template.ts'
 import { roundMm } from './units.ts'
 
+/**
+ * 元素类型在元素库里的信息。
+ */
 export interface ElementMeta {
-  /** 中文名。 */
+  /**
+   * 中文名。
+   */
   label: string
-  /** 界面图标名（见 components/icons.ts）。 */
+  /**
+   * 界面图标名（见 components/icons.ts）。
+   */
   icon: string
-  /** 新建时的默认尺寸（mm）。 */
+  /**
+   * 新建时的默认宽度，mm。
+   */
   width: number
+  /**
+   * 新建时的默认高度，mm（横线为 0）。
+   */
   height: number
 }
 
+/**
+ * 每种元素的中文名、图标和新建时的默认尺寸。
+ */
 export const ELEMENT_META: Readonly<Record<ElementType, ElementMeta>> = {
   text: { label: ELEMENT_LABELS.text, icon: 'text', width: 32, height: 6 },
   barcode: { label: ELEMENT_LABELS.barcode, icon: 'barcode', width: 50, height: 15 },
@@ -26,10 +41,15 @@ export const ELEMENT_META: Readonly<Record<ElementType, ElementMeta>> = {
   rect: { label: ELEMENT_LABELS.rect, icon: 'rect', width: 30, height: 20 },
 }
 
-/** 默认虚线：实段 1mm、空段 0.6mm。 */
+/**
+ * 默认虚线：实段 1mm、空段 0.6mm。
+ */
 export const DEFAULT_DASH = [1, 0.6]
 
-/** 写全的文字样式，和服务端 TextStyle 的默认值一致。 */
+/**
+ * 写全的文字样式，和服务端 TextStyle 的默认值一致。
+ * @returns 新的样式对象（可以随便改）。
+ */
 export function defaultTextStyle(): Required<Omit<TextStyle, 'minFontSize' | 'letterSpacing'>> & Pick<TextStyle, 'minFontSize' | 'letterSpacing'> {
   return {
     fontFamily: TEXT_DEFAULTS.fontFamily,
@@ -47,7 +67,11 @@ export function defaultTextStyle(): Required<Omit<TextStyle, 'minFontSize' | 'le
   }
 }
 
-/** 生成一个不和已有元素重复的 ID。 */
+/**
+ * 生成一个不和已有元素重复的 ID。
+ * @param existing 已有的元素。
+ * @returns 新 ID，如 e1a2b3c4。
+ */
 export function newElementId(existing: readonly { id: string }[] = []): string {
   for (;;) {
     const id = 'e' + Math.random().toString(36).slice(2, 9)
@@ -55,13 +79,22 @@ export function newElementId(existing: readonly { id: string }[] = []): string {
   }
 }
 
-/** “文本 3” 这样的默认名字。 */
+/**
+ * “文本 3” 这样的默认名字。
+ * @param type 元素类型。
+ * @param existing 已有的元素（数同类型的个数）。
+ * @returns 默认名字。
+ */
 export function defaultName(type: ElementType, existing: readonly LabelElement[]): string {
   const count = existing.filter((element) => element.type === type).length + 1
   return `${ELEMENT_META[type].label} ${count}`
 }
 
-/** 补全元素的默认值（原地修改），返回同一个对象。 */
+/**
+ * 补全元素的默认值（原地修改），返回同一个对象。
+ * @param element 元素。
+ * @returns 同一个元素。
+ */
 export function normalizeElement(element: LabelElement): LabelElement {
   element.name ??= ELEMENT_META[element.type].label
   element.rotation ??= 0
@@ -109,7 +142,14 @@ export function normalizeElement(element: LabelElement): LabelElement {
   return element
 }
 
-/** 新建一个元素。条码默认绑定第一个非图片字段，图片默认绑定第一个图片字段。 */
+/**
+ * 新建一个元素。条码默认绑定第一个非图片字段，图片默认绑定第一个图片字段。
+ * @param type 元素类型。
+ * @param fields 模板的字段（决定默认绑定）。
+ * @param existing 已有的元素（生成 ID 和名字）。
+ * @param extra 覆盖的属性，如拖放位置。
+ * @returns 新元素（默认值写全）。
+ */
 export function makeElement(
   type: ElementType,
   fields: readonly FieldDefinition[],
@@ -152,7 +192,13 @@ export function makeElement(
   return normalizeElement(Object.assign(element, extra))
 }
 
-/** 深复制元素，换新 ID、偏移位置、解除锁定。 */
+/**
+ * 深复制元素，换新 ID、偏移位置、解除锁定。
+ * @param elements 要复制的元素。
+ * @param offset 位置偏移，mm（向右下）。
+ * @param existing 已有的元素（新 ID 不和它们重复）。
+ * @returns 复制出的元素。
+ */
 export function cloneElements(elements: readonly LabelElement[], offset: number, existing: readonly LabelElement[]): LabelElement[] {
   const taken = [...existing]
   return elements.map((element) => {

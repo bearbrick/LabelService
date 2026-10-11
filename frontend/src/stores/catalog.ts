@@ -53,7 +53,9 @@ export function roleName(id: number): string {
   return catalog.roles.find((role) => role.id === id)?.name ?? '—'
 }
 
-/** 每个业务分组下的模板数。 */
+/**
+ * 每个业务分组下的模板数。
+ */
 export const templateCountByBusiness = computed(() => {
   const counts: Record<number, number> = {}
   for (const template of catalog.templates) {
@@ -64,7 +66,9 @@ export const templateCountByBusiness = computed(() => {
   return counts
 })
 
-/** 模板状态：草稿（从没发布）、已发布、已发布但有未发布的改动。 */
+/**
+ * 模板状态：草稿（从没发布）、已发布、已发布但有未发布的改动。
+ */
 export type TemplateState = 'draft' | 'changed' | 'published'
 
 export function templateState(template: Pick<TemplateItem, 'latestVersion' | 'hasDraft'>): { key: TemplateState; short: string; text: string; cls: string } {

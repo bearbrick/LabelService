@@ -1,5 +1,7 @@
 <script setup lang="ts">
-/** 元素库：基础元素、GB/T 191 图标、图片素材。点击添加到视图中心，或拖到画布上指定位置。 */
+/**
+ * 元素库：基础元素、GB/T 191 图标、图片素材。点击添加到视图中心，或拖到画布上指定位置。
+ */
 import { ELEMENT_META } from '../model/elements.ts'
 import { LABEL_ICONS } from '../model/icons.ts'
 import { ELEMENT_TYPES } from '../model/template.ts'

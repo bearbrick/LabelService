@@ -1,5 +1,7 @@
 <script setup lang="ts">
-/** 显示全局的确认框和一次性密钥框（stores/dialogs.ts）。 */
+/**
+ * 显示全局的确认框和一次性密钥框（stores/dialogs.ts）。
+ */
 import { closeConfirm, copyText, dialogs } from '../../stores/dialogs.ts'
 import AppIcon from '../AppIcon.vue'
 import ModalDialog from './ModalDialog.vue'

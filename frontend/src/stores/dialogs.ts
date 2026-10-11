@@ -22,13 +22,19 @@ interface SecretState {
 export const dialogs = reactive({
   confirm: null as ConfirmState | null,
   secret: null as SecretState | null,
-  /** 新建模板对话框。 */
+  /**
+   * 新建模板对话框。
+   */
   newTemplate: false,
-  /** 模板工作区里收起左侧模板树。 */
+  /**
+   * 模板工作区里收起左侧模板树。
+   */
   navCollapsed: false,
 })
 
-/** 弹出确认框，用户点确定时返回 true。 */
+/**
+ * 弹出确认框，用户点确定时返回 true。
+ */
 export function confirmBox(title: string, text: string, ok = '确定', danger = false): Promise<boolean> {
   dialogs.confirm?.resolve(false)
   return new Promise((resolve) => {
@@ -41,7 +47,9 @@ export function closeConfirm(value: boolean): void {
   dialogs.confirm = null
 }
 
-/** 显示只出现一次的密钥或临时密码。 */
+/**
+ * 显示只出现一次的密钥或临时密码。
+ */
 export function showSecret(title: string, label: string, value: string, hint: string): void {
   dialogs.secret = { title, label, value, hint }
 }

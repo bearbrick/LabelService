@@ -27,18 +27,26 @@ export type WorkspaceView = (typeof WORKSPACE_VIEWS)[number]
 
 export interface Route {
   page: Page
-  /** 模板库的业务分组，all 是全部。 */
+  /**
+   * 模板库的业务分组，all 是全部。
+   */
   biz: number | 'all'
-  /** 工作区打开的模板编码。 */
+  /**
+   * 工作区打开的模板编码。
+   */
   code: string
   view: WorkspaceView
-  /** 页面内的小节（如个人设置的 pwd）。 */
+  /**
+   * 页面内的小节（如个人设置的 pwd）。
+   */
   section: string
 }
 
 export const route = reactive<Route>(parse(location.hash))
 
-/** 解析地址。不认识的地址回到工作台。 */
+/**
+ * 解析地址。不认识的地址回到工作台。
+ */
 export function parse(hash: string): Route {
   const parts = hash.replace(/^#\/?/, '').split('/').map(decodeURIComponent)
   const base: Route = { page: 'dashboard', biz: 'all', code: '', view: 'designer', section: '' }
@@ -53,7 +61,9 @@ export function parse(hash: string): Route {
   return base
 }
 
-/** 生成地址。 */
+/**
+ * 生成地址。
+ */
 export function href(target: Partial<Route> & { page: Page }): string {
   switch (target.page) {
     case 'workspace':

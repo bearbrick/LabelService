@@ -1,5 +1,7 @@
 <script setup lang="ts">
-/** 选一个字段（插入或绑定），选完自动复位。 */
+/**
+ * 选一个字段（插入或绑定），选完自动复位。
+ */
 import { computed } from 'vue'
 import type { FieldType } from '../../model/template.ts'
 import { designer } from '../../stores/designer.ts'

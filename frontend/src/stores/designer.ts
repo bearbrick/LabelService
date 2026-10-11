@@ -17,7 +17,9 @@ import { roundMm } from '../model/units.ts'
 import { checkTemplate, FIELD_KEY_PATTERN } from '../model/validate.ts'
 import sample from '../samples/box-label.json'
 
-/** 画布提供给 store 的能力（由 CanvasWorkspace 注册）。 */
+/**
+ * 画布提供给 store 的能力（由 CanvasWorkspace 注册）。
+ */
 export interface CanvasController {
   viewCenter(): { x: number; y: number }
   zoomBy(factor: number): void
@@ -25,7 +27,9 @@ export interface CanvasController {
   zoomFit(): void
   requestFit(): void
   editText(id: string): void
-  /** 把纸张导出成指定像素尺寸的白底图片（和服务端预览对比用）。 */
+  /**
+   * 把纸张导出成指定像素尺寸的白底图片（和服务端预览对比用）。
+   */
   snapshot(width: number, height: number): HTMLCanvasElement | null
 }
 
@@ -35,7 +39,9 @@ export interface Toast {
   error: boolean
 }
 
-/** 保存草稿的函数（由模板工作区注册），失败时抛错。 */
+/**
+ * 保存草稿的函数（由模板工作区注册），失败时抛错。
+ */
 export type DraftSaver = (template: LabelTemplate) => Promise<void>
 
 const history = new History(100)
@@ -104,7 +110,9 @@ function snapshot(): string {
   return JSON.stringify(designer.template)
 }
 
-/** 记录一次修改（和上一步相同则忽略），并安排保存草稿。 */
+/**
+ * 记录一次修改（和上一步相同则忽略），并安排保存草稿。
+ */
 export function commit(): void {
   clearTimeout(commitTimer)
   commitTimer = undefined
@@ -123,7 +131,9 @@ export function commit(): void {
   scheduleSave()
 }
 
-/** 连续的小改动（方向键微调、输入框）合并成一步。 */
+/**
+ * 连续的小改动（方向键微调、输入框）合并成一步。
+ */
 export function commitSoon(): void {
   clearTimeout(commitTimer)
   commitTimer = setTimeout(commit, 400)
@@ -158,12 +168,16 @@ function scheduleSave(): void {
   saveTimer = setTimeout(() => void saveDraft(), 1000)
 }
 
-/** 注册保存草稿的函数（模板工作区打开模板时注册，离开时传 null）。 */
+/**
+ * 注册保存草稿的函数（模板工作区打开模板时注册，离开时传 null）。
+ */
 export function setDraftSaver(value: DraftSaver | null): void {
   saver = value
 }
 
-/** 立即保存草稿（有未保存的修改时）。多次调用按顺序执行；返回是否已全部保存。 */
+/**
+ * 立即保存草稿（有未保存的修改时）。多次调用按顺序执行；返回是否已全部保存。
+ */
 export function saveDraft(): Promise<boolean> {
   if (commitTimer) commit()
   clearTimeout(saveTimer)
@@ -201,7 +215,9 @@ function copyOf(template: LabelTemplate): LabelTemplate {
 
 /* ---------------- 模板 ---------------- */
 
-/** 打开一个模板（从服务端读到的草稿或版本），清空撤销历史。readOnly 为真时不能修改。 */
+/**
+ * 打开一个模板（从服务端读到的草稿或版本），清空撤销历史。readOnly 为真时不能修改。
+ */
 export function openTemplate(template: LabelTemplate, readOnly = false): void {
   clearTimeout(commitTimer)
   clearTimeout(saveTimer)
@@ -218,7 +234,9 @@ export function openTemplate(template: LabelTemplate, readOnly = false): void {
   canvas?.requestFit()
 }
 
-/** 导入模板 JSON 文本，替换当前模板的画布、字段和元素（编码和名称不变，可以撤销）；格式不对时抛出带中文说明的错误。 */
+/**
+ * 导入模板 JSON 文本，替换当前模板的画布、字段和元素（编码和名称不变，可以撤销）；格式不对时抛出带中文说明的错误。
+ */
 export function importTemplate(json: string): void {
   let parsed: Partial<LabelTemplate>
   try {
@@ -240,7 +258,9 @@ export function importTemplate(json: string): void {
   canvas?.requestFit()
 }
 
-/** 导出模板 JSON（缩进 2 格）。有不能导出的问题时抛错。 */
+/**
+ * 导出模板 JSON（缩进 2 格）。有不能导出的问题时抛错。
+ */
 export function exportTemplate(): string {
   const problems = report.value.errors
   if (problems.length) throw new Error(problems[0])
@@ -254,7 +274,9 @@ export function setPage(width: number, height: number): void {
   canvas?.zoomFit()
 }
 
-/** 当前画布的纸张快照；设计器没打开时返回 null。 */
+/**
+ * 当前画布的纸张快照；设计器没打开时返回 null。
+ */
 export function canvasSnapshot(width: number, height: number): HTMLCanvasElement | null {
   return canvas?.snapshot(width, height) ?? null
 }
@@ -271,7 +293,9 @@ export function selectAll(): void {
 
 /* ---------------- 元素 ---------------- */
 
-/** 新建元素：放在指定位置（拖入时）或视图中心，并限制在画布内。 */
+/**
+ * 新建元素：放在指定位置（拖入时）或视图中心，并限制在画布内。
+ */
 export function addElement(type: ElementType, extra: Partial<LabelElement> = {}, at?: { x: number; y: number }): LabelElement {
   const template = designer.template
   const element = makeElement(type, template.fields, template.elements, extra)
@@ -299,7 +323,9 @@ export function removeSelected(): void {
   if (kept) toast(`已删除 ${ids.size} 个，${kept} 个锁定的元素保留`)
 }
 
-/** 原地复制一份，偏移 2mm。 */
+/**
+ * 原地复制一份，偏移 2mm。
+ */
 export function duplicate(): void {
   if (!selectedElements.value.length) return
   const copies = cloneElements(selectedElements.value, 2, designer.template.elements)
@@ -365,7 +391,9 @@ export function toggleHidden(element: LabelElement): void {
   commit()
 }
 
-/** 方向键微调：0.1mm，按住 Shift 1mm。 */
+/**
+ * 方向键微调：0.1mm，按住 Shift 1mm。
+ */
 export function nudge(dx: number, dy: number): void {
   for (const element of selectedElements.value) {
     if (element.locked) continue
@@ -384,7 +412,9 @@ export function setLineDirection(element: LabelElement, direction: 'h' | 'v'): v
   commit()
 }
 
-/** 修改旋转角度；条码只允许 0、90、180、270。 */
+/**
+ * 修改旋转角度；条码只允许 0、90、180、270。
+ */
 export function setRotation(element: LabelElement, degrees: number): void {
   let rotation = ((Number(degrees) || 0) % 360 + 360) % 360
   if (element.type === 'barcode' && rotation % 90) {
@@ -420,7 +450,9 @@ export function zoomFit(): void {
 
 /* ---------------- 字段 ---------------- */
 
-/** 添加字段；key 不合法或重复时返回错误说明。 */
+/**
+ * 添加字段；key 不合法或重复时返回错误说明。
+ */
 export function addField(key: string, type: FieldType, name?: string): string | null {
   const trimmed = key.trim()
   if (!FIELD_KEY_PATTERN.test(trimmed)) return 'key 要以字母开头，只含字母、数字、下划线'
@@ -430,7 +462,9 @@ export function addField(key: string, type: FieldType, name?: string): string | 
   return null
 }
 
-/** 改字段 key，模板里引用它的元素一起改；新 key 不合法或重复时返回错误说明。 */
+/**
+ * 改字段 key，模板里引用它的元素一起改；新 key 不合法或重复时返回错误说明。
+ */
 export function renameField(field: FieldDefinition, key: string): string | null {
   const trimmed = key.trim()
   if (trimmed === field.key) return null
@@ -453,7 +487,9 @@ export function removeField(field: FieldDefinition): void {
   commit()
 }
 
-/** 把字段插入选中的文本，或绑定到选中的条码。 */
+/**
+ * 把字段插入选中的文本，或绑定到选中的条码。
+ */
 export function insertFieldIntoSelection(key: string): void {
   const element = selectedElement.value
   if (element?.type === 'text') {
@@ -469,7 +505,9 @@ export function insertFieldIntoSelection(key: string): void {
   }
 }
 
-/** 绘制时回报的提示，内容没变时不写，避免多余的界面刷新。 */
+/**
+ * 绘制时回报的提示，内容没变时不写，避免多余的界面刷新。
+ */
 export function setMetric(id: string, metric: Metric): void {
   const current = designer.metrics[id]
   if (current && current.text === metric.text && current.tone === metric.tone) return

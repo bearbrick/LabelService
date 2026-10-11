@@ -7,18 +7,24 @@ import * as adminApi from '../api/admin.ts'
 import type { AssetInfo } from '../api/admin.ts'
 
 export interface Asset extends AssetInfo {
-  /** blob URL；还没下载完时为空字符串。 */
+  /**
+   * blob URL；还没下载完时为空字符串。
+   */
   src: string
 }
 
 export const assets = reactive<Asset[]>([])
 
-/** 素材变化（列表刷新、文件下载完）时加 1，画布据此重画引用素材的图片元素。 */
+/**
+ * 素材变化（列表刷新、文件下载完）时加 1，画布据此重画引用素材的图片元素。
+ */
 export const assetVersion = ref(0)
 
 let loading: Promise<void> | null = null
 
-/** 读取素材列表并下载文件。重复调用时复用进行中的请求。 */
+/**
+ * 读取素材列表并下载文件。重复调用时复用进行中的请求。
+ */
 export function loadAssets(force = false): Promise<void> {
   if (loading && !force) return loading
   loading = (async () => {
@@ -47,7 +53,9 @@ export function assetSource(key: string): string | null {
   return assets.find((asset) => asset.key === key)?.src || null
 }
 
-/** 上传图片素材：PNG、JPG、SVG，不超过 1 MB（服务端按内容再判断一次）。 */
+/**
+ * 上传图片素材：PNG、JPG、SVG，不超过 1 MB（服务端按内容再判断一次）。
+ */
 export async function uploadAsset(file: File): Promise<Asset> {
   if (!/^image\/(png|jpeg|svg\+xml)$/.test(file.type)) throw new Error('只支持 PNG、JPG、SVG 图片')
   if (file.size > 1024 * 1024) throw new Error('图片超过 1 MB，请压缩后再上传')

@@ -1,5 +1,7 @@
 <script setup lang="ts">
-/** 工作台：今天的调用、近 14 天调用量、近 7 天调用最多的模板、待处理事项、最近的操作。没有 log.view 时只显示模板统计。 */
+/**
+ * 工作台：今天的调用、近 14 天调用量、近 7 天调用最多的模板、待处理事项、最近的操作。没有 log.view 时只显示模板统计。
+ */
 import { computed, onMounted, ref } from 'vue'
 import { getDashboard } from '../api/admin.ts'
 import type { Dashboard } from '../api/admin.ts'

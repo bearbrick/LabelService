@@ -1,5 +1,7 @@
 <script setup lang="ts">
-/** 设计器：工具栏、左侧面板、画布、属性面板、状态栏，以及全部键盘快捷键。 */
+/**
+ * 设计器：工具栏、左侧面板、画布、属性面板、状态栏，以及全部键盘快捷键。
+ */
 import { onBeforeUnmount, onMounted } from 'vue'
 import {
   copySelection,

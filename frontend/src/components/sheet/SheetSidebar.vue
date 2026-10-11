@@ -3,7 +3,7 @@
  * 拼版设计器左侧：尺寸相同的已发布模板（拖到纸上生成格子，点一下换格子里的预览），自动排列（行列、页边距、间距，一键排满）。
  */
 import { computed, reactive, watch } from 'vue'
-import { fitGrid } from '../../model/layout.ts'
+import { fitGrid } from '../../model/layoutArrange.ts'
 import type { FillOrder } from '../../model/layout.ts'
 import { applyArrange, matchingTemplates, setPreview, sheet } from '../../stores/sheet.ts'
 import TemplateThumb from '../admin/TemplateThumb.vue'
@@ -20,7 +20,9 @@ const fits = computed(() => {
     && form.marginTop + form.rows * height + (form.rows - 1) * form.gapY <= layout.paper.height + 0.05
 })
 
-/** 按纸张和格子尺寸算出最多几行几列、居中的页边距。 */
+/**
+ * 按纸张和格子尺寸算出最多几行几列、居中的页边距。
+ */
 function maximize(): void {
   const layout = sheet.layout
   if (!layout) return

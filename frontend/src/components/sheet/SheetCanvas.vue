@@ -1,5 +1,7 @@
 <script setup lang="ts">
-/** 拼版画布：把 editor/sheetStage.ts 接到 stores/sheet.ts，版式、选择、预览图、设置变了就重画。 */
+/**
+ * 拼版画布：把 editor/sheetStage.ts 接到 stores/sheet.ts，版式、选择、预览图、设置变了就重画。
+ */
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { SheetStage } from '../../editor/sheetStage.ts'
 import { addSlotAt, moveSlots, problems, select, sheet } from '../../stores/sheet.ts'
@@ -45,7 +47,9 @@ function fit(): void {
   zoom.value = stage?.zoom ?? 1
 }
 
-/** 画布里 Ctrl+滚轮缩放后同步右下角的比例。 */
+/**
+ * 画布里 Ctrl+滚轮缩放后同步右下角的比例。
+ */
 function syncZoom(): void {
   zoom.value = stage?.zoom ?? zoom.value
 }

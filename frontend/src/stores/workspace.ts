@@ -22,7 +22,9 @@ export const workspace = reactive({
 
 let loadId = 0
 
-/** 打开模板。先把正在编辑的模板的改动存掉。 */
+/**
+ * 打开模板。先把正在编辑的模板的改动存掉。
+ */
 export async function loadWorkspace(code: string): Promise<void> {
   const id = ++loadId
   await saveDraft()
@@ -47,7 +49,9 @@ export async function loadWorkspace(code: string): Promise<void> {
   }
 }
 
-/** 当前用户能不能编辑打开的模板（有 tpl.edit 且模板在自己的业务范围里）。 */
+/**
+ * 当前用户能不能编辑打开的模板（有 tpl.edit 且模板在自己的业务范围里）。
+ */
 export function canEdit(): boolean {
   return can('tpl.edit') && (!workspace.detail || inScope(workspace.detail.businessId))
 }
@@ -63,7 +67,9 @@ async function saveToServer(template: Parameters<typeof adminApi.saveDraft>[0]):
   syncCatalog(detail)
 }
 
-/** 把模板库列表里的这一项和工作区同步（不用整表重读）。 */
+/**
+ * 把模板库列表里的这一项和工作区同步（不用整表重读）。
+ */
 function syncCatalog(detail: Summary): void {
   const item = catalog.templates.find((t) => t.code === detail.code)
   if (!item) return
@@ -93,7 +99,9 @@ export async function loadVersions(): Promise<void> {
   }
 }
 
-/** 发布前检查：先保存草稿，再让服务端检查并试渲染。 */
+/**
+ * 发布前检查：先保存草稿，再让服务端检查并试渲染。
+ */
 export async function checkBeforePublish(): Promise<adminApi.PublishCheck> {
   if (!(await saveDraft())) throw new Error('草稿还没保存成功，先处理保存失败的问题')
   return adminApi.checkTemplate(JSON.parse(JSON.stringify(designer.template)))
@@ -106,7 +114,9 @@ export async function publish(note: string): Promise<{ version: number; warnings
   return result
 }
 
-/** 回滚：把某个版本复制成草稿，再重新打开。 */
+/**
+ * 回滚：把某个版本复制成草稿，再重新打开。
+ */
 export async function restoreVersion(version: number): Promise<void> {
   await saveDraft()
   await adminApi.restoreVersion(workspace.code, version)
@@ -114,7 +124,9 @@ export async function restoreVersion(version: number): Promise<void> {
   await reloadTemplates()
 }
 
-/** 放弃未发布的改动，回到最新发布版本。 */
+/**
+ * 放弃未发布的改动，回到最新发布版本。
+ */
 export async function discardDraft(): Promise<void> {
   await saveDraft()
   await adminApi.discardDraft(workspace.code)
@@ -128,7 +140,9 @@ export async function moveToBusiness(businessId: number): Promise<void> {
   await reloadTemplates()
 }
 
-/** 只重新读取概要（发布、换分组后），不打断设计器里的编辑。 */
+/**
+ * 只重新读取概要（发布、换分组后），不打断设计器里的编辑。
+ */
 async function reloadSummary(): Promise<void> {
   const { content: _content, ...summary } = await adminApi.getTemplate(workspace.code)
   workspace.detail = summary

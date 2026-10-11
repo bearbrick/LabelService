@@ -1,5 +1,7 @@
 <script setup lang="ts">
-/** 弹窗外框：标题、内容、底部按钮。点遮罩或按 Esc 关闭。 */
+/**
+ * 弹窗外框：标题、内容、底部按钮。点遮罩或按 Esc 关闭。
+ */
 import { onBeforeUnmount, onMounted } from 'vue'
 import AppIcon from '../AppIcon.vue'
 

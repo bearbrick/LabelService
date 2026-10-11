@@ -1,5 +1,7 @@
 <script setup lang="ts">
-/** 颜色：取色器 + #RRGGBB 文本框。 */
+/**
+ * 颜色：取色器 + #RRGGBB 文本框。
+ */
 const model = defineModel<string | undefined>()
 const emit = defineEmits<{ change: [] }>()
 defineProps<{ id: string; label: string }>()

@@ -1,5 +1,7 @@
 <script setup lang="ts">
-/** 拼版设计器：工具栏、左侧模板和自动排列、画布、右侧属性，以及键盘快捷键。 */
+/**
+ * 拼版设计器：工具栏、左侧模板和自动排列、画布、右侧属性，以及键盘快捷键。
+ */
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 import {
   alignSelected,

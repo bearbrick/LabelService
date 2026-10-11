@@ -1,5 +1,7 @@
 <script setup lang="ts">
-/** 新建模板：名称、编码、画布（预设或自定义）、方向、业务、DPI。创建后直接打开设计器。 */
+/**
+ * 新建模板：名称、编码、画布（预设或自定义）、方向、业务、DPI。创建后直接打开设计器。
+ */
 import { computed, reactive } from 'vue'
 import { createTemplate } from '../../api/admin.ts'
 import type { Preset } from '../../api/admin.ts'

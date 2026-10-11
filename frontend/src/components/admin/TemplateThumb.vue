@@ -4,7 +4,9 @@ const cache = new Map<string, Promise<string>>()
 </script>
 
 <script setup lang="ts">
-/** 模板缩略图：服务端用样例值渲染的小 PNG（GET /templates/{code}/thumbnail）；渲染不了时显示占位。 */
+/**
+ * 模板缩略图：服务端用样例值渲染的小 PNG（GET /templates/{code}/thumbnail）；渲染不了时显示占位。
+ */
 import { ref, watch } from 'vue'
 import { templateThumbnail } from '../../api/admin.ts'
 import AppIcon from '../AppIcon.vue'

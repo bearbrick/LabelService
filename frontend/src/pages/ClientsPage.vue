@@ -1,5 +1,7 @@
 <script setup lang="ts">
-/** 调用方与密钥：每个业务系统一个调用方和一把 API Key，按业务分组授权，可选 IP 白名单。Key 只在创建和重置时显示一次。 */
+/**
+ * 调用方与密钥：每个业务系统一个调用方和一把 API Key，按业务分组授权，可选 IP 白名单。Key 只在创建和重置时显示一次。
+ */
 import { computed, onMounted, reactive, ref } from 'vue'
 import { createClient, listClients, resetClientKey, setClientStatus, updateClient } from '../api/admin.ts'
 import type { ApiClient } from '../api/admin.ts'
@@ -15,7 +17,7 @@ import { session } from '../stores/session.ts'
 
 const clients = ref<ApiClient[]>([])
 const loaded = ref(false)
-// 业务范围受限的用户只能授权自己范围里的分组（服务端同样检查，T-021）；分组列表本来就只有自己范围里的。
+// 业务范围受限的用户只能授权自己范围里的分组（服务端同样检查）；分组列表本来就只有自己范围里的。
 const mayGrantAll = computed(() => session.me?.allBusinesses === true)
 const form = reactive({ open: false, id: 0, name: '', appId: '', description: '', allBusinesses: false, businessIds: [] as number[], ipAllowlist: '', error: '', busy: false })
 

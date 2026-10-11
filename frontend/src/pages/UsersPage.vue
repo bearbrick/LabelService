@@ -1,5 +1,7 @@
 <script setup lang="ts">
-/** 用户管理：分配角色和业务范围，停用、重置密码（临时密码只显示一次，用户首次登录必须改）。 */
+/**
+ * 用户管理：分配角色和业务范围，停用、重置密码（临时密码只显示一次，用户首次登录必须改）。
+ */
 import { computed, onMounted, reactive, ref } from 'vue'
 import { createUser, listUsers, resetPassword, setUserStatus, updateUser } from '../api/admin.ts'
 import type { User } from '../api/admin.ts'

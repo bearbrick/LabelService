@@ -1,5 +1,7 @@
 <script setup lang="ts">
-/** 调用日志：按时间、结果、调用方、模板筛选，按时间倒序分批加载（翻页用上一批最后一条）；点一行看详情和各阶段耗时。 */
+/**
+ * 调用日志：按时间、结果、调用方、模板筛选，按时间倒序分批加载（翻页用上一批最后一条）；点一行看详情和各阶段耗时。
+ */
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { listClients, searchCallLogs } from '../api/admin.ts'
 import type { ApiClient, CallLog, CallLogFilter } from '../api/admin.ts'

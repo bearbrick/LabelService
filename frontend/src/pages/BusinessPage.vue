@@ -1,5 +1,7 @@
 <script setup lang="ts">
-/** 业务分组：模板按业务分组管理，用户的业务范围和调用方的授权都按分组。 */
+/**
+ * 业务分组：模板按业务分组管理，用户的业务范围和调用方的授权都按分组。
+ */
 import { onMounted, reactive, ref } from 'vue'
 import { createBusiness, deleteBusiness, listClients, listUsers, updateBusiness } from '../api/admin.ts'
 import type { ApiClient, Business, User } from '../api/admin.ts'

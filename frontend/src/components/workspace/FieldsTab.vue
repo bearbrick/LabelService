@@ -38,7 +38,9 @@ function text(value: unknown): string {
   return value === undefined || value === null ? '' : String(value)
 }
 
-/** 默认值、样例值按类型保存：number 存数字，其他存字符串，空字符串表示没有。 */
+/**
+ * 默认值、样例值按类型保存：number 存数字，其他存字符串，空字符串表示没有。
+ */
 function setValue(field: FieldDefinition, prop: 'default' | 'sample', value: string): void {
   if (value === '') delete field[prop]
   else field[prop] = field.type === 'number' && Number.isFinite(Number(value)) ? Number(value) : value

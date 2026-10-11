@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * 拼版版式（ADR 0005，T-019）：`#/layouts` 是版式列表，`#/layouts/编码` 是拼版设计器。
+ * 拼版版式（ADR 0005）：`#/layouts` 是版式列表，`#/layouts/编码` 是拼版设计器。
  * 新建时选纸张和一个已发布的模板，格子尺寸取模板尺寸，先按纸张排满再拖动微调；保存后开放接口立即能用。
  */
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
@@ -9,7 +9,8 @@ import { deleteLayout, getLayout, listLayouts } from '../api/layouts.ts'
 import AppIcon from '../components/AppIcon.vue'
 import ModalDialog from '../components/admin/ModalDialog.vue'
 import SheetEditor from '../components/sheet/SheetEditor.vue'
-import { PAPERS, fitGrid, newLayout, suggestCode } from '../model/layout.ts'
+import { PAPERS } from '../model/layout.ts'
+import { fitGrid, newLayout, suggestCode } from '../model/layoutArrange.ts'
 import type { LayoutView } from '../model/layout.ts'
 import { fmtTime } from '../model/format.ts'
 import { catalog } from '../stores/catalog.ts'
@@ -40,7 +41,9 @@ async function refresh(): Promise<void> {
   }
 }
 
-/** 地址里有编码时打开设计器（刚新建、还没保存的版式直接用内存里的）。 */
+/**
+ * 地址里有编码时打开设计器（刚新建、还没保存的版式直接用内存里的）。
+ */
 async function load(code: string): Promise<void> {
   if (!code) {
     closeLayout()

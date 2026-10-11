@@ -89,7 +89,9 @@ function setField(key: string, value: unknown): void {
   state.body = JSON.stringify(body, null, 2)
 }
 
-/** 去掉一个必填字段，看看接口怎么报错。 */
+/**
+ * 去掉一个必填字段，看看接口怎么报错。
+ */
 function breakRequired(): void {
   const body = parsed.value
   const data = body?.data as Record<string, unknown> | undefined

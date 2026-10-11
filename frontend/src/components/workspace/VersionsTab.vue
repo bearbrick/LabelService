@@ -1,5 +1,7 @@
 <script setup lang="ts">
-/** 版本记录：草稿一行加全部已发布版本；可以把历史版本复制到草稿（回滚第一步，再发布才生效）。 */
+/**
+ * 版本记录：草稿一行加全部已发布版本；可以把历史版本复制到草稿（回滚第一步，再发布才生效）。
+ */
 import { computed } from 'vue'
 import { errorText } from '../../api/http.ts'
 import { fmtDateTime } from '../../model/format.ts'

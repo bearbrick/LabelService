@@ -1,5 +1,7 @@
 <script setup lang="ts">
-/** 登录页：账号密码登录，可选 7 天内自动登录。连续输错 5 次锁定 15 分钟（服务端控制）。 */
+/**
+ * 登录页：账号密码登录，可选 7 天内自动登录。连续输错 5 次锁定 15 分钟（服务端控制）。
+ */
 import { reactive } from 'vue'
 import { errorText } from '../api/http.ts'
 import AppIcon from '../components/AppIcon.vue'

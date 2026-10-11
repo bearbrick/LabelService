@@ -15,12 +15,17 @@ import { gridStep, transformRules } from '../src/editor/overlays.ts'
 import { compareElements, inkEdges } from '../src/editor/compare.ts'
 import { snapBox } from '../src/editor/snapping.ts'
 import { formatDate, formatNumber, keysIn, renameKey, resolveText } from '../src/model/bindings.ts'
-import { arrange, checkLayout, fitGrid, footprint, moveSlot, newLayout, normalizeLayout, pageCount, renumber, suggestCode } from '../src/model/layout.ts'
+import { checkLayout, footprint, normalizeLayout, pageCount } from '../src/model/layout.ts'
+import { arrange, fitGrid, moveSlot, newLayout, renumber, suggestCode } from '../src/model/layoutArrange.ts'
 import type { SheetLayout } from '../src/model/layout.ts'
 import { cloneElements, makeElement, normalizeElement } from '../src/model/elements.ts'
 import type { FieldDefinition, LabelElement, LabelTemplate, RectElement } from '../src/model/template.ts'
 import { normalizeRotation, roundMm } from '../src/model/units.ts'
 import { checkTemplate } from '../src/model/validate.ts'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { checkDocs, sourceFiles } from './docs.ts'
 
 let passed = 0
 function check(name: string, value: boolean): void {
@@ -178,7 +183,7 @@ const broken: LabelTemplate = { ...sample, fields: [...sample.fields, { key: '1b
 const brokenReport = checkTemplate(broken)
 check('检查出不合法和重复的字段 key', brokenReport.errors.some((e) => e.includes('1bad')) && brokenReport.errors.some((e) => e.includes('qty') && e.includes('重复')))
 
-// ---------- 拼版版式（T-019） ----------
+// ---------- 拼版版式 ----------
 const a4 = { width: 210, height: 297 }
 const box100x60 = { width: 100, height: 60 }
 const fresh = newLayout('A4_100x60_2x4', 'A4 · 100×60', a4, box100x60)
@@ -215,5 +220,24 @@ check('长度按 0.1 mm 取整', normalizeLayout({ ...fresh, slots: [{ x: 5.04, 
 const slotBoxes = [{ x: 3, y: 0, width: 60, height: 100 }, { x: 70, y: 5, width: 100, height: 60 }]
 alignElements(slotBoxes, 'top', a4)
 check('对齐也能用在格子所占的矩形上（arrange.ts 接受任意矩形）', slotBoxes[0].y === 0 && slotBoxes[1].y === 0)
+
+// ---------- 源码规范 ----------
+
+/**
+ * frontend 目录。
+ */
+const frontendRoot = fileURLToPath(new URL('..', import.meta.url))
+
+/**
+ * 注释规范的问题清单。
+ */
+const docProblems = checkDocs(frontendRoot)
+check(`模块级声明都有完整的 JSDoc（三行说明、@param、@returns）${docProblems.length > 0 ? `（${docProblems.length} 处）：\n  ` + docProblems.slice(0, 40).join('\n  ') : ''}`, docProblems.length === 0)
+
+/**
+ * 超过 500 行的源码文件（AGENTS.md R11）。
+ */
+const largeFiles = sourceFiles(join(frontendRoot, 'src')).filter((path) => readFileSync(path, 'utf8').split('\n').length > 500)
+check(`src 下的源码文件都不超过 500 行${largeFiles.length > 0 ? '：' + largeFiles.join('、') : ''}`, largeFiles.length === 0)
 
 console.log(`前端检查全部通过：${passed} 项`)

@@ -32,7 +32,9 @@ function sampleText(field: FieldDefinition): string {
   return field.sample === undefined || field.sample === null ? '' : String(field.sample)
 }
 
-/** 样例值按字段类型保存：number 存数字，其他存字符串，空字符串表示没有样例。 */
+/**
+ * 样例值按字段类型保存：number 存数字，其他存字符串，空字符串表示没有样例。
+ */
 function setSample(field: FieldDefinition, text: string): void {
   if (text === '') delete field.sample
   else field.sample = field.type === 'number' && Number.isFinite(Number(text)) ? Number(text) : text

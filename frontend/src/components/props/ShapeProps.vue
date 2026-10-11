@@ -1,5 +1,7 @@
 <script setup lang="ts">
-/** 线和矩形的属性。线宽、虚线、圆角单位都是 mm。 */
+/**
+ * 线和矩形的属性。线宽、虚线、圆角单位都是 mm。
+ */
 import { computed } from 'vue'
 import { DEFAULT_DASH } from '../../model/elements.ts'
 import { STROKE_DEFAULT_WIDTH } from '../../model/template.ts'

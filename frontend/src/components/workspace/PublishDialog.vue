@@ -1,5 +1,7 @@
 <script setup lang="ts">
-/** 发布：先保存草稿，服务端检查并试渲染计时；没有错误时填发布说明发布。 */
+/**
+ * 发布：先保存草稿，服务端检查并试渲染计时；没有错误时填发布说明发布。
+ */
 import { onMounted, reactive, ref } from 'vue'
 import type { PublishCheck } from '../../api/admin.ts'
 import { errorText } from '../../api/http.ts'

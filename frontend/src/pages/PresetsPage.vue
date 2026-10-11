@@ -1,5 +1,7 @@
 <script setup lang="ts">
-/** 画布预设：新建模板和设计器里一键选用。修改预设不影响已有模板。 */
+/**
+ * 画布预设：新建模板和设计器里一键选用。修改预设不影响已有模板。
+ */
 import { computed, reactive, ref } from 'vue'
 import { createPreset, deletePreset, updatePreset } from '../api/admin.ts'
 import type { Preset } from '../api/admin.ts'

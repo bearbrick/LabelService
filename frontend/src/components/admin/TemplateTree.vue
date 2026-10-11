@@ -1,5 +1,7 @@
 <script setup lang="ts">
-/** 左侧模板树：按业务分组列出模板，可搜索；窄屏时还放功能菜单。 */
+/**
+ * 左侧模板树：按业务分组列出模板，可搜索；窄屏时还放功能菜单。
+ */
 import { computed, reactive, ref, watch } from 'vue'
 import type { TemplateItem } from '../../api/admin.ts'
 import { sizeText } from '../../model/format.ts'

@@ -8,9 +8,13 @@ import { handleUnauthorized, hasToken, setToken } from '../api/http.ts'
 
 export const session = reactive({
   me: null as Me | null,
-  /** 启动时检查完已保存的令牌后为 true。 */
+  /**
+   * 启动时检查完已保存的令牌后为 true。
+   */
   ready: false,
-  /** 登录失效被踢回登录页时的提示。 */
+  /**
+   * 登录失效被踢回登录页时的提示。
+   */
   notice: '',
 })
 
@@ -24,7 +28,9 @@ function clear(): void {
   session.me = null
 }
 
-/** 启动时用保存的令牌取当前用户；令牌无效时留在登录页。 */
+/**
+ * 启动时用保存的令牌取当前用户；令牌无效时留在登录页。
+ */
 export async function restoreSession(): Promise<void> {
   try {
     if (hasToken()) session.me = await adminApi.getMe()
@@ -52,17 +58,23 @@ export async function signOut(): Promise<void> {
   clear()
 }
 
-/** 重新读取当前用户（改了个人信息、密码，或管理员改了自己的权限后）。 */
+/**
+ * 重新读取当前用户（改了个人信息、密码，或管理员改了自己的权限后）。
+ */
 export async function refreshMe(): Promise<void> {
   session.me = await adminApi.getMe()
 }
 
-/** 当前用户有没有某个权限点。必须先改密码时一律没有。 */
+/**
+ * 当前用户有没有某个权限点。必须先改密码时一律没有。
+ */
 export function can(permission: string): boolean {
   return !!session.me && !session.me.mustChangePassword && session.me.permissions.includes(permission)
 }
 
-/** 业务分组在不在当前用户的范围里。 */
+/**
+ * 业务分组在不在当前用户的范围里。
+ */
 export function inScope(businessId: number | null | undefined): boolean {
   const me = session.me
   if (!me) return false

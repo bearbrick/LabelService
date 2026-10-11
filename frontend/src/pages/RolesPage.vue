@@ -1,5 +1,7 @@
 <script setup lang="ts">
-/** 角色权限：权限矩阵，勾选即时生效；系统管理员拥有全部权限，不能修改。内置角色、有人在用的角色不能删。 */
+/**
+ * 角色权限：权限矩阵，勾选即时生效；系统管理员拥有全部权限，不能修改。内置角色、有人在用的角色不能删。
+ */
 import { computed, onMounted, reactive, ref } from 'vue'
 import { createRole, deleteRole, listPermissions, updateRole } from '../api/admin.ts'
 import type { PermissionInfo, Role } from '../api/admin.ts'

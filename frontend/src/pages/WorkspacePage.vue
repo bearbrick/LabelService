@@ -38,7 +38,9 @@ const business = computed(() => businessOf(detail.value?.businessId))
 const state = computed(() => (detail.value ? templateState(detail.value) : null))
 const page = computed(() => designer.template.page)
 const kind = computed(() => (paperName(page.value) ? `${paperName(page.value)} 纸张模板` : '标签模板'))
-/** 格子尺寸和当前画布相同、已启用的拼版版式（设计书第 4 节“模板详情页列出可用的版式”）。 */
+/**
+ * 格子尺寸和当前画布相同、已启用的拼版版式（设计书第 4 节“模板详情页列出可用的版式”）。
+ */
 const layouts = ref<LayoutView[]>([])
 watch(
   () => [detail.value?.code, page.value.width, page.value.height] as const,

@@ -1,5 +1,7 @@
 <script setup lang="ts">
-/** 顶栏：业务切换、功能菜单（资源、接口、日志、权限管理）、用户菜单。菜单项按权限显示。 */
+/**
+ * 顶栏：业务切换、功能菜单（资源、接口、日志、权限管理）、用户菜单。菜单项按权限显示。
+ */
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { businessOf, catalog, templateCountByBusiness } from '../../stores/catalog.ts'
 import { designer } from '../../stores/designer.ts'

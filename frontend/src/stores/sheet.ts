@@ -9,20 +9,28 @@ import { createLayout, updateLayout } from '../api/layouts.ts'
 import { alignElements, distributeElements } from '../editor/arrange.ts'
 import type { AlignKind, Movable } from '../editor/arrange.ts'
 import { History } from '../editor/history.ts'
-import { arrange, checkLayout, footprint, moveSlot, normalizeLayout, renumber, slotBox } from '../model/layout.ts'
-import type { ArrangeOptions, FillOrder, LayoutView, SheetLayout } from '../model/layout.ts'
+import { checkLayout, footprint, normalizeLayout, slotBox } from '../model/layout.ts'
+import type { FillOrder, LayoutView, SheetLayout } from '../model/layout.ts'
+import { arrange, moveSlot, renumber } from '../model/layoutArrange.ts'
+import type { ArrangeOptions } from '../model/layoutArrange.ts'
 import { roundMm } from '../model/units.ts'
 import { catalog } from './catalog.ts'
 
 export const sheet = reactive({
   layout: null as SheetLayout | null,
   enabled: true,
-  /** 还没保存过（新建）。 */
+  /**
+   * 还没保存过（新建）。
+   */
   isNew: false,
-  /** 上次保存时的快照，用来判断有没有未保存的改动。 */
+  /**
+   * 上次保存时的快照，用来判断有没有未保存的改动。
+   */
   saved: '',
   selection: [] as number[],
-  /** 格子里显示哪个模板的预览（尺寸和格子相同的已发布模板）。 */
+  /**
+   * 格子里显示哪个模板的预览（尺寸和格子相同的已发布模板）。
+   */
   previewCode: '',
   previewImage: null as HTMLImageElement | null,
   settings: { showGrid: true, grid: 1, snap: true },
@@ -37,14 +45,18 @@ const empty = { messages: [] as string[], badSlots: new Set<number>() }
 export const problems = computed(() => (sheet.layout ? checkLayout(sheet.layout) : empty))
 export const dirty = computed(() => !!sheet.layout && (sheet.isNew || snapshot() !== sheet.saved))
 
-/** 尺寸和格子相同、已经发布过的模板。 */
+/**
+ * 尺寸和格子相同、已经发布过的模板。
+ */
 export const matchingTemplates = computed<TemplateItem[]>(() => {
   const layout = sheet.layout
   if (!layout) return []
   return catalog.templates.filter((item) => item.latestVersion > 0 && Math.abs(item.width - layout.slot.width) <= 0.05 && Math.abs(item.height - layout.slot.height) <= 0.05)
 })
 
-/** 打开一个版式开始编辑。 */
+/**
+ * 打开一个版式开始编辑。
+ */
 export function openLayout(view: LayoutView, isNew = false, previewCode = ''): void {
   sheet.layout = normalizeLayout(view.layout)
   sheet.enabled = view.enabled
@@ -61,7 +73,9 @@ export function closeLayout(): void {
   sheet.selection = []
 }
 
-/** 记录一次修改。 */
+/**
+ * 记录一次修改。
+ */
 export function commit(): void {
   if (!sheet.layout) return
   sheet.layout = normalizeLayout(sheet.layout)
@@ -85,7 +99,9 @@ export function selectAll(): void {
   select(sheet.layout ? sheet.layout.slots.map((_, index) => index) : [])
 }
 
-/** 从左侧拖入模板：在落点放一个新格子（落点是格子中心），加在填充顺序的最后。 */
+/**
+ * 从左侧拖入模板：在落点放一个新格子（落点是格子中心），加在填充顺序的最后。
+ */
 export function addSlotAt(x: number, y: number): void {
   const layout = sheet.layout
   if (!layout) return
@@ -94,7 +110,9 @@ export function addSlotAt(x: number, y: number): void {
   commit()
 }
 
-/** 拖动结束：更新位置。 */
+/**
+ * 拖动结束：更新位置。
+ */
 export function moveSlots(updates: Array<{ index: number; x: number; y: number }>): void {
   const layout = sheet.layout
   if (!layout) return
@@ -102,7 +120,9 @@ export function moveSlots(updates: Array<{ index: number; x: number; y: number }
   commit()
 }
 
-/** 方向键微调：每次 0.1 mm，按住 Shift 1 mm。 */
+/**
+ * 方向键微调：每次 0.1 mm，按住 Shift 1 mm。
+ */
 export function nudge(dx: number, dy: number): void {
   const layout = sheet.layout
   if (!layout || !sheet.selection.length) return
@@ -114,7 +134,9 @@ export function nudge(dx: number, dy: number): void {
   commit()
 }
 
-/** 选中的格子顺时针转 90°，以格子中心为轴。 */
+/**
+ * 选中的格子顺时针转 90°，以格子中心为轴。
+ */
 export function rotateSelected(): void {
   const layout = sheet.layout
   if (!layout) return
@@ -139,7 +161,9 @@ export function removeSelected(): void {
   commit()
 }
 
-/** 复制选中的格子，放在右下方 5 mm。 */
+/**
+ * 复制选中的格子，放在右下方 5 mm。
+ */
 export function duplicateSelected(): void {
   const layout = sheet.layout
   if (!layout || !sheet.selection.length) return
@@ -149,17 +173,23 @@ export function duplicateSelected(): void {
   commit()
 }
 
-/** 对齐：选一个时对齐到纸张，多个时对齐到选区外框。 */
+/**
+ * 对齐：选一个时对齐到纸张，多个时对齐到选区外框。
+ */
 export function alignSelected(kind: AlignKind): void {
   withBoxes((boxes) => alignElements(boxes, kind, sheet.layout!.paper))
 }
 
-/** 等间距分布（至少 3 个）。 */
+/**
+ * 等间距分布（至少 3 个）。
+ */
 export function distributeSelected(axis: 'h' | 'v'): void {
   withBoxes((boxes) => distributeElements(boxes, axis))
 }
 
-/** 自动排列：替换全部格子。 */
+/**
+ * 自动排列：替换全部格子。
+ */
 export function applyArrange(options: ArrangeOptions): void {
   const layout = sheet.layout
   if (!layout) return
@@ -168,7 +198,9 @@ export function applyArrange(options: ArrangeOptions): void {
   commit()
 }
 
-/** 按位置重新编号。 */
+/**
+ * 按位置重新编号。
+ */
 export function renumberSlots(order: FillOrder): void {
   const layout = sheet.layout
   if (!layout) return
@@ -177,7 +209,9 @@ export function renumberSlots(order: FillOrder): void {
   commit()
 }
 
-/** 手动调整一个格子的填充顺序（下标从 0 开始）。 */
+/**
+ * 手动调整一个格子的填充顺序（下标从 0 开始）。
+ */
 export function setOrder(from: number, to: number): void {
   const layout = sheet.layout
   if (!layout || to === from || to < 0 || to >= layout.slots.length) return
@@ -186,7 +220,9 @@ export function setOrder(from: number, to: number): void {
   commit()
 }
 
-/** 保存到服务端；有问题时不保存。返回是否成功（失败时抛出接口的错误）。 */
+/**
+ * 保存到服务端；有问题时不保存。返回是否成功（失败时抛出接口的错误）。
+ */
 export async function saveLayout(): Promise<boolean> {
   const layout = sheet.layout
   if (!layout || problems.value.messages.length) return false
@@ -202,7 +238,9 @@ export async function saveLayout(): Promise<boolean> {
   }
 }
 
-/** 换格子里显示的模板预览（服务端用样例值渲染的缩略图）。 */
+/**
+ * 换格子里显示的模板预览（服务端用样例值渲染的缩略图）。
+ */
 export async function setPreview(code: string): Promise<void> {
   sheet.previewCode = code
   sheet.previewImage = null
@@ -233,7 +271,9 @@ function thumbnailImage(code: string, stamp: string): Promise<HTMLImageElement |
   return pending
 }
 
-/** 对选中格子所占的矩形做对齐、分布，再写回格子位置。 */
+/**
+ * 对选中格子所占的矩形做对齐、分布，再写回格子位置。
+ */
 function withBoxes(action: (boxes: Movable[]) => void): void {
   const layout = sheet.layout
   if (!layout || !sheet.selection.length) return

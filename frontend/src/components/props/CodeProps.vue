@@ -1,5 +1,7 @@
 <script setup lang="ts">
-/** 一维码和二维码的属性。 */
+/**
+ * 一维码和二维码的属性。
+ */
 import { computed } from 'vue'
 import { SYMBOLOGY_LABELS } from '../../editor/barcode.ts'
 import type { BarcodeElement, ErrorCorrectionLevel, QrCodeElement, TextAlign } from '../../model/template.ts'
@@ -21,7 +23,9 @@ const barcode = computed(() => (props.element.type === 'barcode' ? props.element
 const matrix = computed(() => (props.element.type === 'qrcode' ? props.element : null))
 const options = computed(() => (props.element.type === 'barcode' ? LINEAR : MATRIX))
 
-/** 一维码：绑定替换整个内容；二维码：追加字段，用 | 分隔。 */
+/**
+ * 一维码：绑定替换整个内容；二维码：追加字段，用 | 分隔。
+ */
 function pickField(key: string): void {
   if (props.element.type === 'qrcode' && props.element.value) props.element.value += `|{{${key}}}`
   else props.element.value = `{{${key}}}`

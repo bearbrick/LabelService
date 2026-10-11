@@ -17,7 +17,9 @@ defineProps<{ readOnly: boolean }>()
 const layout = computed(() => sheet.layout!)
 const selected = computed(() => (sheet.selection.length === 1 ? sheet.selection[0] : null))
 const slot = computed(() => (selected.value === null ? null : layout.value.slots[selected.value]))
-/** 预览结果：PNG 直接显示，PDF 用浏览器自带的查看器显示在对话框里，都可以下载。 */
+/**
+ * 预览结果：PNG 直接显示，PDF 用浏览器自带的查看器显示在对话框里，都可以下载。
+ */
 const preview = ref<{ url: string; kind: 'png' | 'pdf'; title: string; fileName: string } | null>(null)
 const fileInput = ref<HTMLInputElement | null>(null)
 const busy = ref(false)
@@ -33,7 +35,9 @@ function onOrder(event: Event): void {
   if (selected.value !== null && Number.isInteger(value)) setOrder(selected.value, value - 1)
 }
 
-/** 用样例值预览一页（PNG）。 */
+/**
+ * 用样例值预览一页（PNG）。
+ */
 async function previewPage(): Promise<void> {
   await run(async () => {
     const response = await previewLayout({ layout: layout.value, templateCode: sheet.previewCode, format: 'png' })
@@ -55,7 +59,9 @@ async function previewFile(event: Event): Promise<void> {
   })
 }
 
-/** 打印校准测试页（PDF）：每格边框、中心十字和序号。 */
+/**
+ * 打印校准测试页（PDF）：每格边框、中心十字和序号。
+ */
 async function testPage(): Promise<void> {
   await run(async () => show(await layoutTestPage(layout.value), 'pdf', `${layout.value.code}-test-page.pdf`, '打印校准测试页（按实际大小 100% 打印）'))
 }
@@ -71,7 +77,9 @@ function parseItems(value: unknown): PreviewItem[] {
   })
 }
 
-/** 把接口返回的文件显示在对话框里（新开窗口会被浏览器当成弹窗拦掉）。 */
+/**
+ * 把接口返回的文件显示在对话框里（新开窗口会被浏览器当成弹窗拦掉）。
+ */
 async function show(response: Response, kind: 'png' | 'pdf', fileName: string, title?: string): Promise<void> {
   const blob = await response.blob()
   closePreview()

@@ -1,5 +1,7 @@
 <script setup lang="ts">
-/** 个人设置：姓名、手机号、修改密码、最近登录。首次登录或被重置密码后只能进这里，改完密码才能用其他功能。 */
+/**
+ * 个人设置：姓名、手机号、修改密码、最近登录。首次登录或被重置密码后只能进这里，改完密码才能用其他功能。
+ */
 import { computed, nextTick, onMounted, reactive, ref } from 'vue'
 import { changePassword, searchOpLogs, updateProfile } from '../api/admin.ts'
 import type { OpLog } from '../api/admin.ts'
