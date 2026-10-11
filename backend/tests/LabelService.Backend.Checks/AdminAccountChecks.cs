@@ -25,7 +25,7 @@ internal static class AdminAccountChecks
         var (login, first, me) = await AdminSession.LoginAsync(http, "admin", "admin123");
         check("首次启动建了 admin（开发环境初始密码 admin123），登录拿到令牌，必须先改密码",
             login.IsSuccessStatusCode && first is not null && me.GetProperty("me").GetProperty("mustChangePassword").GetBoolean()
-            && me.GetProperty("me").GetProperty("permissions").GetArrayLength() == 11);
+            && me.GetProperty("me").GetProperty("permissions").GetArrayLength() == 12);
         var admin = first!;
         check("必须先改密码时，除个人设置外的接口返回 403 PASSWORD_CHANGE_REQUIRED",
             await AdminSession.CodeAsync(await admin.GetAsync("/api/admin/templates")) == "PASSWORD_CHANGE_REQUIRED" && (await admin.GetAsync("/api/admin/me")).IsSuccessStatusCode);

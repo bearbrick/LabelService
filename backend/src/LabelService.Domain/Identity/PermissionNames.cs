@@ -61,6 +61,11 @@ public static class PermissionNames
     public const string RoleManage = "sys.role";
 
     /// <summary>
+    /// 修改系统信息（系统名称、公司、Logo、版权信息）。
+    /// </summary>
+    public const string SettingsManage = "sys.settings";
+
+    /// <summary>
     /// 全部权限点和说明，按分组排列；前端的角色编辑页按这个顺序显示。
     /// </summary>
     public static IReadOnlyList<PermissionDefinition> All
@@ -79,6 +84,7 @@ public static class PermissionNames
         new(LogView, "查看日志", "日志"),
         new(UserManage, "管理用户", "系统"),
         new(RoleManage, "管理角色权限", "系统"),
+        new(SettingsManage, "修改系统信息", "系统"),
     ];
 
     /// <summary>

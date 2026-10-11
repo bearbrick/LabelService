@@ -93,6 +93,261 @@ namespace LabelService.Infrastructure.Persistence.Sqlite.Migrations.Main
                     b.ToTable("api_client", (string)null);
                 });
 
+            modelBuilder.Entity("LabelService.Domain.Businesses.BusinessEntity", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("code");
+
+                    b.Property<string>("Color")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("color");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("description");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("name");
+
+                    b.Property<int?>("OwnerUserId")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("owner_user_id");
+
+                    b.Property<int>("Sort")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("sort");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.ToTable("business", (string)null);
+                });
+
+            modelBuilder.Entity("LabelService.Domain.Identity.RoleEntity", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("id");
+
+                    b.Property<bool>("AllPermissions")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("all_permissions");
+
+                    b.Property<bool>("Builtin")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("builtin");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("description");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("name");
+
+                    b.Property<string>("Permissions")
+                        .IsRequired()
+                        .HasMaxLength(1024)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("permissions");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("app_role", (string)null);
+                });
+
+            modelBuilder.Entity("LabelService.Domain.Identity.UserEntity", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Account")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("account");
+
+                    b.Property<bool>("AllBusinesses")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("all_businesses");
+
+                    b.Property<string>("BusinessIds")
+                        .IsRequired()
+                        .HasMaxLength(1024)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("business_ids");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("created_at");
+
+                    b.Property<int>("FailedLogins")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("failed_logins");
+
+                    b.Property<DateTime?>("LastLoginAt")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("last_login_at");
+
+                    b.Property<DateTime?>("LockedUntil")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("locked_until");
+
+                    b.Property<bool>("MustChangePassword")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("must_change_password");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("name");
+
+                    b.Property<string>("PasswordHash")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("password_hash");
+
+                    b.Property<string>("Phone")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("phone");
+
+                    b.Property<int>("RoleId")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("role_id");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("status");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Account")
+                        .IsUnique();
+
+                    b.HasIndex("RoleId");
+
+                    b.ToTable("app_user", (string)null);
+                });
+
+            modelBuilder.Entity("LabelService.Domain.Layouts.SheetLayoutEntity", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("code");
+
+                    b.Property<bool>("CutLines")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("cut_lines");
+
+                    b.Property<bool>("Enabled")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("enabled");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("name");
+
+                    b.Property<double>("OffsetXMm")
+                        .HasColumnType("REAL")
+                        .HasColumnName("offset_x_mm");
+
+                    b.Property<double>("OffsetYMm")
+                        .HasColumnType("REAL")
+                        .HasColumnName("offset_y_mm");
+
+                    b.Property<double>("PaperHeightMm")
+                        .HasColumnType("REAL")
+                        .HasColumnName("paper_height_mm");
+
+                    b.Property<double>("PaperWidthMm")
+                        .HasColumnType("REAL")
+                        .HasColumnName("paper_width_mm");
+
+                    b.Property<double>("SlotHeightMm")
+                        .HasColumnType("REAL")
+                        .HasColumnName("slot_height_mm");
+
+                    b.Property<double>("SlotWidthMm")
+                        .HasColumnType("REAL")
+                        .HasColumnName("slot_width_mm");
+
+                    b.Property<string>("SlotsJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("slots_json");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("updated_at");
+
+                    b.Property<string>("UpdatedBy")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("updated_by");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.ToTable("sheet_layout", (string)null);
+                });
+
             modelBuilder.Entity("LabelService.Domain.Resources.AssetEntity", b =>
                 {
                     b.Property<int>("Id")
@@ -146,57 +401,6 @@ namespace LabelService.Infrastructure.Persistence.Sqlite.Migrations.Main
                     b.HasIndex("Sha256");
 
                     b.ToTable("asset", (string)null);
-                });
-
-            modelBuilder.Entity("LabelService.Domain.Businesses.BusinessEntity", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
-                        .HasColumnName("id");
-
-                    b.Property<string>("Code")
-                        .IsRequired()
-                        .HasMaxLength(32)
-                        .HasColumnType("TEXT")
-                        .HasColumnName("code");
-
-                    b.Property<string>("Color")
-                        .IsRequired()
-                        .HasMaxLength(16)
-                        .HasColumnType("TEXT")
-                        .HasColumnName("color");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT")
-                        .HasColumnName("created_at");
-
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasMaxLength(256)
-                        .HasColumnType("TEXT")
-                        .HasColumnName("description");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("TEXT")
-                        .HasColumnName("name");
-
-                    b.Property<int?>("OwnerUserId")
-                        .HasColumnType("INTEGER")
-                        .HasColumnName("owner_user_id");
-
-                    b.Property<int>("Sort")
-                        .HasColumnType("INTEGER")
-                        .HasColumnName("sort");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Code")
-                        .IsUnique();
-
-                    b.ToTable("business", (string)null);
                 });
 
             modelBuilder.Entity("LabelService.Domain.Resources.CanvasPresetEntity", b =>
@@ -321,123 +525,26 @@ namespace LabelService.Infrastructure.Persistence.Sqlite.Migrations.Main
                         });
                 });
 
-            modelBuilder.Entity("LabelService.Domain.Identity.RoleEntity", b =>
+            modelBuilder.Entity("LabelService.Domain.SystemSettings.SystemSettingEntity", b =>
                 {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
-                        .HasColumnName("id");
-
-                    b.Property<bool>("AllPermissions")
-                        .HasColumnType("INTEGER")
-                        .HasColumnName("all_permissions");
-
-                    b.Property<bool>("Builtin")
-                        .HasColumnType("INTEGER")
-                        .HasColumnName("builtin");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT")
-                        .HasColumnName("created_at");
-
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasMaxLength(256)
-                        .HasColumnType("TEXT")
-                        .HasColumnName("description");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
+                    b.Property<string>("Key")
                         .HasMaxLength(64)
                         .HasColumnType("TEXT")
-                        .HasColumnName("name");
-
-                    b.Property<string>("Permissions")
-                        .IsRequired()
-                        .HasMaxLength(1024)
-                        .HasColumnType("TEXT")
-                        .HasColumnName("permissions");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Name")
-                        .IsUnique();
-
-                    b.ToTable("app_role", (string)null);
-                });
-
-            modelBuilder.Entity("LabelService.Domain.Layouts.SheetLayoutEntity", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
-                        .HasColumnName("id");
-
-                    b.Property<string>("Code")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("TEXT")
-                        .HasColumnName("code");
-
-                    b.Property<bool>("CutLines")
-                        .HasColumnType("INTEGER")
-                        .HasColumnName("cut_lines");
-
-                    b.Property<bool>("Enabled")
-                        .HasColumnType("INTEGER")
-                        .HasColumnName("enabled");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(128)
-                        .HasColumnType("TEXT")
-                        .HasColumnName("name");
-
-                    b.Property<double>("OffsetXMm")
-                        .HasColumnType("REAL")
-                        .HasColumnName("offset_x_mm");
-
-                    b.Property<double>("OffsetYMm")
-                        .HasColumnType("REAL")
-                        .HasColumnName("offset_y_mm");
-
-                    b.Property<double>("PaperHeightMm")
-                        .HasColumnType("REAL")
-                        .HasColumnName("paper_height_mm");
-
-                    b.Property<double>("PaperWidthMm")
-                        .HasColumnType("REAL")
-                        .HasColumnName("paper_width_mm");
-
-                    b.Property<double>("SlotHeightMm")
-                        .HasColumnType("REAL")
-                        .HasColumnName("slot_height_mm");
-
-                    b.Property<double>("SlotWidthMm")
-                        .HasColumnType("REAL")
-                        .HasColumnName("slot_width_mm");
-
-                    b.Property<string>("SlotsJson")
-                        .IsRequired()
-                        .HasColumnType("TEXT")
-                        .HasColumnName("slots_json");
+                        .HasColumnName("key");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("TEXT")
                         .HasColumnName("updated_at");
 
-                    b.Property<string>("UpdatedBy")
+                    b.Property<string>("Value")
                         .IsRequired()
-                        .HasMaxLength(64)
+                        .HasMaxLength(500)
                         .HasColumnType("TEXT")
-                        .HasColumnName("updated_by");
+                        .HasColumnName("value");
 
-                    b.HasKey("Id");
+                    b.HasKey("Key");
 
-                    b.HasIndex("Code")
-                        .IsUnique();
-
-                    b.ToTable("sheet_layout", (string)null);
+                    b.ToTable("system_setting", (string)null);
                 });
 
             modelBuilder.Entity("LabelService.Domain.Templates.TemplateEntity", b =>
@@ -549,87 +656,11 @@ namespace LabelService.Infrastructure.Persistence.Sqlite.Migrations.Main
 
             modelBuilder.Entity("LabelService.Domain.Identity.UserEntity", b =>
                 {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
-                        .HasColumnName("id");
-
-                    b.Property<string>("Account")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("TEXT")
-                        .HasColumnName("account");
-
-                    b.Property<bool>("AllBusinesses")
-                        .HasColumnType("INTEGER")
-                        .HasColumnName("all_businesses");
-
-                    b.Property<string>("BusinessIds")
-                        .IsRequired()
-                        .HasMaxLength(1024)
-                        .HasColumnType("TEXT")
-                        .HasColumnName("business_ids");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT")
-                        .HasColumnName("created_at");
-
-                    b.Property<int>("FailedLogins")
-                        .HasColumnType("INTEGER")
-                        .HasColumnName("failed_logins");
-
-                    b.Property<DateTime?>("LastLoginAt")
-                        .HasColumnType("TEXT")
-                        .HasColumnName("last_login_at");
-
-                    b.Property<DateTime?>("LockedUntil")
-                        .HasColumnType("TEXT")
-                        .HasColumnName("locked_until");
-
-                    b.Property<bool>("MustChangePassword")
-                        .HasColumnType("INTEGER")
-                        .HasColumnName("must_change_password");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("TEXT")
-                        .HasColumnName("name");
-
-                    b.Property<string>("PasswordHash")
-                        .IsRequired()
-                        .HasMaxLength(256)
-                        .HasColumnType("TEXT")
-                        .HasColumnName("password_hash");
-
-                    b.Property<string>("Phone")
-                        .IsRequired()
-                        .HasMaxLength(32)
-                        .HasColumnType("TEXT")
-                        .HasColumnName("phone");
-
-                    b.Property<int>("RoleId")
-                        .HasColumnType("INTEGER")
-                        .HasColumnName("role_id");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(16)
-                        .HasColumnType("TEXT")
-                        .HasColumnName("status");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("TEXT")
-                        .HasColumnName("updated_at");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Account")
-                        .IsUnique();
-
-                    b.HasIndex("RoleId");
-
-                    b.ToTable("app_user", (string)null);
+                    b.HasOne("LabelService.Domain.Identity.RoleEntity", null)
+                        .WithMany()
+                        .HasForeignKey("RoleId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("LabelService.Domain.Templates.TemplateEntity", b =>
@@ -649,15 +680,6 @@ namespace LabelService.Infrastructure.Persistence.Sqlite.Migrations.Main
                         .IsRequired();
 
                     b.Navigation("Template");
-                });
-
-            modelBuilder.Entity("LabelService.Domain.Identity.UserEntity", b =>
-                {
-                    b.HasOne("LabelService.Domain.Identity.RoleEntity", null)
-                        .WithMany()
-                        .HasForeignKey("RoleId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
                 });
 
             modelBuilder.Entity("LabelService.Domain.Templates.TemplateEntity", b =>

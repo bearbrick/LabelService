@@ -3,6 +3,7 @@ using LabelService.Domain.Businesses;
 using LabelService.Domain.Identity;
 using LabelService.Domain.Layouts;
 using LabelService.Domain.Resources;
+using LabelService.Domain.SystemSettings;
 using LabelService.Domain.Templates;
 using LabelService.Infrastructure.Persistence.Configurations;
 using Microsoft.EntityFrameworkCore;
@@ -77,6 +78,11 @@ public abstract class LabelDbContext : DbContext
     /// </summary>
     public DbSet<SheetLayoutEntity> SheetLayouts => Set<SheetLayoutEntity>();
 
+    /// <summary>
+    /// 系统设置（系统名称、所属公司、Logo 文件名等）。
+    /// </summary>
+    public DbSet<SystemSettingEntity> SystemSettings => Set<SystemSettingEntity>();
+
     /// <inheritdoc />
     public override int SaveChanges(bool acceptAllChangesOnSuccess)
     {
@@ -107,6 +113,7 @@ public abstract class LabelDbContext : DbContext
         modelBuilder.ApplyConfiguration(new UserConfiguration());
         modelBuilder.ApplyConfiguration(new RoleConfiguration());
         modelBuilder.ApplyConfiguration(new SheetLayoutConfiguration());
+        modelBuilder.ApplyConfiguration(new SystemSettingConfiguration());
 
         // 列名统一成下划线风格，放在最后，覆盖全部实体。
         ModelConventions.UseSnakeCaseColumns(modelBuilder);
