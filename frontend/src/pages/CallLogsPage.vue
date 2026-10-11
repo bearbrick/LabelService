@@ -226,8 +226,9 @@ function csv(): void {
         <div class="kpi"><span class="k">平均耗时</span><span class="v">{{ summary.ms }}<small>ms</small></span><span class="d">成功的调用</span></div>
       </div>
       <div class="table-box">
-        <div class="tw">
-          <table class="dt">
+        <div class="tw" tabindex="0" role="region" aria-label="调用日志表格">
+          <table class="dt call-table">
+            <colgroup><col style="width: 180px" /><col style="width: 200px" /><col style="width: 70px" /><col style="width: 300px" /><col style="width: 70px" /><col style="width: 60px" /><col style="width: 100px" /><col style="width: 170px" /><col style="width: 150px" /></colgroup>
             <thead>
               <tr><th>时间</th><th>调用方</th><th>接口</th><th>模板</th><th>格式</th><th>张数</th><th>耗时</th><th>结果</th><th>traceId</th></tr>
             </thead>

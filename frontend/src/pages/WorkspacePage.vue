@@ -15,7 +15,7 @@ import PreviewDialog from '../components/workspace/PreviewDialog.vue'
 import PublishDialog from '../components/workspace/PublishDialog.vue'
 import VersionsTab from '../components/workspace/VersionsTab.vue'
 import { paperName, sizeText, fmtTime } from '../model/format.ts'
-import type { LayoutView } from '../model/layout.ts'
+import { useAvailableLayouts } from '../composables/useAvailableLayouts.ts'
 import { businessOf, catalog, templateState } from '../stores/catalog.ts'
 import { designer, exportTemplate, importTemplate, saveDraft, toast } from '../stores/designer.ts'
 import { confirmBox, dialogs } from '../stores/dialogs.ts'
@@ -80,21 +80,7 @@ const kind = computed(() => (paperName(page.value) ? `${paperName(page.value)} �
 /**
  * 格子尺寸和当前画布相同、已启用的拼版版式（设计书第 4 节“模板详情页列出可用的版式”）。
  */
-const layouts = ref<LayoutView[]>([])
-watch(
-  () => [detail.value?.code, page.value.width, page.value.height] as const,
-  async ([code, width, height]) => {
-    layouts.value = []
-    if (!code) return
-    try {
-      const found = (await listLayouts(width, height)).filter((view) => view.enabled)
-      if (detail.value?.code === code) layouts.value = found
-    } catch {
-      layouts.value = []
-    }
-  },
-  { immediate: true },
-)
+const layouts = useAvailableLayouts(() => detail.value?.code, () => [page.value.width, page.value.height], listLayouts)
 
 /**
  * 有没有未发布的改动（有草稿或有还没保存的修改）。

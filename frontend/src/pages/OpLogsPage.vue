@@ -173,8 +173,9 @@ function reset(): void {
         <button class="btn ghost" type="button" @click="reset">重置</button>
       </div>
       <div class="table-box">
-        <div class="tw">
-          <table class="dt">
+        <div class="tw" tabindex="0" role="region" aria-label="操作日志表格">
+          <table class="dt audit-table">
+            <colgroup><col style="width: 180px" /><col style="width: 130px" /><col style="width: 120px" /><col style="width: 280px" /><col style="width: 280px" /><col style="width: 140px" /></colgroup>
             <thead><tr><th>时间</th><th>用户</th><th>操作</th><th>对象</th><th>详情</th><th>IP</th></tr></thead>
             <tbody>
               <tr v-for="o in logs" :key="o.id">

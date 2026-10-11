@@ -1,0 +1,80 @@
+/* 长名称保持在所属区域内；表格保留横向滚动和完整操作列。 */
+.topbar .brand {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  padding: 0;
+  cursor: pointer;
+  flex: none;
+}
+
+.biz-wrap { min-width: 0; flex: 0 1 240px; }
+.project-select { max-width: 100%; min-width: 0; }
+.project-name, .user-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.user-name { max-width: 160px; }
+.header-actions, .project-select > .svgi { flex-shrink: 0; }
+.dropdown { max-height: calc(100dvh - 80px); overflow-y: auto; overscroll-behavior: contain; }
+.dd-item { height: auto; min-height: 42px; padding: 8px 9px; }
+.dd-item > .svgi, .dd-item > .count { flex: none; }
+.menu-label { min-width: 0; overflow-wrap: anywhere; }
+.dropdown h4, .dropdown .hint { overflow-wrap: anywhere; }
+
+.mini-chip {
+  max-width: 100%;
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  align-items: baseline;
+}
+.preset-chips .chip, .rightpanel .chip {
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: left;
+}
+.form-row > * { min-width: 0; }
+.check-list .check { min-width: 0; white-space: normal; overflow-wrap: anywhere; align-items: baseline; }
+.check-list input, .check-list .biz-dot { flex: none; }
+.modal-h, .modal-f { flex: none; }
+.modal-b { overscroll-behavior: contain; }
+.title-row h1 { overflow-wrap: anywhere; }
+.title-row h1 small { flex: none; white-space: nowrap; }
+/* 放大或长标题挤满头部时，保留工作区高度并允许滚动到标签页和编辑内容。 */
+.tpl-ws { overflow-y: auto; overflow-x: hidden; }
+.tpl-ws > .tab-body { flex: 1 0 320px; min-height: 320px; }
+.tree-template-name {
+  min-width: 0;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+
+.tw:focus-visible { outline: 2px solid var(--blue); outline-offset: -2px; }
+.business-table, .clients-table, .users-table, .audit-table, .call-table, .presets-table, .matrix { table-layout: fixed; }
+.business-table { min-width: 1030px; }
+.clients-table { min-width: 1180px; }
+.users-table { min-width: 1020px; }
+.audit-table { min-width: 1130px; }
+.call-table { min-width: 1300px; }
+.presets-table { min-width: 890px; }
+.business-table td, .clients-table td, .users-table td, .audit-table td, .call-table td, .presets-table td, .matrix th, .matrix td { overflow-wrap: anywhere; }
+.users-table td:first-child, .users-table td:nth-child(2), .audit-table td:nth-child(4), .matrix th { white-space: normal; }
+.call-table td:nth-child(2), .call-table td:nth-child(4) { white-space: normal; }
+.clients-table td:nth-child(2), .business-table td:nth-child(5), .audit-table td:nth-child(2) { white-space: normal; }
+.users-table td:first-child .avatar { flex: none; }
+.users-table td:first-child > div > div { min-width: 0; }
+.matrix th, .matrix td { width: 160px; }
+.bar-row > span:first-child { min-width: 0; overflow-wrap: anywhere; }
+
+/* 窄窗口已有遮罩提示；同时移除被遮住控件的键盘焦点。 */
+@media (max-width: 1100px) {
+  .designer { overflow: hidden; }
+  .designer > :not(.narrow-note) { visibility: hidden; }
+}
