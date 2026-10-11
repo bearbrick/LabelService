@@ -10,6 +10,7 @@ import AppIcon from '../components/AppIcon.vue'
 import DesignerView from '../components/DesignerView.vue'
 import ModalDialog from '../components/admin/ModalDialog.vue'
 import ApiTestPanel from '../components/admin/ApiTestPanel.vue'
+import NavToggle from '../components/admin/NavToggle.vue'
 import FieldsTab from '../components/workspace/FieldsTab.vue'
 import PreviewDialog from '../components/workspace/PreviewDialog.vue'
 import PublishDialog from '../components/workspace/PublishDialog.vue'
@@ -18,7 +19,7 @@ import { paperName, sizeText, fmtTime } from '../model/format.ts'
 import type { LayoutView } from '../model/layout.ts'
 import { businessOf, catalog, templateState } from '../stores/catalog.ts'
 import { designer, exportTemplate, importTemplate, saveDraft, toast } from '../stores/designer.ts'
-import { confirmBox, dialogs } from '../stores/dialogs.ts'
+import { confirmBox } from '../stores/dialogs.ts'
 import { go, goBiz, openWorkspace, route } from '../stores/router.ts'
 import type { WorkspaceView } from '../stores/router.ts'
 import { can, inScope } from '../stores/session.ts'
@@ -205,15 +206,7 @@ async function move(): Promise<void> {
     <template v-else-if="detail">
       <div class="page-heading">
         <div class="breadcrumb">
-          <button
-            type="button"
-            class="icon-btn xs"
-            :aria-label="dialogs.navCollapsed ? '展开模板树' : '收起模板树'"
-            :data-tip="dialogs.navCollapsed ? '展开模板树' : '收起模板树'"
-            @click="dialogs.navCollapsed = !dialogs.navCollapsed"
-          >
-            <AppIcon :name="dialogs.navCollapsed ? 'chevR' : 'chevL'" small />
-          </button>
+          <NavToggle :auto="route.view === 'designer'" />
           <button type="button" @click="goBiz(business.id || 'all')">{{ business.name }}（{{ business.code }}）</button><span class="sep">/</span><span>{{ designer.template.name }}</span>
         </div>
         <div class="title-row">

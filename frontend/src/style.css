@@ -68,7 +68,12 @@ textarea.inp { height: auto; padding: 8px 10px; resize: vertical; line-height: 1
 .inp::placeholder, textarea::placeholder { color: var(--faint); }
 input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--blue); cursor: pointer; margin: 0; }
 .unit { position: relative; }
-.unit .inp { padding-right: 32px; }
+.unit .inp { padding-right: 28px; }
+
+/* 带单位的数字框不显示上下箭头：窄面板里箭头会挤掉数字（仍然可以输入、用方向键调整）。 */
+.unit input[type='number'] { appearance: textfield; -moz-appearance: textfield; }
+
+.unit input[type='number']::-webkit-inner-spin-button, .unit input[type='number']::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 .unit::after { content: attr(data-unit); position: absolute; right: 9px; top: 50%; transform: translateY(-50%); color: var(--faint); font-size: 11px; pointer-events: none; }
 .seg { display: inline-flex; border: 1px solid #dbe1eb; border-radius: 5px; overflow: hidden; background: #fff; }
 .seg button { border: 0; background: none; padding: 0 11px; height: 30px; cursor: pointer; color: #5c6b84; display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; font-size: 12px; }
@@ -185,7 +190,12 @@ input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--blue); cur
 pre.code { margin: 8px 0 0; background: #f7faff; border: 1px solid #e3eaf5; border-radius: 5px; padding: 12px 14px; font: 12px/1.65 var(--font-mono); overflow: auto; max-height: 260px; white-space: pre; color: #2c3e5c; }
 .narrow-note { position: absolute; inset: 0; background: #fff; z-index: 20; display: none; place-items: center; padding: 24px; text-align: center; }
 .narrow-note .in { max-width: 360px; display: grid; gap: 12px; justify-items: center; color: #5c6b84; }
-@media (max-width: 1100px) { .narrow-note { display: grid; } }
+@media (max-width: 1100px) {
+  .narrow-note { display: grid; }
+  /* 提示盖住的设计器内容不再参与显示：不撑出横向滚动条，也不能用 Tab 键切到看不见的按钮上 */
+  .designer { overflow: hidden; }
+  .designer > :not(.narrow-note) { visibility: hidden; }
+}
 
 /* 弹窗与提示 */
 .modal-back { position: fixed; inset: 0; background: #081b3d55; z-index: 80; display: flex; align-items: center; justify-content: center; padding: 16px; }

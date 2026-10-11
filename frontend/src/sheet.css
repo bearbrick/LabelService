@@ -1,5 +1,6 @@
 /* 拼版设计器。版面沿用模板设计器的 .designer 三栏布局。 */
-.sheet-left { overflow-y: auto; }
+/* 选择器要比 style.css 的 .panel { overflow: hidden } 更具体（sheet.css 先加载），左栏内容多时才能滚动。 */
+.panel.sheet-left { overflow-y: auto; }
 .sheet-canvas { grid-row: 2; grid-column: 2; position: relative; background: var(--canvas); border: 1px solid var(--line-2); border-radius: 5px; overflow: hidden; min-width: 0; min-height: 0; }
 .sheet-stage { position: absolute; inset: 0; }
 .sheet-zoom { position: absolute; right: 10px; bottom: 8px; font-size: 11px; color: #929caf; background: rgba(255, 255, 255, 0.85); padding: 2px 6px; border-radius: 4px; pointer-events: none; }
@@ -8,7 +9,12 @@
 .sheet-tpl img, .sheet-tpl .thumb-empty { width: 64px; height: 40px; object-fit: contain; flex: none; border: 1px solid #eef1f6; background: #fff; display: grid; place-items: center; }
 .sheet-tpl .n { font-size: 12px; min-width: 0; display: grid; gap: 2px; }
 .sheet-tpl small { color: #8993a4; font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.tb-group { display: flex; align-items: center; gap: 4px; }
+/* 窗口较窄时工具栏右侧的网格、缩放按钮换到第二行，不和左侧按钮组重叠 */
+.sheet-designer .toolbar { flex-wrap: wrap; row-gap: 6px; }
+.tb-group { display: flex; align-items: center; gap: 4px; flex: none; }
+.tb-end { margin-left: auto; }
+/* 右侧这组的最后一个按钮贴着画布右边，提示框右对齐，不伸出窗口 */
+.tb-end > [data-tip]:last-child::after { left: auto; right: 0; transform: none; }
 .sheet-problems { margin: 0; padding-left: 18px; color: var(--danger); font-size: 12px; line-height: 1.7; }
 .err-h { color: var(--danger); }
 .sheet-preview { display: block; max-width: 100%; max-height: 70vh; margin: 0 auto; border: 1px solid #e3e8f0; }
