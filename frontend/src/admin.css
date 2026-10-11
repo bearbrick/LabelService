@@ -194,7 +194,16 @@ a { color: var(--blue); text-decoration: none; }
 
 .app-body { flex: 1; min-height: 0; display: flex; position: relative; }
 
-.sidebar { width: 280px; flex: none; background: var(--sidebar); border-right: 1px solid var(--line); display: flex; flex-direction: column; padding: 22px 16px 14px; min-height: 0; }
+.sidebar { width: var(--sidebar-w, 280px); flex: none; background: var(--sidebar); border-right: 1px solid var(--line); display: flex; flex-direction: column; padding: 22px 16px 14px; min-height: 0; position: relative; }
+
+/* 右边缘的拖动手柄：悬停或拖动时显示一条蓝线；窄屏抽屉和收起时不显示 */
+.sidebar-resizer { position: absolute; top: 0; bottom: 0; right: -4px; width: 8px; cursor: col-resize; z-index: 5; touch-action: none; }
+.sidebar-resizer::after { content: ''; position: absolute; top: 0; bottom: 0; left: 3px; width: 2px; background: transparent; transition: background .12s; }
+.sidebar-resizer:hover::after, .sidebar-resizer:focus-visible::after, .sidebar.resizing .sidebar-resizer::after { background: var(--blue); }
+.sidebar-resizer:focus-visible { outline: none; }
+.sidebar.resizing { user-select: none; }
+.sidebar.collapsed .sidebar-resizer { display: none; }
+@media (max-width: 900px) { .sidebar-resizer { display: none; } }
 
 .sidebar-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; padding: 0 4px; }
 
@@ -261,7 +270,7 @@ a { color: var(--blue); text-decoration: none; }
 .nav-scrim { display: none; }
 
 @media (max-width: 900px) {
-  .sidebar { position: fixed; left: 0; top: 64px; bottom: 0; z-index: 40; transform: translateX(-102%); transition: transform .18s; box-shadow: 0 10px 30px #12284930; }
+  .sidebar { width: 280px; position: fixed; left: 0; top: 64px; bottom: 0; z-index: 40; transform: translateX(-102%); transition: transform .18s; box-shadow: 0 10px 30px #12284930; }
   .app.nav-open .sidebar { transform: none; }
   .app.nav-open .nav-scrim { display: block; position: fixed; inset: 64px 0 0; background: #081b3d55; z-index: 39; }
   .sidebar.collapsed { width: 280px; padding: 22px 16px 14px; border-right: 1px solid var(--line); }
@@ -336,6 +345,21 @@ a { color: var(--blue); text-decoration: none; }
 .table-box { border: 1px solid var(--line-2); border-radius: 5px; overflow: hidden; background: #fff; }
 
 .tw { overflow-x: auto; }
+
+/* 工作台：内容高度跟着窗口，最近的操作占满剩下的高度、在自己的框里滚动，整页不出现滚动条（窗口太矮、放不下 120px 时才整页滚动） */
+.page-inner.dash { min-height: 100%; display: flex; flex-direction: column; padding-block: 20px; }
+.dash .recent-box { flex: 1 1 0; min-height: 120px; display: flex; flex-direction: column; }
+.dash .recent-box .tw { flex: 1 1 0; min-height: 0; overflow: auto; }
+.dash .recent-box thead th { position: sticky; top: 0; z-index: 1; }
+/* 工作台排得紧凑一点：图表限宽（高度不随屏幕变宽而变高，坐标文字也不会放大），右栏三个框的间距和内边距小一些 */
+.dash .chart-wrap { max-width: 760px; margin-inline: auto; }
+.dash .kpis { margin-bottom: 14px; }
+.dash .grid-2 { gap: 14px; }
+.dash .grid-2 > .stack { gap: 12px; }
+.dash .grid-2 .box { padding: 14px 18px; }
+.dash .grid-2 .box h3 { margin-bottom: 10px; }
+.dash .bar-list { gap: 9px; }
+.dash .todo { padding: 8px 0; }
 
 .dt { width: 100%; border-collapse: collapse; font-size: 12px; }
 

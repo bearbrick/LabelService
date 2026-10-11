@@ -29,6 +29,11 @@ const error = ref('')
  */
 const hover = ref(-1)
 
+/**
+ * 模板排行看哪一种：生成最多（top）或单张平均最慢（slow）。两种放在一个框里切换，工作台不用整页滚动。
+ */
+const rank = ref<'top' | 'slow'>('top')
+
 onMounted(async () => {
   if (!can('tpl.view')) return
   try {
@@ -115,10 +120,9 @@ const todos = computed(() => {
 
 <template>
   <div class="page-scroll">
-    <div class="page-inner">
+    <div class="page-inner dash">
       <div class="page-head">
         <div>
-          <div class="breadcrumb"><span>工作台</span></div>
           <h1>{{ greeting }}，{{ session.me?.name }} <small>DASHBOARD</small></h1>
           <p>{{ todayText }}{{ data?.today ? ' · 调用数字来自调用日志' : '' }}</p>
         </div>
@@ -175,8 +179,21 @@ const todos = computed(() => {
           </div>
           <div class="stack">
             <div class="box">
-              <h3>近 7 天生成最多的模板</h3>
-              <div v-if="top.length" class="bar-list">
+              <div class="code-head">
+                <h3 style="margin: 0">近 7 天的模板</h3>
+                <div v-if="data.slowTemplates?.length" class="seg" role="group" aria-label="模板排行">
+                  <button type="button" :class="{ on: rank === 'top' }" @click="rank = 'top'">生成最多</button>
+                  <button type="button" :class="{ on: rank === 'slow' }" @click="rank = 'slow'">最慢（单张平均）</button>
+                </div>
+              </div>
+              <div v-if="rank === 'slow' && data.slowTemplates?.length" class="bar-list">
+                <div v-for="r in slow" :key="r.code" class="bar-row">
+                  <span class="bar-name" :title="`${r.name} ${r.code}`">{{ r.name }} <span class="code-chip">{{ r.code }}</span></span>
+                  <span class="num muted">{{ r.averageMs.toFixed(1) }} ms · 最慢 {{ r.maxMs.toFixed(0) }} ms</span>
+                  <div class="track"><div class="fill" :class="{ over: r.averageMs > 100 }" :style="{ width: r.pct + '%' }"></div></div>
+                </div>
+              </div>
+              <div v-else-if="top.length" class="bar-list">
                 <div v-for="r in top" :key="r.code" class="bar-row">
                   <span class="bar-name" :title="`${r.name} ${r.code}`">{{ r.name }} <span class="code-chip">{{ r.code }}</span></span>
                   <span class="num muted">{{ r.labels.toLocaleString() }} 张</span>
@@ -184,16 +201,6 @@ const todos = computed(() => {
                 </div>
               </div>
               <div v-else class="hint">近 7 天没有调用</div>
-            </div>
-            <div v-if="data.slowTemplates?.length" class="box">
-              <h3>近 7 天最慢的模板（单张，平均）</h3>
-              <div class="bar-list">
-                <div v-for="r in slow" :key="r.code" class="bar-row">
-                  <span class="bar-name" :title="`${r.name} ${r.code}`">{{ r.name }} <span class="code-chip">{{ r.code }}</span></span>
-                  <span class="num muted">{{ r.averageMs.toFixed(1) }} ms · 最慢 {{ r.maxMs.toFixed(0) }} ms</span>
-                  <div class="track"><div class="fill" :class="{ over: r.averageMs > 100 }" :style="{ width: r.pct + '%' }"></div></div>
-                </div>
-              </div>
             </div>
             <div class="box">
               <h3>需要处理</h3>
@@ -205,7 +212,7 @@ const todos = computed(() => {
             </div>
           </div>
         </div>
-        <div v-if="data.recentOps?.length" class="box" style="margin-top: 16px">
+        <div v-if="data.recentOps?.length" class="box recent-box" style="margin-top: 16px">
           <div class="code-head">
             <h3 style="margin: 0">最近的操作</h3>
             <button class="btn sm" type="button" @click="go('oplogs')">查看全部</button>
