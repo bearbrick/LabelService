@@ -73,8 +73,6 @@
 .matrix th, .matrix td { width: 160px; }
 .bar-row > span:first-child { min-width: 0; overflow-wrap: anywhere; }
 
-/* 窄窗口已有遮罩提示；同时移除被遮住控件的键盘焦点。 */
-@media (max-width: 1100px) {
-  .designer { overflow: hidden; }
-  .designer > :not(.narrow-note) { visibility: hidden; }
-}
+/* 模板卡片的业务名保留单行省略，其他业务标签仍可换行；图标不能被长名称挤扁。 */
+.mini-chip > .biz-dot { flex: none; }
+.mini-chip .tx { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
