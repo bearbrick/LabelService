@@ -40,6 +40,7 @@ Select-String -Path docs/tasks/T-*.md -Pattern '^(状态|负责人)：'
 | [T-021](T-021-phase1-acceptance-fixes.md) | 一期验收问题修复与总体 review | 全部 | 一期验收 | T-001～T-019 | 全部 |
 | [T-022](T-022-adopt-adr-0007-0009.md) | 采纳 ADR 0007、0009：预览只在管理接口，监控自建 | 后端 + 文档 | 一期验收 | T-010、T-016、T-021 | Server/Endpoints、docs |
 | [T-023](T-023-layered-architecture.md) | 后端分层架构（DDD）与多数据库支持 | 后端 | 一期验收 | T-022 | src 全部、tests |
+| [T-024](T-024-code-comments.md) | 代码注释补齐，去掉代码里的任务号 | 后端 + 调用端 + 前端 | 一期验收 | T-023 | 全部源码、检查程序 |
 
 “主要目录”是相对于对应部分（`frontend/`、`backend/`、`client/`）的路径；后端的 Rendering、Server 指 `backend/src/LabelService.Rendering`、`backend/src/LabelService.Server`（T-023 起 Server 改名为 `LabelService.Api`，原来的模板存储、鉴权、日志等拆到 Domain、Application、Infrastructure，见 ADR 0010；已完成任务的“主要目录”保留当时的写法）。跨两个部分的任务（T-014、T-016、T-018、T-020）建议按部分拆成子任务分别认领；T-018 是契约变更，后端和调用端的契约副本要在同一个提交里改齐。
 
