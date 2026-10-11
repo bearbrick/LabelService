@@ -25,6 +25,7 @@ internal static class AdminEndpoints
         LogEndpoints.Map(api);
         PreviewEndpoints.Map(api);
         LayoutEndpoints.Map(api);
+        SystemInfoEndpoints.Map(api);
         return app;
     }
 
@@ -38,7 +39,7 @@ internal static class AdminEndpoints
         builder.AddEndpointFilter(new AdminFilter(permission));
 
     /// <summary>
-    /// 不要求登录（只有登录接口）：只把用户能修正的问题转成错误响应。
+    /// 不要求登录（登录接口，以及登录页要显示的系统信息和公司 Logo）：只把用户能修正的问题转成错误响应。
     /// </summary>
     /// <param name="builder">路由。</param>
     /// <returns>同一个路由，便于链式调用。</returns>

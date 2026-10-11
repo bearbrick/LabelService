@@ -544,6 +544,28 @@ namespace LabelService.Infrastructure.Persistence.SqlServer.Migrations.Main
                         });
                 });
 
+            modelBuilder.Entity("LabelService.Domain.SystemSettings.SystemSettingEntity", b =>
+                {
+                    b.Property<string>("Key")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)")
+                        .HasColumnName("key");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("updated_at");
+
+                    b.Property<string>("Value")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)")
+                        .HasColumnName("value");
+
+                    b.HasKey("Key");
+
+                    b.ToTable("system_setting", (string)null);
+                });
+
             modelBuilder.Entity("LabelService.Domain.Templates.TemplateEntity", b =>
                 {
                     b.Property<int>("Id")

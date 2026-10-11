@@ -21,6 +21,7 @@ export const PAGES = [
   'oplogs',
   'users',
   'roles',
+  'settings',
   'profile',
 ] as const
 

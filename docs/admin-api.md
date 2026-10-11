@@ -37,6 +37,7 @@
 | `log.view` | 查看调用日志、操作日志 |
 | `sys.user` | 管理用户 |
 | `sys.role` | 管理角色权限 |
+| `sys.settings` | 修改系统信息（系统名称、公司 Logo、版权信息） |
 
 模板相关的接口同时检查权限点和业务范围。调用方接口也看业务范围（T-021）：业务范围不是“全部业务”的用户，列表里只有授权完全在自己范围里的调用方，修改、启停、重置 Key 别的调用方返回 404；新建、修改时只能授权自己范围里的分组，不能授权“全部业务”，否则 403。下表“权限”一列写“登录”的，只要登录（且不需要先改密码）就能用。
 
@@ -97,6 +98,11 @@
 | GET | `/op-logs` | log.view | 参数 `from、to、userId、type、q、beforeId、pageSize` |
 | GET | `/dashboard` | tpl.view | `templates{total,published,changed,neverPublished}`；有 log.view 时再给 `today{total,errors,slow,labels,averageMs,p95Ms}`（p95Ms 是今日单张成功调用的 P95）、`days[14]`、`topTemplates`、`slowTemplates`（近 7 天单张平均耗时最高的 5 个）、`recentOps` |
 | POST | `/api-test/render` | api.test | 请求体和开放接口单张生成一样，用已发布的模板试生成，返回文件；不写调用日志 |
+| GET | `/system-info` | — | 系统信息 `{ systemName, subtitle, companyName, copyright, support, logoVersion? }`；不用登录（登录页要显示）；没上传 Logo 时没有 `logoVersion` |
+| PUT | `/system-info` | sys.settings | `{ systemName, subtitle, companyName, copyright, support }`；去掉首尾空白、换行换成空格；系统名称必填，最长 20 / 30 / 60 / 120 / 60 字 |
+| GET | `/system-info/logo` | — | 公司 Logo 文件，不用登录；前端在地址后面拼 `?v={logoVersion}`；没上传时 404 |
+| POST | `/system-info/logo` | sys.settings | multipart，字段 `file`；PNG、JPG、SVG，≤ 1 MB；按内容判断类型，SVG 先清洗；替换原来的 Logo → 系统信息 |
+| DELETE | `/system-info/logo` | sys.settings | 删除上传的 Logo，恢复成占位 → 系统信息 |
 | POST | `/preview` | tpl.view | 服务端预览（ADR 0007）：`{ template, data?, dpi?, mono? }`，模板不用先保存，不传 data 时用字段样例值 → PNG（带 `X-Label-Dpi`、`Server-Timing`、`X-Label-Warnings`）；模板 JSON 不合法时 400，`message` 写 JSON 路径和行；结构问题（元素 ID 重复等）逐条列在 `details` |
 
 \* 必须先改密码的用户也能访问。

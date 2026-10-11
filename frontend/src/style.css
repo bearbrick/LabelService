@@ -76,7 +76,8 @@ input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--blue); cur
 .unit input[type='number']::-webkit-inner-spin-button, .unit input[type='number']::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 .unit::after { content: attr(data-unit); position: absolute; right: 9px; top: 50%; transform: translateY(-50%); color: var(--faint); font-size: 11px; pointer-events: none; }
 .seg { display: inline-flex; border: 1px solid #dbe1eb; border-radius: 5px; overflow: hidden; background: #fff; }
-.seg button { border: 0; background: none; padding: 0 11px; height: 30px; cursor: pointer; color: #5c6b84; display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; font-size: 12px; }
+/* 分段按钮组被拉宽（如属性面板里占满一行）时，多出的宽度平均分给各个选项，不在最后一个选项后面留一段空白 */
+.seg button { border: 0; background: none; padding: 0 11px; height: 30px; cursor: pointer; color: #5c6b84; display: inline-flex; align-items: center; justify-content: center; gap: 5px; white-space: nowrap; font-size: 12px; flex: 1 1 auto; }
 .seg button + button { border-left: 1px solid #dbe1eb; }
 .seg button.on { background: var(--blue-tint); color: var(--blue); font-weight: 600; }
 .check { display: inline-flex; align-items: center; gap: 7px; cursor: pointer; user-select: none; white-space: nowrap; font-size: 13px; color: #3c475a; }

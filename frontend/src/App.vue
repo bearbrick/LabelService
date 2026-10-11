@@ -23,6 +23,7 @@ import OpLogsPage from './pages/OpLogsPage.vue'
 import PresetsPage from './pages/PresetsPage.vue'
 import ProfilePage from './pages/ProfilePage.vue'
 import RolesPage from './pages/RolesPage.vue'
+import SettingsPage from './pages/SettingsPage.vue'
 import TemplatesPage from './pages/TemplatesPage.vue'
 import UsersPage from './pages/UsersPage.vue'
 import WorkspacePage from './pages/WorkspacePage.vue'
@@ -33,6 +34,7 @@ import { dialogs } from './stores/dialogs.ts'
 import { route } from './stores/router.ts'
 import type { Page } from './stores/router.ts'
 import { can, restoreSession, session } from './stores/session.ts'
+import { loadSystemInfo } from './stores/system.ts'
 
 /**
  * 每个页面对应的组件和需要的权限点（没有权限时显示无权限提示）。
@@ -51,6 +53,7 @@ const PAGES: Record<Page, { component: Component; permission?: string }> = {
   oplogs: { component: OpLogsPage, permission: 'log.view' },
   users: { component: UsersPage, permission: 'sys.user' },
   roles: { component: RolesPage, permission: 'sys.role' },
+  settings: { component: SettingsPage, permission: 'sys.settings' },
   profile: { component: ProfilePage },
 }
 
@@ -98,6 +101,8 @@ function onBeforeUnload(event: BeforeUnloadEvent): void {
 }
 
 onMounted(() => {
+  // 系统名称、Logo 登录页就要显示，不等登录
+  void loadSystemInfo()
   void restoreSession()
   window.addEventListener('beforeunload', onBeforeUnload)
 })

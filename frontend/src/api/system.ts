@@ -1,0 +1,99 @@
+/**
+ * 系统信息的管理接口（docs/admin-api.md 的 /system-info）：系统名称、副标题、所属公司、版权信息、技术支持和公司 Logo。
+ * 读取不用登录（登录页要显示），修改要权限点 sys.settings。
+ */
+import { api } from './http.ts'
+
+/**
+ * 系统信息（GET /system-info）。
+ */
+export interface SystemInfo {
+  /**
+   * 系统名称，不会为空；显示在顶栏和浏览器标签页上。
+   */
+  systemName: string
+  /**
+   * 副标题，显示在系统名称旁边；空表示不显示。
+   */
+  subtitle: string
+  /**
+   * 所属公司；空表示不显示。
+   */
+  companyName: string
+  /**
+   * 版权信息；空表示不显示。
+   */
+  copyright: string
+  /**
+   * 技术支持的联系方式；空表示不显示。
+   */
+  support: string
+  /**
+   * 公司 Logo 的版本，换一次 Logo 变一次；没上传时没有这个属性（界面显示占位）。
+   */
+  logoVersion?: string | null
+}
+
+/**
+ * 修改系统信息的文字部分（PUT /system-info）。
+ */
+export type SaveSystemInfo = Omit<SystemInfo, 'logoVersion'>
+
+/**
+ * 每项最长多少字，和服务端的校验一致（Domain/SystemSettings/SystemInfoRules.cs）。
+ */
+export const SYSTEM_INFO_LIMITS: Record<keyof SaveSystemInfo, number> = {
+  systemName: 20,
+  subtitle: 30,
+  companyName: 60,
+  copyright: 120,
+  support: 60,
+}
+
+/**
+ * 没保存过时的默认值，接口还没读到时先用它显示。
+ */
+export const DEFAULT_SYSTEM_INFO: SystemInfo = {
+  systemName: '标签服务',
+  subtitle: '标签设计与生成工作台',
+  companyName: '',
+  copyright: '',
+  support: '',
+}
+
+/**
+ * 读系统信息（不用登录）。
+ * @returns 系统信息。
+ */
+export const getSystemInfo = () => api<SystemInfo>('GET', '/system-info')
+
+/**
+ * 修改系统信息的文字部分。
+ * @param body 新的系统信息；每项会去掉首尾空白。
+ * @returns 修改后的系统信息。
+ */
+export const saveSystemInfo = (body: SaveSystemInfo) => api<SystemInfo>('PUT', '/system-info', body)
+
+/**
+ * 上传公司 Logo：PNG、JPG、SVG，不超过 1 MB；服务端按内容判断类型，SVG 先清洗。
+ * @param file 图片文件。
+ * @returns 修改后的系统信息（Logo 版本变了）。
+ */
+export function uploadLogo(file: File): Promise<SystemInfo> {
+  const form = new FormData()
+  form.append('file', file)
+  return api<SystemInfo>('POST', '/system-info/logo', form)
+}
+
+/**
+ * 删除上传的 Logo，恢复成占位。
+ * @returns 修改后的系统信息。
+ */
+export const resetLogo = () => api<SystemInfo>('DELETE', '/system-info/logo')
+
+/**
+ * 公司 Logo 的图片地址（不用登录就能取）；没上传时为空字符串。
+ * @param info 系统信息。
+ * @returns 带版本参数的地址，换了 Logo 地址就变，浏览器不会显示缓存里的旧图。
+ */
+export const logoUrl = (info: SystemInfo) => (info.logoVersion ? `/api/admin/system-info/logo?v=${encodeURIComponent(info.logoVersion)}` : '')

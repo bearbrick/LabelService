@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * 顶栏：业务切换、功能菜单（资源、接口、日志、权限管理）、用户菜单。菜单项按权限显示。
+ * 顶栏：左上角公司 Logo 和系统名称、业务切换、功能菜单（资源、接口、日志、系统管理）、用户菜单。菜单项按权限显示。
  */
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { businessOf, catalog, templateCountByBusiness } from '../../stores/catalog.ts'
@@ -8,7 +8,9 @@ import { designer } from '../../stores/designer.ts'
 import { go, goBiz, route } from '../../stores/router.ts'
 import type { Page } from '../../stores/router.ts'
 import { can, session, signOut } from '../../stores/session.ts'
+import { system } from '../../stores/system.ts'
 import AppIcon from '../AppIcon.vue'
+import BrandMark from './BrandMark.vue'
 
 defineEmits<{
   /**
@@ -18,7 +20,7 @@ defineEmits<{
 }>()
 
 /**
- * 顶栏的下拉菜单：业务、资源、接口、日志、权限管理、用户。
+ * 顶栏的下拉菜单：业务、资源、接口、日志、系统管理、用户。
  */
 type MenuKey = 'biz' | 'res' | 'api' | 'log' | 'sys' | 'user'
 
@@ -97,12 +99,12 @@ onBeforeUnmount(() => document.removeEventListener('click', close))
 <template>
   <header class="topbar">
     <button class="hamburger" type="button" aria-label="打开模板树" @click.stop="$emit('toggleNav')"><AppIcon name="menu" /></button>
-    <button class="brand" type="button" @click="open('dashboard')"><AppIcon name="brand" /><b>标签服务</b></button>
-    <span class="brand-sub">标签设计与生成工作台</span>
+    <button class="brand" type="button" aria-label="回到工作台" :title="system.info.systemName" @click="open('dashboard')"><BrandMark :info="system.info" /></button>
+    <span v-if="system.info.subtitle" class="brand-sub" :title="system.info.subtitle">{{ system.info.subtitle }}</span>
     <span class="header-divider"></span>
     <div class="menu-wrap biz-wrap">
       <button class="project-select" type="button" aria-haspopup="menu" :aria-expanded="menu === 'biz'" @click.stop="toggle('biz')">
-        <span class="biz-name" :title="currentBiz?.name">{{ currentBiz ? currentBiz.name : '全部业务' }}</span><AppIcon name="chevD" small />
+        <span class="biz-name" :title="currentBiz ? currentBiz.name : '全部业务'">{{ currentBiz ? currentBiz.name : '全部业务' }}</span><AppIcon name="chevD" small />
       </button>
       <div v-if="menu === 'biz'" class="dropdown left" role="menu" @click.stop>
         <h4>切换业务<span>{{ catalog.businesses.length }} 个</span></h4>
@@ -147,14 +149,15 @@ onBeforeUnmount(() => document.removeEventListener('click', close))
           <button class="dd-item" type="button" @click="open('oplogs')"><AppIcon name="logs" />操作日志</button>
         </div>
       </div>
-      <div v-if="can('sys.user') || can('sys.role')" class="menu-wrap wide-only">
-        <button class="top-btn" type="button" :class="{ on: menu === 'sys' || route.page === 'users' || route.page === 'roles' }" @click.stop="toggle('sys')">
-          <AppIcon name="shield" /><span class="lbl">权限管理</span><AppIcon name="chevD" small />
+      <div v-if="can('sys.user') || can('sys.role') || can('sys.settings')" class="menu-wrap wide-only">
+        <button class="top-btn" type="button" :class="{ on: menu === 'sys' || route.page === 'users' || route.page === 'roles' || route.page === 'settings' }" @click.stop="toggle('sys')">
+          <AppIcon name="shield" /><span class="lbl">系统管理</span><AppIcon name="chevD" small />
         </button>
         <div v-if="menu === 'sys'" class="dropdown" role="menu" @click.stop>
-          <h4>权限管理<span>RBAC</span></h4>
+          <h4>系统管理<span>用户、权限和系统信息</span></h4>
           <button v-if="can('sys.user')" class="dd-item" type="button" @click="open('users')"><AppIcon name="users" />用户管理</button>
           <button v-if="can('sys.role')" class="dd-item" type="button" @click="open('roles')"><AppIcon name="shield" />角色权限<span class="count">{{ catalog.roles.length }}</span></button>
+          <button v-if="can('sys.settings')" class="dd-item" type="button" @click="open('settings')"><AppIcon name="gear" />系统信息</button>
         </div>
       </div>
       <div class="menu-wrap">
@@ -168,6 +171,10 @@ onBeforeUnmount(() => document.removeEventListener('click', close))
           <button class="dd-item" type="button" @click="open('profile', 'pwd')"><AppIcon name="lock" />修改密码</button>
           <button v-if="route.page === 'workspace' && route.view === 'designer'" class="dd-item" type="button" @click="showShortcuts"><AppIcon name="keyboard" />快捷键</button>
           <button class="dd-item danger" type="button" @click="logout"><AppIcon name="logout" />退出登录</button>
+          <small v-if="system.info.copyright || system.info.support" class="about">
+            <template v-if="system.info.copyright">{{ system.info.copyright }}<br /></template>
+            <template v-if="system.info.support">技术支持：{{ system.info.support }}</template>
+          </small>
         </div>
       </div>
     </nav>

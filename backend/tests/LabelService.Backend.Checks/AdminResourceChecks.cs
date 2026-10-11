@@ -478,6 +478,7 @@ internal static class AdminChecks
             await ClientScopeChecks.RunAsync(http, admin, check);
             await PreviewChecks.RunAsync(backendRoot, http, admin, check);
             await LayoutServerChecks.RunAdminAsync(http, admin, check);
+            await SystemInfoChecks.RunAsync(http, admin, check);
         }
         finally
         {

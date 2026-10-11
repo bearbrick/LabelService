@@ -78,7 +78,7 @@ dotnet run -c Release --project backend/tests/LabelService.Benchmarks -- --gate 
   }
   ```
 
-- **数据目录**：配置 `LabelService:Data:Directory`，默认程序目录下的 `data/`（本地 `dotnet run` 时在 `backend/src/LabelService.Api/bin/Debug/net10.0/data/`）。不管用哪种数据库都要有：上传的素材、JWT 签名密钥放在这里；SQLite 时还有 `label.db`、`label-log.db`。
+- **数据目录**：配置 `LabelService:Data:Directory`，默认程序目录下的 `data/`（本地 `dotnet run` 时在 `backend/src/LabelService.Api/bin/Debug/net10.0/data/`）。不管用哪种数据库都要有：上传的素材（`assets/`）、公司 Logo（`branding/`，系统信息页上传）、JWT 签名密钥放在这里；SQLite 时还有 `label.db`、`label-log.db`。
 - **升级**：启动时自动建库、执行迁移。SQLite：已有数据的库升级前先快照到 `backups/`，失败自动恢复（`Infrastructure/Persistence/DatabaseUpgrade.cs`），一期早期的旧库把模板分类和调用方授权换算成业务分组（`Persistence/Sqlite/LegacyUpgrade.cs`）。SQL Server、PostgreSQL：每个迁移在事务里执行，失败自动回滚、服务不启动。
 - **改表结构**：改领域层的实体、`Infrastructure/Persistence/Configurations/` 后，给三种数据库各生成一次迁移，不要手改迁移文件和快照。检查程序会核对六套迁移（主库、日志库各三种）都和模型一致。
 

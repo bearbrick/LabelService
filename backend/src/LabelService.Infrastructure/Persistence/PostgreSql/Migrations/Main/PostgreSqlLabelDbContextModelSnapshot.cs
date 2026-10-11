@@ -545,6 +545,28 @@ namespace LabelService.Infrastructure.Persistence.PostgreSql.Migrations.Main
                         });
                 });
 
+            modelBuilder.Entity("LabelService.Domain.SystemSettings.SystemSettingEntity", b =>
+                {
+                    b.Property<string>("Key")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("key");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<string>("Value")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("value");
+
+                    b.HasKey("Key");
+
+                    b.ToTable("system_setting", (string)null);
+                });
+
             modelBuilder.Entity("LabelService.Domain.Templates.TemplateEntity", b =>
                 {
                     b.Property<int>("Id")
