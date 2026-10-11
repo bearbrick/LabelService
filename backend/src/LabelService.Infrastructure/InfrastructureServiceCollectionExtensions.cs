@@ -70,6 +70,7 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddSingleton(LoadAssets);
         services.AddSingleton<IAssetFileStore, AssetFileStore>();
         services.AddSingleton<IBrandingFileStore, BrandingFileStore>();
+        services.AddSingleton<IFontFileStore, FontFileStore>();
         return services;
     }
 
@@ -95,15 +96,16 @@ public static class InfrastructureServiceCollectionExtensions
     }
 
     /// <summary>
-    /// 加载字体目录。没有思源黑体时记警告：文本会降级显示，中文可能是方框。
+    /// 加载部署目录（程序目录 fonts/）和上传目录（数据目录 fonts/，ADR 0011）里的字体。没有思源黑体时记警告：文本会降级显示，中文可能是方框。
     /// </summary>
     /// <param name="provider">根服务。</param>
     /// <returns>字体注册表。</returns>
     private static FontRegistry LoadFonts(IServiceProvider provider)
     {
         var directory = provider.GetRequiredService<IOptions<FontOptions>>().Value.ResolveDirectory();
+        var uploadDirectory = FontFileStore.ResolveDirectory(provider.GetRequiredService<IOptions<DataOptions>>().Value);
         var logger = provider.GetRequiredService<ILoggerFactory>().CreateLogger(typeof(FontRegistry));
-        var fonts = FontRegistry.Load(directory);
+        var fonts = FontRegistry.Load(directory, uploadDirectory);
         foreach (var error in fonts.Errors)
         {
             logger.LogWarning("{Error}", error);
@@ -111,11 +113,11 @@ public static class InfrastructureServiceCollectionExtensions
 
         if (fonts.HasDefaultFamily)
         {
-            logger.LogInformation("已加载字体 {Families}（{Count} 个文件，目录 {Directory}）", string.Join("、", fonts.FamilyNames), fonts.Files.Count, directory);
+            logger.LogInformation("已加载字体 {Families}（{Count} 个文件，部署目录 {Directory}，上传目录 {Upload}）", string.Join("、", fonts.FamilyNames), fonts.Files.Count, directory, uploadDirectory);
         }
         else
         {
-            logger.LogWarning("字体目录 {Directory} 里没有思源黑体，文本会降级显示，中文可能是方框。准备字体见 backend/assets/fonts/README.md", directory);
+            logger.LogWarning("没有思源黑体（部署目录 {Directory}，上传目录 {Upload}），文本会降级显示，中文可能是方框。在管理后台“素材与字体”页上传思源黑体（Noto Sans SC），见 backend/assets/fonts/README.md", directory, uploadDirectory);
         }
 
         return fonts;
