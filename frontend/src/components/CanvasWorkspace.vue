@@ -9,10 +9,11 @@ import { useTextEdit } from '../composables/useTextEdit.ts'
 import { paintRuler } from '../editor/rulers.ts'
 import { snapshotPage } from '../editor/snapshot.ts'
 import { DesignerStage } from '../editor/stage.ts'
-import { SERVER_FONT_FAMILIES } from '../model/fonts.ts'
+import { BUILTIN_FONTS, serverFontFamily } from '../model/fonts.ts'
 import { assetSource, assetVersion } from '../stores/assets.ts'
 import { commit, designer, registerCanvas, select, setMetric, toast } from '../stores/designer.ts'
 import { endDrag } from '../stores/drag.ts'
+import { serverFamilies } from '../stores/fonts.ts'
 
 /**
  * 画布的外层容器（尺寸、焦点、拖放）。
@@ -171,7 +172,8 @@ onMounted(() => {
   resizeObserver.observe(wrap.value)
   document.fonts?.addEventListener?.('loadingdone', onFontsLoaded)
   // 提前加载服务端字体的常规和粗体，加载完会触发 loadingdone 重画。
-  for (const family of SERVER_FONT_FAMILIES) for (const weight of [400, 700]) void document.fonts?.load(`${weight} 16px "${family}"`).catch(() => undefined)
+  const families = new Set([...BUILTIN_FONTS.map((font) => font.value), ...serverFamilies()])
+  for (const family of families) for (const weight of [400, 700]) void document.fonts?.load(`${weight} 16px "${serverFontFamily(family)}"`).catch(() => undefined)
   document.addEventListener('dragend', onGlobalDragEnd)
 })
 

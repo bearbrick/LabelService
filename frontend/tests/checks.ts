@@ -16,6 +16,7 @@ import { compareElements, inkEdges } from '../src/editor/compare.ts'
 import { snapBox } from '../src/editor/snapping.ts'
 import { formatDate, formatNumber, keysIn, renameKey, resolveText } from '../src/model/bindings.ts'
 import { checkLayout, footprint, normalizeLayout, pageCount } from '../src/model/layout.ts'
+import { cssFontFamily, DEFAULT_FONT, fontOptions, templateFontName } from '../src/model/fonts.ts'
 import { arrange, fitGrid, moveSlot, newLayout, renumber, suggestCode } from '../src/model/layoutArrange.ts'
 import type { SheetLayout } from '../src/model/layout.ts'
 import { cloneElements, makeElement, normalizeElement } from '../src/model/elements.ts'
@@ -289,6 +290,19 @@ function checkLayouts(): void {
 }
 
 /**
+ * 字体（ADR 0011）：上传的字体按家族名使用，找不到时按默认字体显示；下拉框列出服务端有的和模板正在用的字体。
+ */
+function checkFonts(): void {
+  check('内置字体的别名对应模板名，上传的字体用家族名', templateFontName('Noto Sans SC') === 'SourceHanSansSC' && templateFontName('noto-serif-sc') === 'SourceHanSerifSC' && templateFontName('阿里巴巴普惠体') === '阿里巴巴普惠体')
+  check('上传字体的 CSS 先用服务端字体，再退回默认字体；空名字和带引号的名字直接用默认字体',
+    cssFontFamily('阿里巴巴普惠体').startsWith('"LabelService 阿里巴巴普惠体", "阿里巴巴普惠体", ') && cssFontFamily('').startsWith('"LabelService SourceHanSansSC"') && cssFontFamily('a"b') === DEFAULT_FONT.css)
+  const options = fontOptions(['SourceHanSansSC', '阿里巴巴普惠体'], '已删除的字体')
+  check('字体下拉框：内置在前，服务端没有的标“未安装”，上传的和模板正在用的都列出来',
+    options.map((option) => option.value).join('|') === 'SourceHanSansSC|SourceHanSerifSC|阿里巴巴普惠体|已删除的字体'
+    && options[1].label === '思源宋体（未安装）' && options[2].available && options[3].label === '已删除的字体（未安装）')
+}
+
+/**
  * 源码规范：注释完整（tests/docs.ts）、文件不超过 500 行。
  */
 function checkSource(): void {
@@ -322,6 +336,7 @@ checkTransform()
 checkCompare()
 checkSampleTemplate()
 checkLayouts()
+checkFonts()
 checkSource()
 
 console.log(`前端检查全部通过：${passed} 项`)

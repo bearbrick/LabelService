@@ -157,7 +157,77 @@ export const renameAsset = (key: string, name: string) => api<AssetInfo>('PUT', 
 export const deleteAsset = (key: string) => api<void>('DELETE', `/assets/${encodeURIComponent(key)}`)
 
 /**
- * 取服务端加载的字体。
- * @returns 模板字体名和字体文件名。
+ * 一个字体文件（GET /fonts 的 items）。
  */
-export const listFonts = () => api<{ families: string[]; files: string[] }>('GET', '/fonts')
+export interface FontFile {
+  /**
+   * 文件名，删除时用它。
+   */
+  fileName: string
+  /**
+   * 文件里的字体家族名。
+   */
+  families: string[]
+  /**
+   * 文件大小，字节。
+   */
+  size: number
+  /**
+   * 文件修改时间（UTC），上传的字体就是上传时间。
+   */
+  lastModified: string
+  /**
+   * 是否在管理后台上传的（可以删除）；false 是部署目录里的字体（只读）。
+   */
+  uploaded: boolean
+}
+
+/**
+ * 服务端的字体（GET /fonts）。
+ */
+export interface FontList {
+  /**
+   * 字体家族名（字体文件里的名字）。
+   */
+  families: string[]
+  /**
+   * 字体文件名。
+   */
+  files: string[]
+  /**
+   * 每个字体文件的详情。
+   */
+  items: FontFile[]
+  /**
+   * 模板里可以写的字体名（设计器的字体下拉框）：思源黑体、思源宋体用 SourceHanSansSC 等，其余用家族名。
+   */
+  templateFamilies: string[]
+  /**
+   * 有没有默认字体（思源黑体）。
+   */
+  hasDefaultFamily: boolean
+}
+
+/**
+ * 取服务端加载的字体。
+ * @returns 字体家族、文件和详情。
+ */
+export const listFonts = () => api<FontList>('GET', '/fonts')
+
+/**
+ * 上传字体（.ttf、.otf、.ttc、.otc，不超过 50 MB），立即生效（ADR 0011）。
+ * @param file 字体文件。
+ * @returns 上传后的字体列表。
+ */
+export function uploadFont(file: File): Promise<FontList> {
+  const form = new FormData()
+  form.append('file', file)
+  return api<FontList>('POST', '/fonts', form)
+}
+
+/**
+ * 删除上传的字体（部署目录里的不能删）；引用它的模板生成时降级到默认字体。
+ * @param fileName 文件名。
+ * @returns 删除后的字体列表。
+ */
+export const deleteFont = (fileName: string) => api<FontList>('DELETE', `/fonts/${encodeURIComponent(fileName)}`)

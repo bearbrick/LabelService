@@ -34,6 +34,7 @@ import { dialogs } from './stores/dialogs.ts'
 import { route } from './stores/router.ts'
 import type { Page } from './stores/router.ts'
 import { can, restoreSession, session } from './stores/session.ts'
+import { loadFonts } from './stores/fonts.ts'
 import { loadSystemInfo } from './stores/system.ts'
 
 /**
@@ -86,7 +87,7 @@ watch(
       return
     }
 
-    await Promise.all([loadCatalog(), loadAssets()]).catch((error) => toast(errorText(error), true))
+    await Promise.all([loadCatalog(), loadAssets(), loadFonts()]).catch((error) => toast(errorText(error), true))
   },
 )
 
