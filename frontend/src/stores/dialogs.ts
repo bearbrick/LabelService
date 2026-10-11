@@ -69,7 +69,7 @@ export const dialogs = reactive({
    */
   newTemplate: false,
   /**
-   * 模板工作区里收起左侧模板树。
+   * 模板工作区和拼版设计器里收起左侧模板树。
    */
   navCollapsed: false,
 })

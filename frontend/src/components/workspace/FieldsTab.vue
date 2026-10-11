@@ -122,7 +122,7 @@ async function remove(field: FieldDefinition): Promise<void> {
         <span class="toolbar-divider"></span>
         <span class="hint">声明模板需要的字段 key 和类型。业务系统调用接口时按这里传数据，样例值只用于设计器预览、发布前试渲染和调用样例。</span>
       </div>
-      <div class="two-col">
+      <div class="two-col wide-left">
         <div style="display: grid; gap: 16px; min-width: 0; align-content: start">
           <div v-if="report.undefinedKeys.length || report.unusedFields.length">
             <div v-for="key in report.undefinedKeys" :key="key" class="notice warn">

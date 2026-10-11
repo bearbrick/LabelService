@@ -102,7 +102,7 @@ onBeforeUnmount(() => document.removeEventListener('click', close))
     <span class="header-divider"></span>
     <div class="menu-wrap biz-wrap">
       <button class="project-select" type="button" aria-haspopup="menu" :aria-expanded="menu === 'biz'" @click.stop="toggle('biz')">
-        {{ currentBiz ? currentBiz.name : '全部业务' }}<AppIcon name="chevD" small />
+        <span class="biz-name" :title="currentBiz?.name">{{ currentBiz ? currentBiz.name : '全部业务' }}</span><AppIcon name="chevD" small />
       </button>
       <div v-if="menu === 'biz'" class="dropdown left" role="menu" @click.stop>
         <h4>切换业务<span>{{ catalog.businesses.length }} 个</span></h4>

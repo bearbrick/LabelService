@@ -146,6 +146,10 @@ export class StageViewport {
    */
   private needsFit = true
   /**
+   * 当前视图是“适应窗口”的结果，用户还没有缩放或平移过；窗口大小变化时跟着重新适应，纸张不会被裁掉。
+   */
+  private fitted = false
+  /**
    * 正在拖动平移。
    */
   private panning = false
@@ -202,14 +206,14 @@ export class StageViewport {
   }
 
   /**
-   * 容器尺寸变化后调整舞台尺寸；还没适应过窗口时适应一次。
+   * 容器尺寸变化后调整舞台尺寸；还没适应过窗口，或者视图还停在适应窗口的状态时，重新适应一次。
    */
   resize(): void {
     const width = this.wrap.clientWidth
     const height = this.wrap.clientHeight
     if (!width || !height) return
     this.stage.size({ width, height })
-    if (this.needsFit) this.zoomFit()
+    if (this.needsFit || this.fitted) this.zoomFit()
     else this.afterView()
   }
 
@@ -244,6 +248,7 @@ export class StageViewport {
     this.needsFit = false
     const scale = clamp(Math.min((width - 96) / page.width, (height - 96) / page.height), MIN_SCALE, MAX_SCALE)
     this.apply(scale, (width - page.width * scale) / 2, (height - page.height * scale) / 2)
+    this.fitted = true
   }
 
   /**
@@ -309,6 +314,8 @@ export class StageViewport {
    */
   protected zoomAt(scale: number, x: number, y: number): void {
     const next = clamp(scale, MIN_SCALE, MAX_SCALE)
+    // 用户自己缩放过，之后窗口变化时保留这个视图
+    this.fitted = false
     const mmX = (x - this.stage.x()) / this.scaleValue
     const mmY = (y - this.stage.y()) / this.scaleValue
     this.apply(next, x - mmX * next, y - mmY * next)
@@ -358,6 +365,7 @@ export class StageViewport {
 
     const dx = event.shiftKey ? event.deltaY : event.deltaX
     const dy = event.shiftKey ? 0 : event.deltaY
+    this.fitted = false
     this.stage.position({ x: this.stage.x() - dx, y: this.stage.y() - dy })
     this.afterView()
   }
@@ -371,6 +379,7 @@ export class StageViewport {
     event.preventDefault()
     event.stopPropagation()
     this.panning = true
+    this.fitted = false
     const move = (x: number, y: number) => {
       this.stage.position({ x, y })
       this.afterView()

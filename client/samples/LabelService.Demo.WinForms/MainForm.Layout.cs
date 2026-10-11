@@ -65,6 +65,8 @@ internal sealed partial class MainForm
     private Control BuildLeft()
     {
         var left = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 3, Padding = new Padding(8) };
+        // 列宽跟着左栏走（不按内容撑宽），出现纵向滚动条时不会再多出横向滚动条
+        left.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         left.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         left.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
         left.RowStyles.Add(new RowStyle(SizeType.AutoSize));
@@ -90,11 +92,13 @@ internal sealed partial class MainForm
         var dataGroup = Group("模板与数据", data);
         dataGroup.Dock = DockStyle.Fill;
         left.Controls.Add(dataGroup, 0, 1);
-        fields.Columns.Add(new DataGridViewTextBoxColumn { Name = "key", HeaderText = "字段", ReadOnly = true, FillWeight = 26 });
-        fields.Columns.Add(new DataGridViewTextBoxColumn { Name = "name", HeaderText = "名称", ReadOnly = true, FillWeight = 22 });
-        fields.Columns.Add(new DataGridViewTextBoxColumn { Name = "type", HeaderText = "类型", ReadOnly = true, FillWeight = 16 });
-        fields.Columns.Add(new DataGridViewCheckBoxColumn { Name = "required", HeaderText = "必填", ReadOnly = true, FillWeight = 12 });
-        fields.Columns.Add(new DataGridViewTextBoxColumn { Name = "value", HeaderText = "值", FillWeight = 44 });
+        // 字段、名称、类型、必填按内容（含表头）定宽，不会被截成“num...”“必”；值占满剩下的宽度
+        var fitContent = DataGridViewAutoSizeColumnMode.AllCells;
+        fields.Columns.Add(new DataGridViewTextBoxColumn { Name = "key", HeaderText = "字段", ReadOnly = true, AutoSizeMode = fitContent });
+        fields.Columns.Add(new DataGridViewTextBoxColumn { Name = "name", HeaderText = "名称", ReadOnly = true, AutoSizeMode = fitContent });
+        fields.Columns.Add(new DataGridViewTextBoxColumn { Name = "type", HeaderText = "类型", ReadOnly = true, AutoSizeMode = fitContent });
+        fields.Columns.Add(new DataGridViewCheckBoxColumn { Name = "required", HeaderText = "必填", ReadOnly = true, AutoSizeMode = fitContent });
+        fields.Columns.Add(new DataGridViewTextBoxColumn { Name = "value", HeaderText = "值", MinimumWidth = 100 });
 
         var options = Grid();
         AddRow(options, "格式", Flow(png, pdf, zpl, new Label { Text = "DPI", AutoSize = true, Margin = new Padding(12, 6, 3, 0) }, dpi));
@@ -102,7 +106,26 @@ internal sealed partial class MainForm
         AddRow(options, "批量条数", Flow(batchCount, new Label { Text = "递增字段", AutoSize = true, Margin = new Padding(12, 6, 3, 0) }, incrementKey));
         AddRow(options, "", Flow(renderSingle, renderBatch));
         left.Controls.Add(Group("生成选项", options), 0, 2);
-        return left;
+
+        // 窗口很矮时字段表格会被压得一行都看不到：左栏放进可滚动的外框，高度至少让表格显示 6 行，不够时出现纵向滚动条。
+        // 左栏停靠在顶部、高度自己算：停靠在顶部的控件只参与纵向滚动范围，宽度始终跟着外框，不会多出横向滚动条。
+        var scroller = new Panel { Dock = DockStyle.Fill, AutoScroll = true };
+        left.Dock = DockStyle.Top;
+        left.Margin = Padding.Empty;
+        scroller.Controls.Add(left);
+        var minimumHeight = 0;
+        EventHandler place = (_, _) => left.Height = Math.Max(scroller.ClientSize.Height, minimumHeight);
+        scroller.Resize += place;
+        Shown += (_, _) =>
+        {
+            // 窗口显示出来、按默认大小排好之后，按其他内容的实际高度算出最小高度（Load 时布局还没定下来，量出来偏小）
+            place(scroller, EventArgs.Empty);
+            left.PerformLayout();
+            var rowHeight = Math.Max(fields.RowTemplate.Height, fields.Font.Height + 9);
+            minimumHeight = left.Height - fields.Height + fields.ColumnHeadersHeight + (rowHeight * 6) + 2;
+            place(scroller, EventArgs.Empty);
+        };
+        return scroller;
     }
 
     /// <summary>

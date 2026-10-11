@@ -111,7 +111,7 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', onBeforeUnload)
     <div v-else class="app" :class="{ 'nav-open': navOpen }">
       <TopBar @toggle-nav="navOpen = !navOpen" />
       <div class="app-body">
-        <TemplateTree v-if="!mustChange" :collapsed="dialogs.navCollapsed && route.page === 'workspace'" @navigate="navOpen = false" />
+        <TemplateTree v-if="!mustChange" :collapsed="dialogs.navCollapsed && (route.page === 'workspace' || (route.page === 'layouts' && !!route.section))" @navigate="navOpen = false" />
         <div class="nav-scrim" @click="navOpen = false"></div>
         <main class="main">
           <component :is="current.component" v-if="allowed" />

@@ -117,7 +117,7 @@ function page(target: Page): void {
         <AppIcon name="folder" /><span class="nm">全部模板</span><span class="count">{{ catalog.templates.length }}</span>
       </button>
       <template v-for="folder in folders" :key="folder.id">
-        <button class="module-row" type="button" :class="{ active: route.page === 'templates' && route.biz === folder.id }" @click="openFolder(folder.id)">
+        <button class="module-row" type="button" :class="{ active: route.page === 'templates' && route.biz === folder.id }" :title="`${folder.name}（${folder.code}）`" @click="openFolder(folder.id)">
           <AppIcon :name="openFolders[folder.id] || query ? 'chevD' : 'chevR'" small class="chev" />
           <AppIcon :name="openFolders[folder.id] || query ? 'folderOpen' : 'folder'" />
           <span class="nm">{{ folder.name }}（{{ folder.code }}）</span><span class="count">{{ templatesOf(folder.id).length }}</span>
@@ -129,6 +129,8 @@ function page(target: Page): void {
             class="table-item"
             type="button"
             :class="{ active: route.page === 'workspace' && route.code === t.code }"
+            :title="`${t.name}
+${t.code} · ${sizeText(t)}`"
             @click="open(t)"
           >
             <span><span class="state-dot" :class="templateState(t).key"></span>{{ t.name }}</span>

@@ -26,6 +26,11 @@ const zoom = ref(1)
  */
 let stage: SheetStage | null = null
 
+/**
+ * 监听画布尺寸：窗口变化后画布可能重新适应了整张纸，同步右下角的比例。
+ */
+let resizeObserver: ResizeObserver | null = null
+
 onMounted(() => {
   stage = new SheetStage(wrap.value!, container.value!, {
     layout: () => sheet.layout,
@@ -39,9 +44,15 @@ onMounted(() => {
   })
   stage.render()
   zoom.value = stage.zoom
+  // 画布自己的尺寸监听先执行，下一帧再读比例
+  resizeObserver = new ResizeObserver(() => requestAnimationFrame(syncZoom))
+  resizeObserver.observe(wrap.value!)
 })
 
-onBeforeUnmount(() => stage?.destroy())
+onBeforeUnmount(() => {
+  resizeObserver?.disconnect()
+  stage?.destroy()
+})
 
 watch(
   () => [sheet.layout, sheet.selection, sheet.previewImage, sheet.settings, problems.value],

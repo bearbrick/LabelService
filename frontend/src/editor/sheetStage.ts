@@ -135,6 +135,10 @@ export class SheetStage {
    */
   private needsFit = true
   /**
+   * 当前视图是“整张纸”的结果，用户还没有缩放或平移过；窗口大小变化时跟着重新适应，纸张不会被裁掉。
+   */
+  private fitted = false
+  /**
    * 拖动开始时选中格子的原位置（下标 → 坐标）；没在拖动时为 null。
    */
   private dragStart: Map<number, { x: number; y: number }> | null = null
@@ -205,6 +209,7 @@ export class SheetStage {
     const layout = this.host.layout()
     if (!layout || !this.wrap.clientWidth) return
     this.needsFit = false
+    this.fitted = true
     const scale = Math.min((this.wrap.clientWidth - 48) / layout.paper.width, (this.wrap.clientHeight - 48) / layout.paper.height)
     this.setScale(Math.max(MIN_SCALE, Math.min(MAX_SCALE, scale)))
     this.stage.position({ x: (this.wrap.clientWidth - layout.paper.width * this.scaleValue) / 2, y: (this.wrap.clientHeight - layout.paper.height * this.scaleValue) / 2 })
@@ -221,11 +226,11 @@ export class SheetStage {
   }
 
   /**
-   * 容器尺寸变化后调整舞台尺寸；还没适应过窗口时适应一次。
+   * 容器尺寸变化后调整舞台尺寸；还没适应过窗口，或者视图还停在整张纸的状态时，重新适应一次。
    */
   resize(): void {
     this.stage.size({ width: this.wrap.clientWidth || 10, height: this.wrap.clientHeight || 10 })
-    if (this.needsFit) this.fit()
+    if (this.needsFit || this.fitted) this.fit()
     this.stage.batchDraw()
   }
 
@@ -380,6 +385,7 @@ export class SheetStage {
     const next = Math.max(MIN_SCALE, Math.min(MAX_SCALE, scale))
     const paperPoint = { x: (point.x - this.stage.x()) / this.scaleValue, y: (point.y - this.stage.y()) / this.scaleValue }
     this.needsFit = false
+    this.fitted = false
     this.setScale(next)
     this.stage.position({ x: point.x - paperPoint.x * next, y: point.y - paperPoint.y * next })
     this.stage.batchDraw()
@@ -403,6 +409,7 @@ export class SheetStage {
         return
       }
 
+      this.fitted = false
       this.stage.position({ x: this.stage.x() - event.deltaX, y: this.stage.y() - event.deltaY })
       this.stage.batchDraw()
     }

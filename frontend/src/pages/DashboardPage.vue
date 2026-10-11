@@ -178,7 +178,7 @@ const todos = computed(() => {
               <h3>近 7 天生成最多的模板</h3>
               <div v-if="top.length" class="bar-list">
                 <div v-for="r in top" :key="r.code" class="bar-row">
-                  <span>{{ r.name }} <span class="code-chip">{{ r.code }}</span></span>
+                  <span class="bar-name" :title="`${r.name} ${r.code}`">{{ r.name }} <span class="code-chip">{{ r.code }}</span></span>
                   <span class="num muted">{{ r.labels.toLocaleString() }} 张</span>
                   <div class="track"><div class="fill" :style="{ width: r.pct + '%' }"></div></div>
                 </div>
@@ -189,7 +189,7 @@ const todos = computed(() => {
               <h3>近 7 天最慢的模板（单张，平均）</h3>
               <div class="bar-list">
                 <div v-for="r in slow" :key="r.code" class="bar-row">
-                  <span>{{ r.name }} <span class="code-chip">{{ r.code }}</span></span>
+                  <span class="bar-name" :title="`${r.name} ${r.code}`">{{ r.name }} <span class="code-chip">{{ r.code }}</span></span>
                   <span class="num muted">{{ r.averageMs.toFixed(1) }} ms · 最慢 {{ r.maxMs.toFixed(0) }} ms</span>
                   <div class="track"><div class="fill" :class="{ over: r.averageMs > 100 }" :style="{ width: r.pct + '%' }"></div></div>
                 </div>

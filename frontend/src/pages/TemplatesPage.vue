@@ -213,10 +213,10 @@ async function remove(t: TemplateItem): Promise<void> {
         <div v-for="t in list" :key="t.code" class="card">
           <div class="thumb" @click="openWorkspace(t.code)"><TemplateThumb :code="t.code" :updated-at="t.updatedAt" :alt="`${t.name} 缩略图`" /></div>
           <div class="card-body">
-            <div class="card-title"><b>{{ t.name }}</b><span class="pill" :class="templateState(t).cls">{{ templateState(t).short }}</span></div>
-            <div class="card-meta"><span class="mono">{{ t.code }}</span><span>{{ sizeText(t) }} · {{ t.dpi }} dpi</span></div>
+            <div class="card-title"><b :title="t.name">{{ t.name }}</b><span class="pill" :class="templateState(t).cls">{{ templateState(t).short }}</span></div>
+            <div class="card-meta"><span class="mono" :title="t.code">{{ t.code }}</span><span>{{ sizeText(t) }} · {{ t.dpi }} dpi</span></div>
             <div class="card-meta">
-              <span class="mini-chip"><span class="biz-dot" :style="{ background: businessOf(t.businessId).color }"></span>{{ businessOf(t.businessId).name }}</span>
+              <span class="mini-chip" :title="businessOf(t.businessId).name"><span class="biz-dot" :style="{ background: businessOf(t.businessId).color }"></span><span class="tx">{{ businessOf(t.businessId).name }}</span></span>
               <span>{{ t.updatedBy || '—' }} · {{ fmtTime(t.updatedAt) }}</span>
             </div>
             <div class="card-actions">
@@ -241,7 +241,7 @@ async function remove(t: TemplateItem): Promise<void> {
               <tr v-for="t in list" :key="t.code" class="click" @click="openWorkspace(t.code)">
                 <td class="nowrap"><b style="font-weight: 600; color: #172236">{{ t.name }}</b></td>
                 <td class="code-chip">{{ t.code }}</td>
-                <td><span class="mini-chip"><span class="biz-dot" :style="{ background: businessOf(t.businessId).color }"></span>{{ businessOf(t.businessId).name }}</span></td>
+                <td><span class="mini-chip" :title="businessOf(t.businessId).name"><span class="biz-dot" :style="{ background: businessOf(t.businessId).color }"></span><span class="tx">{{ businessOf(t.businessId).name }}</span></span></td>
                 <td class="nowrap num">{{ sizeText(t) }} · {{ t.dpi }} dpi</td>
                 <td><span class="pill" :class="templateState(t).cls">{{ templateState(t).short }}</span></td>
                 <td class="num">{{ t.fieldCount }} / {{ t.elementCount }}</td>

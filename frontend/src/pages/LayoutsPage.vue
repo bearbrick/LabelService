@@ -8,6 +8,7 @@ import { errorText } from '../api/http.ts'
 import { deleteLayout, getLayout, listLayouts } from '../api/layouts.ts'
 import AppIcon from '../components/AppIcon.vue'
 import ModalDialog from '../components/admin/ModalDialog.vue'
+import NavToggle from '../components/admin/NavToggle.vue'
 import SheetEditor from '../components/sheet/SheetEditor.vue'
 import { PAPERS } from '../model/layout.ts'
 import { fitGrid, newLayout, suggestCode } from '../model/layoutArrange.ts'
@@ -249,7 +250,7 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', onBeforeUnload)
     </div>
     <template v-else-if="sheet.layout">
       <div class="page-heading">
-        <div class="breadcrumb"><button type="button" @click="back">资源</button><span class="sep">/</span><button type="button" @click="back">拼版版式</button><span class="sep">/</span><span>{{ sheet.layout.name }}</span></div>
+        <div class="breadcrumb"><NavToggle :auto="true" /><button type="button" @click="back">资源</button><span class="sep">/</span><button type="button" @click="back">拼版版式</button><span class="sep">/</span><span>{{ sheet.layout.name }}</span></div>
         <div class="title-row">
           <h1>{{ sheet.layout.name }} <small>SHEET LAYOUT</small></h1>
           <div class="title-actions">

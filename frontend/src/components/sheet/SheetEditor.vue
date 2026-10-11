@@ -125,16 +125,18 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeyDown))
         <button class="btn sm" type="button" data-tip="按位置重新编号：一行一行从左到右" @click="renumberSlots('rows')">先行后列</button>
         <button class="btn sm" type="button" data-tip="按位置重新编号：一列一列从上到下" @click="renumberSlots('cols')">先列后行</button>
       </fieldset>
-      <span class="spacer"></span>
-      <button class="icon-btn" type="button" data-tip="显示网格" aria-label="显示网格" :class="{ on: sheet.settings.showGrid }" @click="sheet.settings.showGrid = !sheet.settings.showGrid"><AppIcon name="grid" /></button>
-      <button class="icon-btn" type="button" data-tip="吸附：对齐参考线和网格" aria-label="吸附" :class="{ on: sheet.settings.snap }" @click="sheet.settings.snap = !sheet.settings.snap"><AppIcon name="magnet" /></button>
-      <select v-model.number="sheet.settings.grid" class="sel sm" aria-label="网格间距" style="width: 84px">
-        <option v-for="size in [0.5, 1, 2, 5, 10]" :key="size" :value="size">网格 {{ size }}</option>
-      </select>
-      <span class="tb-sep"></span>
-      <button class="icon-btn" type="button" data-tip="缩小（Ctrl+滚轮）" aria-label="缩小" @click="canvas?.zoomBy(1 / 1.25)"><AppIcon name="zoomOut" /></button>
-      <button class="icon-btn" type="button" data-tip="整张纸" aria-label="适合窗口" @click="canvas?.fit()"><AppIcon name="fit" /></button>
-      <button class="icon-btn" type="button" data-tip="放大" aria-label="放大" @click="canvas?.zoomBy(1.25)"><AppIcon name="zoomIn" /></button>
+      <!-- 网格和缩放放在一组里，窗口窄时整组换到第二行并靠右 -->
+      <div class="tb-group tb-end">
+        <button class="icon-btn" type="button" data-tip="显示网格" aria-label="显示网格" :class="{ on: sheet.settings.showGrid }" @click="sheet.settings.showGrid = !sheet.settings.showGrid"><AppIcon name="grid" /></button>
+        <button class="icon-btn" type="button" data-tip="吸附：对齐参考线和网格" aria-label="吸附" :class="{ on: sheet.settings.snap }" @click="sheet.settings.snap = !sheet.settings.snap"><AppIcon name="magnet" /></button>
+        <select v-model.number="sheet.settings.grid" class="sel sm" aria-label="网格间距" style="width: 84px">
+          <option v-for="size in [0.5, 1, 2, 5, 10]" :key="size" :value="size">网格 {{ size }}</option>
+        </select>
+        <span class="tb-sep"></span>
+        <button class="icon-btn" type="button" data-tip="缩小（Ctrl+滚轮）" aria-label="缩小" @click="canvas?.zoomBy(1 / 1.25)"><AppIcon name="zoomOut" /></button>
+        <button class="icon-btn" type="button" data-tip="整张纸" aria-label="适合窗口" @click="canvas?.fit()"><AppIcon name="fit" /></button>
+        <button class="icon-btn" type="button" data-tip="放大" aria-label="放大" @click="canvas?.zoomBy(1.25)"><AppIcon name="zoomIn" /></button>
+      </div>
     </div>
     <SheetSidebar :read-only="props.readOnly" />
     <SheetCanvas ref="canvas" />

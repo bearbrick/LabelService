@@ -59,12 +59,14 @@ file.Save(Path.Combine(@"D:\Labels", file.FileName));
 
 | 文件 | 内容 |
 | --- | --- |
-| `MainForm.cs` | 界面布局：连接设置、模板与数据、生成选项，右边预览、调用代码、调用日志、响应信息四个页签 |
+| `MainForm.cs` | 控件定义、窗口大小（默认 1240×760，最小 960×600）、组装界面 |
+| `MainForm.Layout.cs` | 界面布局：连接设置、模板与数据、生成选项，右边预览、调用代码、调用日志、响应信息四个页签；窗口矮时左栏可以上下滚动，字段表格至少显示 6 行 |
 | `MainForm.Calls.cs` | 调 SDK：建客户端（设置不变就复用同一个实例）、读取字段、单张和批量、调用日志（`CallCompleted` 事件） |
 | `MainForm.Results.cs` | 显示结果：PNG 预览、批量缩略图、ZPL 指令和黑白效果、PDF 交给默认程序；`LabelFile` / `LabelServiceException` 的全部属性 |
 | `ZplPreview.cs` | 把 ZPL 的 `^GFA` 位图（含 ASCII 压缩）还原成图片 |
 | `CodeGenerator.cs` | “调用代码”页签：按当前设置生成 C# 7.3 的 Program.cs，单张和批量两种写法 |
 | `PrintForm.cs` | 发送到打印机：网络打印机（`NetworkPrinter`）、Windows 打印机（ZPL 用 `WindowsRawPrinter`，PNG 用 PrintDocument 按 DPI 原尺寸） |
+| `MainForm.Smoke.cs` | 自检（见下） |
 | `Mock/` | 内置模拟服务（`HttpMessageHandler`）：BOX_LABEL、A4_SHIPPING_MARK 两个模板，错误码和真实服务一致，可模拟首次 503 看 SDK 重试 |
 
 自检（开发用）：走一遍读取字段、三种格式、批量 ZPL、四种错误（缺必填、Key 无效、模板未发布、批量超量）和调用代码，每步截图，结果写进 `smoke.txt`，全部通过时退出码 0。要有桌面会话，所以没有放进 `verify.ps1`，改了演示程序手动跑：

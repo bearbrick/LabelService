@@ -39,7 +39,9 @@ a { color: var(--blue); text-decoration: none; }
 
 .dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
 
-.mini-chip { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; padding: 1px 8px; border-radius: 4px; background: #f5f8fc; border: 1px solid #e7ecf3; color: #4b5870; white-space: nowrap; }
+.mini-chip { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; padding: 1px 8px; border-radius: 4px; background: #f5f8fc; border: 1px solid #e7ecf3; color: #4b5870; white-space: nowrap; max-width: 100%; min-width: 0; }
+
+.mini-chip .tx { overflow: hidden; text-overflow: ellipsis; }
 
 .chip-row { display: flex; flex-wrap: wrap; gap: 4px; }
 
@@ -144,6 +146,13 @@ a { color: var(--blue); text-decoration: none; }
 .project-select { display: inline-flex; align-items: center; gap: 8px; background: transparent; color: #fff; border: 0; cursor: pointer; font-weight: 500; font-size: 14px; padding: 6px 4px; border-radius: 4px; white-space: nowrap; }
 
 .project-select:hover { background: #ffffff12; }
+
+/* 业务名称可能很长，限宽显示省略号，完整名称放在 title 里，避免把右侧菜单挤出窗口 */
+.biz-wrap { min-width: 0; }
+
+.project-select { max-width: 100%; }
+
+.project-select .biz-name { max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
 
 .version { font-size: 9px; letter-spacing: 1px; color: #aec3e7; border: 1px solid #ffffff30; border-radius: 3px; padding: 3px 6px; white-space: nowrap; }
 
@@ -386,7 +395,8 @@ table.grid .err-msg { color: var(--danger); font-size: 11px; padding: 0 6px 4px;
 
 .toolbar-divider { width: 1px; height: 20px; background: var(--line); margin: 0 2px; flex: none; }
 
-.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 16px; }
+/* 卡片最窄 280：底部三个按钮加复制、删除两个图标放得下一行。 */
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
 
 .card { background: #fff; border: 1px solid var(--line-2); border-radius: 6px; overflow: hidden; display: flex; flex-direction: column; min-width: 0; }
 
@@ -404,6 +414,9 @@ table.grid .err-msg { color: var(--danger); font-size: 11px; padding: 0 6px 4px;
 
 .card-meta { display: flex; flex-wrap: wrap; gap: 4px 12px; color: #8993a4; font-size: 11px; }
 
+/* 很长的编码、分组名在卡片里省略，悬停看全名。 */
+.card-meta > span { max-width: 100%; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
 .card-actions { display: flex; gap: 6px; margin-top: 6px; align-items: center; }
 
 .card.new { border-style: dashed; display: grid; place-items: center; min-height: 270px; cursor: pointer; color: #6c7c94; background: #fbfcfe; }
@@ -419,6 +432,11 @@ table.grid .err-msg { color: var(--danger); font-size: 11px; padding: 0 6px 4px;
 .two-col { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; align-items: start; }
 
 @media (min-width: 1100px) { .two-col { grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); } }
+
+/* 左边是宽表格（如字段表，约 780 px）时，窗口足够宽才并排，否则右边的内容放到表格下面。 */
+@media (min-width: 1100px) { .two-col.wide-left { grid-template-columns: minmax(0, 1fr); } }
+
+@media (min-width: 1680px) { .two-col.wide-left { grid-template-columns: minmax(800px, 1.6fr) minmax(0, 1fr); } }
 
 .grid-2 { display: grid; gap: 18px; grid-template-columns: minmax(0, 1fr); }
 
@@ -477,6 +495,8 @@ table.grid .err-msg { color: var(--danger); font-size: 11px; padding: 0 6px 4px;
 .bar-list { display: grid; gap: 12px; }
 
 .bar-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 5px 10px; font-size: 13px; }
+
+.bar-row .bar-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .bar-row .track { grid-column: 1 / -1; height: 6px; background: #f0f3f8; border-radius: 3px; overflow: hidden; }
 
