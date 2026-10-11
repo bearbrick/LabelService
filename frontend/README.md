@@ -96,7 +96,7 @@ npm run build     # 类型检查（vue-tsc）+ 打包
 - 权限：按钮的禁用、菜单的隐藏用 `can()`、`inScope()`，只是体验；服务端每个管理接口都会再校验。页面需要的权限点登记在 `App.vue` 的 `PAGES`。
 - 不引入 vue-router：路由只有十几个页面，`stores/router.ts` 用 hash 实现，刷新停在原位。
 - 画布每个元素记“内容签名”，只有内容变了才重画；100 个元素时拖动一帧约 3.5 ms（目标 20 ms 以内）。
-- 字体：`index.html` 引入服务端的 `/fonts/fonts.css`，画布用和服务端渲染同一份字体文件（家族名 `LabelService SourceHanSansSC` 等），度量也按服务端的值覆盖；服务端没有字体时退回本机字体。文字按 100 倍字号排版再缩小（`editor/draw.ts` 的 `TEXT_SCALE`），避免浏览器把字体度量取整到整像素带来的偏差。
+- 字体：`index.html` 引入服务端的 `/fonts/fonts.css`，画布用和服务端渲染同一份字体文件（家族名 `LabelService SourceHanSansSC` 等），度量也按服务端的值覆盖；服务端没有字体时退回本机字体。字体由使用单位在“素材与字体”页上传（ADR 0011），`stores/fonts.ts` 登录后读服务端的字体列表，设计器的字体下拉框列出内置的思源黑体、思源宋体和上传的字体（`model/fonts.ts` 的 `fontOptions`，服务端没有的标“未安装”）；上传、删除后重新加载 fonts.css。文字按 100 倍字号排版再缩小（`editor/draw.ts` 的 `TEXT_SCALE`），避免浏览器把字体度量取整到整像素带来的偏差。
 - 服务端预览（T-016）：模板工作区的“服务端预览”把当前内容（不用先保存）发给 `POST /api/admin/preview`；在设计页打开、按模板 DPI 预览时可以“和画布对比”，叠加显示并逐个元素量位置偏差（`editor/compare.ts`），示例箱标最大 0.085 mm。
 - `src/model/layout.ts` 是后端 `Contracts/Layouts/SheetLayout.cs` 的镜像（ADR 0005），后端检查程序按属性名核对；越界、重叠的规则和容差（0.05 mm）和服务端保存前的检查一致。
 - 拼版画布的格子画的是服务端缩略图（一张位图），24 个格子一帧约 0.5 ms，和模板有多少元素无关。对齐、分布直接用 `editor/arrange.ts`（它接受任意矩形），吸附用 `editor/snapping.ts`，撤销用 `editor/history.ts`。

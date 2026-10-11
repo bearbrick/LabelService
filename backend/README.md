@@ -19,7 +19,7 @@ backend/
 │  ├─ LabelService.Benchmarks/      渲染基准和基准门禁（baseline.json）
 │  └─ load/                         k6 压测脚本、压测报告模板
 ├─ tools/add-migration.ps1       给三种数据库各生成一次迁移
-├─ assets/fonts/                 思源黑体、思源宋体（文件不提交，准备方法见那里的 README）
+├─ assets/fonts/                 开发和检查用的思源黑体、思源宋体（文件不提交，见那里的 README；发布包不带字体，正式环境在管理后台上传，ADR 0011）
 ├─ assets/icons/                 GB/T 191 图标（SVG，和设计器同一套）
 ├─ assets/images/                内置图片素材（模板里写 asset:文件名）
 ├─ deploy/                       Dockerfile、部署说明、监控样例（monitoring/）
@@ -78,7 +78,7 @@ dotnet run -c Release --project backend/tests/LabelService.Benchmarks -- --gate 
   }
   ```
 
-- **数据目录**：配置 `LabelService:Data:Directory`，默认程序目录下的 `data/`（本地 `dotnet run` 时在 `backend/src/LabelService.Api/bin/Debug/net10.0/data/`）。不管用哪种数据库都要有：上传的素材（`assets/`）、公司 Logo（`branding/`，系统信息页上传）、JWT 签名密钥放在这里；SQLite 时还有 `label.db`、`label-log.db`。
+- **数据目录**：配置 `LabelService:Data:Directory`，默认程序目录下的 `data/`（本地 `dotnet run` 时在 `backend/src/LabelService.Api/bin/Debug/net10.0/data/`）。不管用哪种数据库都要有：上传的素材（`assets/`）、上传的字体（`fonts/`，ADR 0011）、公司 Logo（`branding/`，系统信息页上传）、JWT 签名密钥放在这里；SQLite 时还有 `label.db`、`label-log.db`。
 - **升级**：启动时自动建库、执行迁移。SQLite：已有数据的库升级前先快照到 `backups/`，失败自动恢复（`Infrastructure/Persistence/DatabaseUpgrade.cs`），一期早期的旧库把模板分类和调用方授权换算成业务分组（`Persistence/Sqlite/LegacyUpgrade.cs`）。SQL Server、PostgreSQL：每个迁移在事务里执行，失败自动回滚、服务不启动。
 - **改表结构**：改领域层的实体、`Infrastructure/Persistence/Configurations/` 后，给三种数据库各生成一次迁移，不要手改迁移文件和快照。检查程序会核对六套迁移（主库、日志库各三种）都和模型一致。
 

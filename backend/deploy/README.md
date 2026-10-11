@@ -52,10 +52,10 @@
 
 ## Docker（Linux）
 
-镜像里只有思源黑体、思源宋体两个字体，不依赖任何系统字体（SkiaSharp 用不依赖 fontconfig 的原生库）。
+镜像里不带字体，也不依赖任何系统字体（SkiaSharp 用不依赖 fontconfig 的原生库）。启动后在管理后台“素材与字体”页上传思源黑体（Noto Sans SC，SIL OFL，可免费商用）和其他有授权的字体，存在数据卷的 `fonts/` 里，上传后立即生效（ADR 0011）。
 
 ```bash
-# 在 backend/ 目录。构建前先按 assets/fonts/README.md 放好字体文件。
+# 在 backend/ 目录。
 docker build -f deploy/Dockerfile -t label-service .
 docker volume create label-data
 docker run -d --name label-service -p 8080:8080 -v label-data:/data \
@@ -94,6 +94,8 @@ Invoke-WebRequest http://localhost:8080/health/ready -UseBasicParsing
 ```nginx
 location / { root /srv/label-frontend; try_files $uri /index.html; }
 location /api/   { proxy_pass http://127.0.0.1:8080; client_max_body_size 10m; }
+# 上传字体：中文字体常有十几到几十 MB，单独放宽（服务端上限 50 MB，ADR 0011）。
+location = /api/admin/fonts { proxy_pass http://127.0.0.1:8080; client_max_body_size 51m; }
 location /fonts/ { proxy_pass http://127.0.0.1:8080; }
 location /health { proxy_pass http://127.0.0.1:8080; }
 # /metrics 不转发：只给内网的 Prometheus 直接抓取。
@@ -129,6 +131,6 @@ location /health { proxy_pass http://127.0.0.1:8080; }
 
 ## 还没验证的
 
-- Docker 镜像没有在本机构建过（开发机上没有 Docker）；`dotnet publish -r linux-x64` 已验证能出包，原生库（libSkiaSharp、libHarfBuzzSharp、libe_sqlite3）和字体都在包里。第一次在 Linux 上跑时，用示例请求生成一张 PNG 看中文是否正常。
+- Docker 镜像没有在本机构建过（开发机上没有 Docker）；`dotnet publish -r linux-x64` 已验证能出包，原生库（libSkiaSharp、libHarfBuzzSharp、libe_sqlite3）都在包里；发布包不带字体（ADR 0011），第一次在 Linux 上跑时，先在管理后台上传思源黑体，再用示例请求生成一张 PNG 看中文是否正常。
 - Windows 服务没有实际安装过（需要管理员权限）。
 - SQL Server 在本机的 LocalDB 上验证过（检查程序的端到端流程、123 个接口调用和 SQLite 结果逐项一致）；PostgreSQL 没有实际跑过（开发机上没装），迁移和模型的一致性检查通过。第一次用 PostgreSQL 时，设置 `LABEL_TEST_POSTGRES` 跑一遍后端检查程序（见 `backend/README.md`）。
