@@ -26,22 +26,27 @@ public class RenderBenchmarks
     /// backend/assets/fonts 里的字体。
     /// </summary>
     private FontRegistry fonts = null!;
+
     /// <summary>
     /// backend/assets 里的图标和图片素材。
     /// </summary>
     private AssetLibrary assets = null!;
+
     /// <summary>
     /// 渲染引擎（和服务端一样带字体和素材）。
     /// </summary>
     private LabelRenderer renderer = null!;
+
     /// <summary>
     /// 成品箱标模板。
     /// </summary>
     private LabelTemplate template = null!;
+
     /// <summary>
     /// 接口收到的字段数据（每次调用都要重新校验）。
     /// </summary>
     private Dictionary<string, JsonElement> data = null!;
+
     /// <summary>
     /// 箱号流水，<see cref="BoxLabelPngUniqueBox"/> 每次加一。
     /// </summary>

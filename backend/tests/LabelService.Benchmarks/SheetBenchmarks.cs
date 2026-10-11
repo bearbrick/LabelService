@@ -23,22 +23,27 @@ public class SheetBenchmarks
     /// backend/assets/fonts 里的字体。
     /// </summary>
     private FontRegistry fonts = null!;
+
     /// <summary>
     /// backend/assets 里的图标和图片素材。
     /// </summary>
     private AssetLibrary assets = null!;
+
     /// <summary>
     /// 渲染引擎（和服务端一样带字体和素材）。
     /// </summary>
     private LabelRenderer renderer = null!;
+
     /// <summary>
     /// 70×37 的小箱标模板。
     /// </summary>
     private LabelTemplate template = null!;
+
     /// <summary>
     /// A4 3 列 × 8 行的版式。
     /// </summary>
     private SheetLayout layout = null!;
+
     /// <summary>
     /// 校验好的 24 张标签数据（箱号各不相同）。
     /// </summary>

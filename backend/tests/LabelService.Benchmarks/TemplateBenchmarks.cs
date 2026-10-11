@@ -23,18 +23,22 @@ public class TemplateBenchmarks
     /// backend/assets/fonts 里的字体。
     /// </summary>
     private FontRegistry fonts = null!;
+
     /// <summary>
     /// backend/assets 里的图标和图片素材。
     /// </summary>
     private AssetLibrary assets = null!;
+
     /// <summary>
     /// 渲染引擎（和服务端一样带字体和素材）。
     /// </summary>
     private LabelRenderer renderer = null!;
+
     /// <summary>
     /// 当前参数对应的示例模板。
     /// </summary>
     private LabelTemplate template = null!;
+
     /// <summary>
     /// 用样例值校验出的字段值。
     /// </summary>

@@ -320,6 +320,7 @@ internal static class StorageChecks
         /// 订阅（诊断监听器列表本身，以及 EF Core 的监听器），释放时一起退订。
         /// </summary>
         private readonly List<IDisposable> subscriptions = [];
+
         /// <summary>
         /// 数到的命令数（原子累加）。
         /// </summary>
