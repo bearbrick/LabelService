@@ -9,6 +9,12 @@ namespace LabelService.Backend.Checks;
 /// </summary>
 internal static partial class ArchitectureChecks
 {
+    /// <summary>
+    /// 运行仓库约定的全部检查。
+    /// </summary>
+    /// <param name="backendRoot">backend 目录。</param>
+    /// <param name="repositoryRoot">仓库根目录。</param>
+    /// <param name="check">记录检查结果。</param>
     public static void Run(string backendRoot, string repositoryRoot, Action<string, bool> check)
     {
         string Project(string name) => File.ReadAllText(Path.Combine(backendRoot, "src", name, name + ".csproj"));
@@ -58,14 +64,8 @@ internal static partial class ArchitectureChecks
             sources.Where(path => Relative(path).StartsWith("backend/src/LabelService.Rendering/", StringComparison.Ordinal))
                 .All(path => !ForbiddenInRendering().IsMatch(File.ReadAllText(path))));
 
+        // 代码里不写任务编号（由 DocumentationChecks 检查），这里只核对任务文件本身是否完整。
         var taskFiles = Directory.GetFiles(Path.Combine(repositoryRoot, "docs", "tasks"), "T-*.md");
-        var referenced = new[] { "backend", "client", Path.Combine("frontend", "src") }
-            .SelectMany(part => SourceFiles(Path.Combine(repositoryRoot, part), "*.*"))
-            .Where(path => Path.GetExtension(path) is ".cs" or ".csproj" or ".ts" or ".vue")
-            .SelectMany(path => TaskId().Matches(File.ReadAllText(path)).Select(match => match.Value))
-            .ToHashSet();
-        var missing = referenced.Where(id => !taskFiles.Any(path => Path.GetFileName(path).StartsWith(id + "-", StringComparison.Ordinal))).Order().ToArray();
-        check("代码里提到的任务编号都有任务文件" + (missing.Length > 0 ? "：" + string.Join(", ", missing) : ""), missing.Length == 0);
         var incomplete = taskFiles.Where(path =>
         {
             var text = File.ReadAllText(path);
@@ -133,6 +133,12 @@ internal static partial class ArchitectureChecks
         check("接口层不引用调用端 SDK", !References("LabelService.Api").Any(item => item.StartsWith("LabelService.Client", StringComparison.Ordinal)));
     }
 
+    /// <summary>
+    /// 列出目录里的源文件，跳过 bin、obj、node_modules。
+    /// </summary>
+    /// <param name="directory">目录；不存在时返回空。</param>
+    /// <param name="pattern">文件名通配符，如 *.cs。</param>
+    /// <returns>文件的完整路径。</returns>
     private static IEnumerable<string> SourceFiles(string directory, string pattern)
     {
         if (!Directory.Exists(directory))
@@ -145,21 +151,38 @@ internal static partial class ArchitectureChecks
             .Where(path => !path.Contains($"{separator}bin{separator}") && !path.Contains($"{separator}obj{separator}") && !path.Contains($"{separator}node_modules{separator}"));
     }
 
+    /// <summary>
+    /// 领域层不能出现的 using：EF Core、ASP.NET Core、渲染引擎。
+    /// </summary>
+    /// <returns>编译好的正则。</returns>
     [GeneratedRegex(@"using (Microsoft\.EntityFrameworkCore|Microsoft\.AspNetCore|LabelService\.Rendering)")]
     private static partial Regex DomainForbidden();
 
+    /// <summary>
+    /// 应用层不能出现的 using：EF Core、ASP.NET Core。
+    /// </summary>
+    /// <returns>编译好的正则。</returns>
     [GeneratedRegex(@"using (Microsoft\.EntityFrameworkCore|Microsoft\.AspNetCore)")]
     private static partial Regex ApplicationForbidden();
 
+    /// <summary>
+    /// 接口层不能出现的数据库访问：EF Core、基础设施层的持久化和仓储命名空间、DbContext。
+    /// </summary>
+    /// <returns>编译好的正则。</returns>
     [GeneratedRegex(@"using (Microsoft\.EntityFrameworkCore|LabelService\.Infrastructure\.(Persistence|Repositories))\b|\bDbContext\b")]
     private static partial Regex ApiForbidden();
 
+    /// <summary>
+    /// 渲染引擎里不能出现的网络和数据库类型。
+    /// </summary>
+    /// <returns>编译好的正则。</returns>
     [GeneratedRegex(@"\b(HttpClient|DbContext|SqlConnection|WebRequest)\b")]
     private static partial Regex ForbiddenInRendering();
 
-    [GeneratedRegex(@"\bT-\d{3}\b")]
-    private static partial Regex TaskId();
-
+    /// <summary>
+    /// 前端源码里 import 和 from 后面的路径。
+    /// </summary>
+    /// <returns>编译好的正则，路径在 path 组。</returns>
     [GeneratedRegex("""(?:from|import)\s+['"](?<path>[^'"]+)['"]""")]
     private static partial Regex ImportPath();
 }

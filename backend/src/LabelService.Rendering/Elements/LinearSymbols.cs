@@ -47,11 +47,24 @@ internal static partial class LinearSymbols
     };
 
     /// <summary>
-    /// 编码（带缓存）。内容不符合码制时抛 BARCODE_INVALID。
+    /// 编码（带缓存）。
     /// </summary>
+    /// <param name="symbology">码制。</param>
+    /// <param name="content">已替换绑定的条码内容。</param>
+    /// <param name="elementId">元素 ID（错误消息里用）。</param>
+    /// <returns>模块序列和人眼可读文字。</returns>
+    /// <exception cref="LabelRenderException">内容不符合码制（BARCODE_INVALID）。</exception>
     public static EncodedSymbol Encode(BarcodeSymbology symbology, string content, string elementId) =>
         SymbolCache.GetOrAdd("1d:" + symbology, content, value => EncodeUncached(symbology, value, elementId));
 
+    /// <summary>
+    /// 编码（不查缓存）：先按码制检查内容、补校验位，再交给 ZXing。
+    /// </summary>
+    /// <param name="symbology">码制。</param>
+    /// <param name="content">条码内容。</param>
+    /// <param name="elementId">元素 ID（错误消息里用）。</param>
+    /// <returns>模块序列和人眼可读文字。</returns>
+    /// <exception cref="LabelRenderException">内容不符合码制（BARCODE_INVALID）。</exception>
     private static EncodedSymbol EncodeUncached(BarcodeSymbology symbology, string content, string elementId)
     {
         LabelRenderException Invalid(string message) =>
@@ -74,6 +87,7 @@ internal static partial class LinearSymbols
             _ => throw Invalid("不支持的码制"),
         };
 
+        // ZXing 编码成 1 行的矩阵，不要空白区（空白区由绘制器按 quietZone 留）。
         bool[] modules;
         try
         {
@@ -100,6 +114,8 @@ internal static partial class LinearSymbols
     /// <summary>
     /// 码制的显示名，用在错误消息里。
     /// </summary>
+    /// <param name="symbology">码制。</param>
+    /// <returns>如 EAN-13、GS1-128。</returns>
     public static string Name(BarcodeSymbology symbology) => symbology switch
     {
         BarcodeSymbology.Code128 => "Code128",
@@ -115,6 +131,8 @@ internal static partial class LinearSymbols
     /// <summary>
     /// 按 GS1 规则算校验位（EAN、UPC、ITF-14 通用）：从右往左奇数位乘 3。
     /// </summary>
+    /// <param name="digits">不含校验位的数字。</param>
+    /// <returns>校验位 0–9。</returns>
     public static int CheckDigit(ReadOnlySpan<char> digits)
     {
         var sum = 0;
@@ -127,12 +145,25 @@ internal static partial class LinearSymbols
         return (10 - sum % 10) % 10;
     }
 
+    /// <summary>
+    /// Code128、Code39 只能编码 ASCII 字符。
+    /// </summary>
+    /// <param name="content">条码内容。</param>
+    /// <param name="invalid">创建“内容不合法”异常。</param>
+    /// <returns>原内容。</returns>
+    /// <exception cref="LabelRenderException">有非 ASCII 字符。</exception>
     private static string Ascii(string content, Func<string, LabelRenderException> invalid) =>
         content.All(ch => ch < 128) ? content : throw invalid("只能编码英文字母、数字和符号，不能有中文或全角字符");
 
     /// <summary>
     /// 纯数字码制：少一位时补校验位，位数够时核对校验位。
     /// </summary>
+    /// <param name="format">ZXing 的码制。</param>
+    /// <param name="content">条码内容。</param>
+    /// <param name="length">含校验位的总位数。</param>
+    /// <param name="invalid">创建“内容不合法”异常。</param>
+    /// <returns>ZXing 的码制、要编码的数据（含校验位）、人眼可读文字。</returns>
+    /// <exception cref="LabelRenderException">不是数字、位数不对或校验位不对。</exception>
     private static (BarcodeFormat Format, string Data, string Caption) Digits(
         BarcodeFormat format, string content, int length, Func<string, LabelRenderException> invalid)
     {
@@ -163,14 +194,20 @@ internal static partial class LinearSymbols
     /// <summary>
     /// GS1-128：内容写成“(AI)数据(AI)数据”，开头加 FNC1，变长数据后面（不是最后一段时）加 FNC1 分隔。
     /// </summary>
+    /// <param name="content">条码内容，如 (01)06901234567892(10)ABC。</param>
+    /// <param name="invalid">创建“内容不合法”异常。</param>
+    /// <returns>交给 Code128 编码器的数据（括号去掉，加上 FNC1）。</returns>
+    /// <exception cref="LabelRenderException">格式不对、数据为空或长度不对。</exception>
     private static string Gs1(string content, Func<string, LabelRenderException> invalid)
     {
+        // 内容必须完全由“(AI)数据”拼成，不能有多余的字符。
         var matches = Gs1Segment().Matches(content);
         if (matches.Count == 0 || string.Concat(matches.Select(match => match.Value)) != content)
         {
             throw invalid("要写成 (应用标识符)数据 的形式，如 (01)06901234567892(10)ABC");
         }
 
+        // 开头放 FNC1 表示 GS1-128；定长的 AI 核对长度，变长的 AI 后面（最后一段除外）加 FNC1 作分隔。
         var builder = new StringBuilder().Append(Fnc1);
         for (var i = 0; i < matches.Count; i++)
         {
@@ -198,6 +235,10 @@ internal static partial class LinearSymbols
         return builder.ToString();
     }
 
+    /// <summary>
+    /// GS1 的一段：(应用标识符)数据。
+    /// </summary>
+    /// <returns>编译好的正则。</returns>
     [GeneratedRegex(@"\((?<ai>\d{2,4})\)(?<data>[^()]*)", RegexOptions.CultureInvariant)]
     private static partial Regex Gs1Segment();
 }

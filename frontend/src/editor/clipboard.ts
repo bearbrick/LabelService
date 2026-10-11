@@ -4,14 +4,34 @@
  */
 import type { LabelElement } from '../model/template.ts'
 
+/**
+ * localStorage 里的键名。
+ */
 const STORAGE_KEY = 'label-designer.clipboard'
+
+/**
+ * 内存里的副本（本地存储不可用时用）。
+ */
 let memory: string | null = null
 
+/**
+ * 剪贴板里存的内容。
+ */
 interface ClipboardPayload {
+  /**
+   * 内容类型，读的时候核对。
+   */
   kind: 'label-elements'
+  /**
+   * 复制的元素。
+   */
   elements: readonly LabelElement[]
 }
 
+/**
+ * 把元素放进剪贴板。
+ * @param elements 复制的元素。
+ */
 export function writeClipboard(elements: readonly LabelElement[]): void {
   const json = JSON.stringify({ kind: 'label-elements', elements } satisfies ClipboardPayload)
   memory = json
@@ -22,6 +42,10 @@ export function writeClipboard(elements: readonly LabelElement[]): void {
   }
 }
 
+/**
+ * 读剪贴板里的元素。
+ * @returns 元素的副本；没有或内容不对时为 null。
+ */
 export function readClipboard(): LabelElement[] | null {
   let json = memory
   try {

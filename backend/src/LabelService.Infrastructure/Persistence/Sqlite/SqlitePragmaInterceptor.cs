@@ -19,6 +19,9 @@ internal sealed class SqlitePragmaInterceptor : DbConnectionInterceptor
     /// </summary>
     public const string Pragmas = "PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL; PRAGMA busy_timeout=5000; PRAGMA foreign_keys=ON;";
 
+    /// <summary>
+    /// 只读连接执行的 PRAGMA：只读连接不能改日志模式和同步方式。
+    /// </summary>
     private const string ReadOnlyPragmas = "PRAGMA busy_timeout=5000; PRAGMA foreign_keys=ON;";
 
     /// <inheritdoc />
@@ -37,6 +40,11 @@ internal sealed class SqlitePragmaInterceptor : DbConnectionInterceptor
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
+    /// <summary>
+    /// 按连接的打开方式选要执行的 PRAGMA。
+    /// </summary>
+    /// <param name="connection">刚打开的连接。</param>
+    /// <returns>只读连接用 <see cref="ReadOnlyPragmas"/>，其余用 <see cref="Pragmas"/>。</returns>
     private static string PragmasFor(DbConnection connection) =>
         new SqliteConnectionStringBuilder(connection.ConnectionString).Mode == SqliteOpenMode.ReadOnly ? ReadOnlyPragmas : Pragmas;
 }

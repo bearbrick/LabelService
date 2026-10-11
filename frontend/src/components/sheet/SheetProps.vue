@@ -12,28 +12,65 @@ import { commit, problems, renumberSlots, setOrder, sheet } from '../../stores/s
 import AppIcon from '../AppIcon.vue'
 import ModalDialog from '../admin/ModalDialog.vue'
 
-defineProps<{ readOnly: boolean }>()
+defineProps<{
+  /**
+   * 只读：属性不能改。
+   */
+  readOnly: boolean
+}>()
 
+/**
+ * 正在编辑的版式（这个面板只在打开版式后显示）。
+ */
 const layout = computed(() => sheet.layout!)
+
+/**
+ * 只选中一个格子时是它的下标，否则为 null。
+ */
 const selected = computed(() => (sheet.selection.length === 1 ? sheet.selection[0] : null))
+
+/**
+ * 选中的格子；没有只选中一个时为 null。
+ */
 const slot = computed(() => (selected.value === null ? null : layout.value.slots[selected.value]))
-/** 预览结果：PNG 直接显示，PDF 用浏览器自带的查看器显示在对话框里，都可以下载。 */
+
+/**
+ * 预览结果：PNG 直接显示，PDF 用浏览器自带的查看器显示在对话框里，都可以下载。
+ */
 const preview = ref<{ url: string; kind: 'png' | 'pdf'; title: string; fileName: string } | null>(null)
+
+/**
+ * 上传批量数据用的文件输入框。
+ */
 const fileInput = ref<HTMLInputElement | null>(null)
+
+/**
+ * 正在请求预览或测试页。
+ */
 const busy = ref(false)
 
+/**
+ * 设置选中格子的旋转角度。
+ * @param value 0、90、180、270。
+ */
 function setRotation(value: number): void {
   if (!slot.value) return
   slot.value.rotation = value
   commit()
 }
 
+/**
+ * 改选中格子的序号（从 1 开始），其他格子顺延。
+ * @param event 输入框的 change 事件。
+ */
 function onOrder(event: Event): void {
   const value = Number((event.target as HTMLInputElement).value)
   if (selected.value !== null && Number.isInteger(value)) setOrder(selected.value, value - 1)
 }
 
-/** 用样例值预览一页（PNG）。 */
+/**
+ * 用样例值预览一页（PNG）。
+ */
 async function previewPage(): Promise<void> {
   await run(async () => {
     const response = await previewLayout({ layout: layout.value, templateCode: sheet.previewCode, format: 'png' })
@@ -43,6 +80,7 @@ async function previewPage(): Promise<void> {
 
 /**
  * 上传一批数据预览多页效果（PDF）。文件可以是批量请求体（有 items，可带 common）、data 数组，或 { data, copies } 数组。
+ * @param event 文件输入框的 change 事件。
  */
 async function previewFile(event: Event): Promise<void> {
   const file = (event.target as HTMLInputElement).files?.[0]
@@ -55,11 +93,18 @@ async function previewFile(event: Event): Promise<void> {
   })
 }
 
-/** 打印校准测试页（PDF）：每格边框、中心十字和序号。 */
+/**
+ * 打印校准测试页（PDF）：每格边框、中心十字和序号。
+ */
 async function testPage(): Promise<void> {
   await run(async () => show(await layoutTestPage(layout.value), 'pdf', `${layout.value.code}-test-page.pdf`, '打印校准测试页（按实际大小 100% 打印）'))
 }
 
+/**
+ * 把上传的 JSON 转成预览数据：批量请求体（items 加 common）、data 数组，或 { data, copies } 数组。
+ * @param value 解析好的 JSON。
+ * @returns 每条数据和份数。
+ */
 function parseItems(value: unknown): PreviewItem[] {
   const body = value as { items?: unknown; common?: Record<string, unknown> }
   const list = Array.isArray(value) ? value : Array.isArray(body?.items) ? body.items : null
@@ -71,7 +116,14 @@ function parseItems(value: unknown): PreviewItem[] {
   })
 }
 
-/** 把接口返回的文件显示在对话框里（新开窗口会被浏览器当成弹窗拦掉）。 */
+/**
+ * 把接口返回的文件显示在对话框里（新开窗口会被浏览器当成弹窗拦掉）。
+ * @param response 接口的响应（PNG 或 PDF）。
+ * @param kind 文件类型。
+ * @param fileName 下载时的文件名。
+ * @param title 对话框标题；不传时写张数和页数。
+ * @returns 显示后完成。
+ */
 async function show(response: Response, kind: 'png' | 'pdf', fileName: string, title?: string): Promise<void> {
   const blob = await response.blob()
   closePreview()
@@ -79,11 +131,19 @@ async function show(response: Response, kind: 'png' | 'pdf', fileName: string, t
   preview.value = { url: URL.createObjectURL(blob), kind, fileName, title: title ?? `预览：${count}` }
 }
 
+/**
+ * 关闭预览对话框，释放文件的 blob URL。
+ */
 function closePreview(): void {
   if (preview.value) URL.revokeObjectURL(preview.value.url)
   preview.value = null
 }
 
+/**
+ * 执行一次请求：期间显示忙碌，失败时提示。
+ * @param action 请求。
+ * @returns 请求结束时完成。
+ */
 async function run(action: () => Promise<void>): Promise<void> {
   busy.value = true
   try {

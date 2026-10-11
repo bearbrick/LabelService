@@ -1,13 +1,47 @@
 <script setup lang="ts">
-/** 登录页：账号密码登录，可选 7 天内自动登录。连续输错 5 次锁定 15 分钟（服务端控制）。 */
+/**
+ * 登录页：账号密码登录，可选 7 天内自动登录。连续输错 5 次锁定 15 分钟（服务端控制）。
+ */
 import { reactive } from 'vue'
 import { errorText } from '../api/http.ts'
 import AppIcon from '../components/AppIcon.vue'
 import { toast } from '../stores/designer.ts'
 import { session, signIn } from '../stores/session.ts'
 
-const form = reactive({ account: '', password: '', remember: false, show: false, error: '', busy: false })
+/**
+ * 登录表单。
+ */
+const form = reactive({
+  /**
+   * 账号。
+   */
+  account: '',
+  /**
+   * 密码。
+   */
+  password: '',
+  /**
+   * 7 天内自动登录。
+   */
+  remember: false,
+  /**
+   * 显示密码明文。
+   */
+  show: false,
+  /**
+   * 登录失败的原因。
+   */
+  error: '',
+  /**
+   * 正在登录。
+   */
+  busy: false,
+})
 
+/**
+ * 登录：账号密码不能为空；失败时显示原因。
+ * @returns 登录结束时完成。
+ */
 async function submit(): Promise<void> {
   if (!form.account || !form.password) {
     form.error = '请输入账号和密码'

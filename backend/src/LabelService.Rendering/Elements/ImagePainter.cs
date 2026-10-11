@@ -19,14 +19,17 @@ namespace LabelService.Rendering.Elements;
 /// </remarks>
 internal sealed partial class ImagePainter : IElementPainter
 {
+    /// <inheritdoc />
     public string ElementType => ElementTypes.Image;
 
+    /// <inheritdoc />
     public ElementLayout Layout(LabelElement element, RenderContext context)
     {
         var image = (ImageElement)element;
         var box = context.Box(element);
         var src = image.Src.Trim();
         var mono = image.Mono || context.Mono;
+        // 素材图片：从素材库取，按目标像素尺寸栅格化（带缓存）。
         if (src.StartsWith("asset:", StringComparison.Ordinal))
         {
             var id = src["asset:".Length..];
@@ -39,6 +42,7 @@ internal sealed partial class ImagePainter : IElementPainter
             return new ImageLayout(element, box, context.Assets.Scaled(id, asset, target.Width, target.Height, image.Fit, mono), target, owned: false);
         }
 
+        // 字段图片：src 必须正好是一个 {{key}}；不是绑定、字段不存在或可选字段没传时什么都不画。
         var match = FieldReference().Match(src);
         if (!match.Success)
         {
@@ -64,6 +68,7 @@ internal sealed partial class ImagePainter : IElementPainter
         return new ImageLayout(element, box, ImageRaster.Render(source, area.Width, area.Height, image.Fit, mono), area, owned: true);
     }
 
+    /// <inheritdoc />
     public void Draw(SKCanvas canvas, ElementLayout layout, RenderContext context)
     {
         var image = (ImageLayout)layout;
@@ -92,6 +97,9 @@ internal sealed partial class ImagePainter : IElementPainter
     /// <summary>
     /// 图片在画布上占的整像素区域：左上角取整，栅格化的尺寸和它一致，画的时候 1:1，不再缩放。
     /// </summary>
+    /// <param name="destination">图片在框里占的区域（相对框左上角）。</param>
+    /// <param name="box">元素框。</param>
+    /// <returns>画布上的整像素区域，宽高至少 1。</returns>
     private static SKRectI Pixels(SKRect destination, SKRect box)
     {
         var left = (int)Math.Round(box.Left + destination.Left);
@@ -99,19 +107,37 @@ internal sealed partial class ImagePainter : IElementPainter
         return SKRectI.Create(left, top, Math.Max(1, (int)Math.Round(destination.Width)), Math.Max(1, (int)Math.Round(destination.Height)));
     }
 
+    /// <summary>
+    /// 正好是一个字段绑定 {{key}}（图片不支持格式和混合文字）。
+    /// </summary>
+    /// <returns>编译好的正则。</returns>
     [GeneratedRegex(@"^\{\{\s*(?<key>[A-Za-z][A-Za-z0-9_]*)\s*\}\}$", RegexOptions.CultureInvariant)]
     private static partial Regex FieldReference();
 
     /// <summary>
     /// 图片的排版结果。字段图片每次请求单独生成，画完释放；素材图片来自缓存，不释放。
     /// </summary>
+    /// <param name="element">元素。</param>
+    /// <param name="bounds">元素框（打印点）。</param>
+    /// <param name="image">栅格化好的图；不画时为 null。</param>
+    /// <param name="area">图在画布上的整像素区域。</param>
+    /// <param name="owned">是否这次请求单独生成、画完要释放。</param>
     private sealed class ImageLayout(LabelElement element, SKRect bounds, SKImage? image, SKRectI area, bool owned)
         : ElementLayout(element, bounds)
     {
+        /// <summary>
+        /// 栅格化好的图；不画时为 null。
+        /// </summary>
         public SKImage? Image { get; } = image;
 
+        /// <summary>
+        /// 图在画布上的整像素区域。
+        /// </summary>
         public SKRectI Area { get; } = area;
 
+        /// <summary>
+        /// 是否这次请求单独生成、画完要释放（字段图片）；素材图片来自缓存，为 false。
+        /// </summary>
         public bool Owned { get; } = owned;
     }
 }

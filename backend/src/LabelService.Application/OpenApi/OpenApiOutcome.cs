@@ -43,12 +43,14 @@ public sealed class OpenApiOutcome<T>
     /// 从结果隐式转换成成功。
     /// </summary>
     /// <param name="value">结果。</param>
+    /// <returns>成功的处理结果。</returns>
     public static implicit operator OpenApiOutcome<T>(T value) => new(value, null);
 
     /// <summary>
     /// 从错误隐式转换成失败。
     /// </summary>
     /// <param name="error">错误。</param>
+    /// <returns>失败的处理结果。</returns>
     public static implicit operator OpenApiOutcome<T>(OpenApiError error) => new(null, error);
 }
 

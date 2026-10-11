@@ -13,11 +13,30 @@ namespace LabelService.Demo;
 /// </summary>
 internal sealed partial class MainForm
 {
+    /// <summary>
+    /// 最多预览几张（批量结果只解码前面这些）。
+    /// </summary>
     private const int MaxPreviewImages = 24;
+
+    /// <summary>
+    /// 当前结果解码出的预览图，换结果时释放。
+    /// </summary>
     private readonly List<Image> images = new List<Image>();
+
+    /// <summary>
+    /// 当前显示的结果；没有结果时为 null。
+    /// </summary>
     private LabelFile? result;
+
+    /// <summary>
+    /// 预览中显示的是第几张，从 0 开始。
+    /// </summary>
     private int current;
 
+    /// <summary>
+    /// 显示一个结果：摘要、预览（PNG 图片、ZPL 文本加打印效果、PDF 和压缩包给出打开按钮）、缩略图和响应信息。
+    /// </summary>
+    /// <param name="file">结果；null 表示清空，显示提示文字。</param>
     private void ShowResult(LabelFile? file)
     {
         result = file;
@@ -86,6 +105,11 @@ internal sealed partial class MainForm
         tabs.SelectedTab = previewTab;
     }
 
+    /// <summary>
+    /// 把结果解码成预览图：ZPL 按指令画黑白位图，ZIP 逐个解出 PNG 或 ZPL，单张 PNG 直接解码；PDF 不解码。
+    /// </summary>
+    /// <param name="file">结果。</param>
+    /// <param name="zplText">单个 ZPL 文件的文本；不是 ZPL 时为 null。</param>
     private void LoadImages(LabelFile file, string? zplText)
     {
         if (zplText is not null)
@@ -119,6 +143,10 @@ internal sealed partial class MainForm
         }
     }
 
+    /// <summary>
+    /// 显示当前这张预览图的图片框。
+    /// </summary>
+    /// <returns>图片框（已按缩放设置摆好）。</returns>
     private PictureBox Picture()
     {
         var picture = new PictureBox { BackColor = Color.White, Image = images.Count > current ? images[current] : null, Tag = "preview" };
@@ -126,6 +154,9 @@ internal sealed partial class MainForm
         return picture;
     }
 
+    /// <summary>
+    /// 缩放设置变化后重新摆放预览里的全部图片框。
+    /// </summary>
     private void LayoutPreview()
     {
         foreach (var picture in previewHost.Controls.Cast<Control>().SelectMany(Descendants).OfType<PictureBox>())
@@ -134,6 +165,10 @@ internal sealed partial class MainForm
         }
     }
 
+    /// <summary>
+    /// 按缩放设置摆放图片框：适应窗口时铺满并等比缩放，100%、50% 时按原图尺寸缩放、超出时滚动。
+    /// </summary>
+    /// <param name="picture">图片框。</param>
     private void ApplyZoom(PictureBox picture)
     {
         if (zoom.SelectedIndex == 0 || picture.Image is null)
@@ -149,6 +184,9 @@ internal sealed partial class MainForm
         picture.Size = new Size((int)(picture.Image.Width * scale), (int)(picture.Image.Height * scale));
     }
 
+    /// <summary>
+    /// 多于一张时在预览下方放缩略图，点一下切换；只预览了一部分时写明总张数。
+    /// </summary>
     private void BuildThumbnails()
     {
         ClearControls(thumbnails);
@@ -172,7 +210,10 @@ internal sealed partial class MainForm
         }
     }
 
-    /// <summary>预览里换成第 <paramref name="index"/> 张（点缩略图）。</summary>
+    /// <summary>
+    /// 预览里换成第 <paramref name="index"/> 张（点缩略图）。
+    /// </summary>
+    /// <param name="index">第几张，从 0 开始。</param>
     private void ShowImage(int index)
     {
         current = index;
@@ -183,6 +224,11 @@ internal sealed partial class MainForm
         }
     }
 
+    /// <summary>
+    /// 显示调用失败：SDK 的 LabelServiceException 列出状态码、错误码、跟踪 ID、是否重试和逐条错误；
+    /// 本地校验的异常说明请求没有发出，并对照服务端的错误码。
+    /// </summary>
+    /// <param name="exception">异常。</param>
     private void ShowError(Exception exception)
     {
         ShowResult(null);
@@ -220,6 +266,8 @@ internal sealed partial class MainForm
     /// <summary>
     /// SDK 本地预校验拦下的请求如果发到服务端，会返回设计书第 8 节的哪个错误码，方便和服务端的错误对照。
     /// </summary>
+    /// <param name="exception">SDK 本地校验抛出的异常。</param>
+    /// <returns>对应的服务端错误码；参数不完整、服务端收不到时是一句说明。</returns>
     private static string ServerCodeFor(Exception exception) =>
         exception.Message.Contains("上限") ? LabelErrorCodes.BatchTooLarge
         : exception.Message.Contains("份") || (exception as ArgumentException)?.ParamName?.EndsWith("opies", StringComparison.Ordinal) == true ? LabelErrorCodes.CopiesInvalid
@@ -231,6 +279,8 @@ internal sealed partial class MainForm
     /// <summary>
     /// 去掉 ArgumentException 消息后面附带的参数名：.NET Framework 另起一行写“参数名: x”，.NET 写成“ (Parameter 'x')”。
     /// </summary>
+    /// <param name="exception">异常。</param>
+    /// <returns>不带参数名的消息。</returns>
     private static string PlainMessage(Exception exception)
     {
         var message = exception.Message;
@@ -245,6 +295,10 @@ internal sealed partial class MainForm
         return message;
     }
 
+    /// <summary>
+    /// 在响应信息里列出 LabelFile 的属性和各阶段耗时。
+    /// </summary>
+    /// <param name="file">结果。</param>
     private void ShowLabelFile(LabelFile file)
     {
         var group = Group("成功：SDK 返回 LabelFile，这些值来自响应头和响应体");
@@ -266,6 +320,11 @@ internal sealed partial class MainForm
         }
     }
 
+    /// <summary>
+    /// 在响应信息里加一个分组。
+    /// </summary>
+    /// <param name="header">分组标题。</param>
+    /// <returns>分组。</returns>
     private ListViewGroup Group(string header)
     {
         var group = new ListViewGroup(header);
@@ -273,9 +332,19 @@ internal sealed partial class MainForm
         return group;
     }
 
+    /// <summary>
+    /// 在响应信息的分组里加一行。
+    /// </summary>
+    /// <param name="group">分组。</param>
+    /// <param name="name">属性名。</param>
+    /// <param name="value">值。</param>
     private void AddProperty(ListViewGroup group, string name, string value) =>
         responseList.Items.Add(new ListViewItem(new[] { name, value }, group));
 
+    /// <summary>
+    /// 换掉预览区的内容（旧内容释放）。
+    /// </summary>
+    /// <param name="content">新内容；图片框保留自己的停靠方式，其他铺满。</param>
     private void SetPreview(Control content)
     {
         ClearControls(previewHost);
@@ -283,7 +352,10 @@ internal sealed partial class MainForm
         previewHost.Controls.Add(content);
     }
 
-    /// <summary>移除并释放子控件（Controls.Clear 只移除不释放，窗口句柄会越积越多）。</summary>
+    /// <summary>
+    /// 移除并释放子控件（Controls.Clear 只移除不释放，窗口句柄会越积越多）。
+    /// </summary>
+    /// <param name="host">容器控件。</param>
     private static void ClearControls(Control host)
     {
         while (host.Controls.Count > 0)
@@ -292,9 +364,17 @@ internal sealed partial class MainForm
         }
     }
 
+    /// <summary>
+    /// 预览区居中的灰色提示文字。
+    /// </summary>
+    /// <param name="text">提示。</param>
+    /// <returns>标签。</returns>
     private static Label Message(string text) =>
         new Label { Text = text, Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleCenter, ForeColor = SystemColors.GrayText };
 
+    /// <summary>
+    /// 选位置保存当前结果（演示 LabelFile.Save）。
+    /// </summary>
     private void SaveResult()
     {
         if (result is null)
@@ -310,6 +390,9 @@ internal sealed partial class MainForm
         }
     }
 
+    /// <summary>
+    /// 把当前结果存到临时目录，用系统默认程序打开。
+    /// </summary>
     private void OpenResult()
     {
         if (result is null)
@@ -330,6 +413,9 @@ internal sealed partial class MainForm
         }
     }
 
+    /// <summary>
+    /// 打开打印窗口发送当前结果。
+    /// </summary>
     private void PrintResult()
     {
         if (result is not null)
@@ -339,16 +425,34 @@ internal sealed partial class MainForm
         }
     }
 
+    /// <summary>
+    /// 显示关于：SDK 版本、目标框架、依赖和当前运行时。
+    /// </summary>
     private void ShowAbout() =>
         MessageBox.Show(this,
             $"标签服务 SDK 调用演示　{SdkVersion}\r\n\r\nLabelService.Client.dll {SdkVersion}\r\n目标框架：net462 · netstandard2.0 · net8.0\r\n依赖：System.Text.Json 8.x（仅 .NET Framework 和 .NET Standard 版本）\r\n\r\n当前运行在 {RuntimeName}。演示程序同时提供 .NET Framework 4.8 和 .NET 10 两个版本，源码随 SDK 一起发给对接方。",
             "关于 LabelServiceDemo", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
+    /// <summary>
+    /// 控件和它的全部后代控件。
+    /// </summary>
+    /// <param name="control">起始控件。</param>
+    /// <returns>控件本身和后代，深度优先。</returns>
     private static IEnumerable<Control> Descendants(Control control) =>
         new[] { control }.Concat(control.Controls.Cast<Control>().SelectMany(Descendants));
 
+    /// <summary>
+    /// 文件大小的显示写法：B、KB 或 MB。
+    /// </summary>
+    /// <param name="bytes">字节数。</param>
+    /// <returns>如 12.3 KB。</returns>
     private static string FormatSize(int bytes) =>
         bytes < 1024 ? bytes + " B" : bytes < 1024 * 1024 ? (bytes / 1024.0).ToString("0.0", CultureInfo.InvariantCulture) + " KB" : (bytes / 1024.0 / 1024).ToString("0.00", CultureInfo.InvariantCulture) + " MB";
 
+    /// <summary>
+    /// 跟踪 ID 太长时（W3C traceparent 格式，00-trace-id-span-id-flags）只显示 trace-id 的前 16 位。
+    /// </summary>
+    /// <param name="traceId">跟踪 ID。</param>
+    /// <returns>缩短后的跟踪 ID。</returns>
     private static string Short(string traceId) => traceId.Length > 20 ? traceId.Substring(3, 16) + "…" : traceId;
 }

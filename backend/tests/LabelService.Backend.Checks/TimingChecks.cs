@@ -24,8 +24,17 @@ namespace LabelService.Backend.Checks;
 /// </remarks>
 internal static partial class TimingChecks
 {
+    /// <summary>
+    /// 客户端拿到响应头后停多久再读响应体，毫秒。
+    /// </summary>
     private const int ReaderDelayMs = 800;
 
+    /// <summary>
+    /// 运行计时口径的检查：同一个批量请求正常读一次、停一会儿再读一次，比较响应头和调用日志里的耗时。
+    /// </summary>
+    /// <param name="backendRoot">backend 目录。</param>
+    /// <param name="check">记录检查结果。</param>
+    /// <returns>检查做完时完成。</returns>
     public static async Task RunAsync(string backendRoot, Action<string, bool> check)
     {
         var dataDirectory = TempDataDirectory.Create();
@@ -57,6 +66,14 @@ internal static partial class TimingChecks
         }
     }
 
+    /// <summary>
+    /// 调批量接口，拿到响应头后按要求停一会儿再读完响应体。
+    /// </summary>
+    /// <param name="http">调用服务的客户端。</param>
+    /// <param name="json">请求体。</param>
+    /// <param name="requestId">X-Request-Id，用来找这次调用的日志。</param>
+    /// <param name="delayMs">读响应体前停多久，毫秒；0 表示不停。</param>
+    /// <returns>Server-Timing 里的 total（毫秒，没有时为 NaN）和响应体字节数。</returns>
     private static async Task<(double HeaderTotal, long Bytes)> SendAsync(HttpClient http, string json, string requestId, int delayMs)
     {
         using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/render/batch") { Content = new StringContent(json, Encoding.UTF8, "application/json") };
@@ -75,6 +92,12 @@ internal static partial class TimingChecks
         return (headerTotal, bytes);
     }
 
+    /// <summary>
+    /// 等后台服务把这次调用的日志写进库（最多约 5 秒）。
+    /// </summary>
+    /// <param name="logs">调用日志仓储。</param>
+    /// <param name="requestId">链路 ID。</param>
+    /// <returns>日志；超时没等到时为 null。</returns>
     private static async Task<RenderLogEntity?> WaitForLogAsync(IRenderLogRepository logs, string requestId)
     {
         for (var i = 0; i < 100; i++)
@@ -91,6 +114,10 @@ internal static partial class TimingChecks
         return null;
     }
 
+    /// <summary>
+    /// Server-Timing 头里的 total 阶段。
+    /// </summary>
+    /// <returns>编译好的正则，耗时在第 1 组。</returns>
     [GeneratedRegex(@"total;dur=([\d.]+)")]
     private static partial Regex TotalPattern();
 }

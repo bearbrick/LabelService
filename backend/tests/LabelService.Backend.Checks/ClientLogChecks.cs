@@ -26,11 +26,17 @@ using Microsoft.Extensions.Options;
 namespace LabelService.Backend.Checks;
 
 /// <summary>
-/// 调用方和调用日志（T-009）：Key 只存哈希、限制模板、停用和重置立即生效；调用日志的字段、异步写入、队列满丢弃、
+/// 调用方和调用日志：Key 只存哈希、限制模板、停用和重置立即生效；调用日志的字段、异步写入、队列满丢弃、
 /// 写入失败不影响生成、清理过期日志、筛选查询和索引性能。
 /// </summary>
 internal static class ClientLogChecks
 {
+    /// <summary>
+    /// 运行调用方和调用日志的全部检查：用临时数据目录启动服务；队列和写入失败不需要服务。
+    /// </summary>
+    /// <param name="backendRoot">backend 目录。</param>
+    /// <param name="check">记录检查结果。</param>
+    /// <returns>检查做完时完成。</returns>
     public static async Task RunAsync(string backendRoot, Action<string, bool> check)
     {
         var dataDirectory = TempDataDirectory.Create();
@@ -52,6 +58,13 @@ internal static class ClientLogChecks
         await CheckWriteFailureAsync(check);
     }
 
+    /// <summary>
+    /// 调用方：新建返回 Key 原文、库里只存哈希，授权限制、名称不能重复，停用和重置 Key 立即生效。
+    /// </summary>
+    /// <param name="services">服务的根容器。</param>
+    /// <param name="http">调用服务的客户端。</param>
+    /// <param name="check">记录检查结果。</param>
+    /// <returns>后面检查日志用的调用方 ID 和它的新 Key。</returns>
     private static async Task<(int ClientId, string Key)> CheckClientsAsync(IServiceProvider services, HttpClient http, Action<string, bool> check)
     {
         Task<T> Clients<T>(Func<IApiClientAppService, Task<T>> action) => AdminScope.RunAsync(services, action);
@@ -79,6 +92,15 @@ internal static class ClientLogChecks
         return (mes.Id, newKey);
     }
 
+    /// <summary>
+    /// 调用日志：成功、失败各写一条，字段齐全、不存业务数据，筛选和翻页，清理过期日志。
+    /// </summary>
+    /// <param name="services">服务的根容器。</param>
+    /// <param name="http">调用服务的客户端。</param>
+    /// <param name="clientId">调用方 ID。</param>
+    /// <param name="key">调用方的 Key。</param>
+    /// <param name="check">记录检查结果。</param>
+    /// <returns>检查做完时完成。</returns>
     private static async Task CheckLogsAsync(IServiceProvider services, HttpClient http, int clientId, string key, Action<string, bool> check)
     {
         var service = services.GetRequiredService<RenderLogWriterService>();
@@ -121,6 +143,9 @@ internal static class ClientLogChecks
     /// <summary>
     /// 索引性能：灌入大量日志后按模板、调用方、结果、时间筛选取一页。默认 20 万行；设置 LABEL_LOG_PERF_ROWS=1000000 测 100 万行。
     /// </summary>
+    /// <param name="services">服务的根容器。</param>
+    /// <param name="check">记录检查结果。</param>
+    /// <returns>检查做完时完成。</returns>
     private static async Task CheckLogPerformanceAsync(IServiceProvider services, Action<string, bool> check)
     {
         var rows = int.TryParse(Environment.GetEnvironmentVariable("LABEL_LOG_PERF_ROWS"), out var configured) ? configured : 200_000;
@@ -177,6 +202,7 @@ internal static class ClientLogChecks
     /// <summary>
     /// 队列满时丢弃并计数，不阻塞。
     /// </summary>
+    /// <param name="check">记录检查结果。</param>
     private static void CheckQueue(Action<string, bool> check)
     {
         var writer = new RenderLogQueue(Options.Create(new RenderLogOptions { QueueCapacity = 2 }));
@@ -187,6 +213,8 @@ internal static class ClientLogChecks
     /// <summary>
     /// 日志库写不进去时只记警告，后台服务不停、队列照常清空。
     /// </summary>
+    /// <param name="check">记录检查结果。</param>
+    /// <returns>检查做完时完成。</returns>
     private static async Task CheckWriteFailureAsync(Action<string, bool> check)
     {
         var options = new DbContextOptionsBuilder<SqliteLogDbContext>()
@@ -207,6 +235,12 @@ internal static class ClientLogChecks
         await service.StopAsync(CancellationToken.None);
     }
 
+    /// <summary>
+    /// 等后台服务把日志写进库（最多约 5 秒）。
+    /// </summary>
+    /// <param name="query">调用日志仓储。</param>
+    /// <param name="ready">什么时候算写好了。</param>
+    /// <returns>最近的日志（最多 200 条）。</returns>
     private static async Task<IReadOnlyList<RenderLogEntity>> WaitForLogsAsync(IRenderLogRepository query, Func<IReadOnlyList<RenderLogEntity>, bool> ready)
     {
         IReadOnlyList<RenderLogEntity> logs = [];
@@ -224,6 +258,14 @@ internal static class ClientLogChecks
         return logs;
     }
 
+    /// <summary>
+    /// 用指定的 Key 调一次单张生成。
+    /// </summary>
+    /// <param name="http">调用服务的客户端。</param>
+    /// <param name="apiKey">API Key。</param>
+    /// <param name="requestId">X-Request-Id；null 表示不传。</param>
+    /// <param name="data">字段数据（JSON 对象文本）；null 时用示例箱标的完整数据。</param>
+    /// <returns>HTTP 状态码。</returns>
     private static async Task<int> Status(HttpClient http, string apiKey, string? requestId = null, string? data = null)
     {
         using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/render")
@@ -239,6 +281,11 @@ internal static class ClientLogChecks
         return (int)(await http.SendAsync(request)).StatusCode;
     }
 
+    /// <summary>
+    /// 执行一个操作，看它是否抛出 <see cref="UserFriendlyException"/>。
+    /// </summary>
+    /// <param name="action">操作。</param>
+    /// <returns>抛出时为 true。</returns>
     private static async Task<bool> Throws(Func<Task> action)
     {
         try

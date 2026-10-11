@@ -1,5 +1,7 @@
 <script setup lang="ts">
-/** 个人设置：姓名、手机号、修改密码、最近登录。首次登录或被重置密码后只能进这里，改完密码才能用其他功能。 */
+/**
+ * 个人设置：姓名、手机号、修改密码、最近登录。首次登录或被重置密码后只能进这里，改完密码才能用其他功能。
+ */
 import { computed, nextTick, onMounted, reactive, ref } from 'vue'
 import { changePassword, searchOpLogs, updateProfile } from '../api/admin.ts'
 import type { OpLog } from '../api/admin.ts'
@@ -11,10 +13,63 @@ import { toast } from '../stores/designer.ts'
 import { go, route } from '../stores/router.ts'
 import { can, refreshMe, session } from '../stores/session.ts'
 
+/**
+ * 当前用户。
+ */
 const me = computed(() => session.me!)
-const profile = reactive({ name: me.value.name, phone: me.value.phone, busy: false })
-const pwd = reactive({ old: '', next: '', confirm: '', error: '', busy: false })
+
+/**
+ * 个人信息的表单。
+ */
+const profile = reactive({
+  /**
+   * 姓名。
+   */
+  name: me.value.name,
+  /**
+   * 手机号。
+   */
+  phone: me.value.phone,
+  /**
+   * 正在保存。
+   */
+  busy: false,
+})
+
+/**
+ * 修改密码的表单。
+ */
+const pwd = reactive({
+  /**
+   * 原密码。
+   */
+  old: '',
+  /**
+   * 新密码。
+   */
+  next: '',
+  /**
+   * 再输一次新密码。
+   */
+  confirm: '',
+  /**
+   * 修改失败的原因。
+   */
+  error: '',
+  /**
+   * 正在修改。
+   */
+  busy: false,
+})
+
+/**
+ * 最近 8 次登录（没有 log.view 权限时为空）。
+ */
 const logins = ref<OpLog[]>([])
+
+/**
+ * 业务范围的显示文字。
+ */
 const scope = computed(() => (me.value.allBusinesses ? '全部业务' : me.value.businessIds.map((id) => businessOf(id).name).join('、') || '无'))
 
 onMounted(async () => {
@@ -26,6 +81,10 @@ onMounted(async () => {
   if (can('log.view')) logins.value = await searchOpLogs({ userId: me.value.id, type: '登录', pageSize: 8 }).catch(() => [])
 })
 
+/**
+ * 保存姓名和手机号。
+ * @returns 保存结束时完成。
+ */
 async function saveProfile(): Promise<void> {
   profile.busy = true
   try {
@@ -39,6 +98,10 @@ async function saveProfile(): Promise<void> {
   }
 }
 
+/**
+ * 修改密码：两次输入要一致；首次登录改完后进入工作台。
+ * @returns 修改结束时完成。
+ */
 async function savePassword(): Promise<void> {
   pwd.error = ''
   if (pwd.next !== pwd.confirm) {

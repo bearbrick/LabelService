@@ -16,17 +16,22 @@ frontend/
 ├─ package.json  package-lock.json   依赖（版本写死，不加 ^）
 ├─ vite.config.ts                    开发时把 /api 转给 http://localhost:5080
 ├─ tsconfig.json  index.html
-├─ tests/checks.ts                   检查程序：用 Node 直接运行，检查不依赖浏览器的模块
+├─ tests/checks.ts                   检查程序：用 Node 直接运行，检查不依赖浏览器的模块，以及源码规范
+├─ tests/docs.ts                     注释规范检查（TypeScript 编译器解析 .ts 和 .vue 的 <script>）
 └─ src/
    ├─ main.ts  App.vue               入口；外壳（登录页，或顶栏 + 模板树 + 当前页面）
    ├─ style.css  admin.css           设计器样式（沿用 DB Studio）、管理后台样式（从原型移植）
    ├─ api/                           管理接口客户端
    │  ├─ http.ts                     带登录令牌的请求、统一错误（ApiError），401 时回登录页
-   │  ├─ admin.ts                    和 docs/admin-api.md 对应的类型和函数
+   │  ├─ admin.ts                    统一入口，按业务转导出下面几个文件（和 docs/admin-api.md 对应）
+   │  ├─ accounts.ts  businesses.ts  账号、用户、角色；业务分组
+   │  ├─ templates.ts  resources.ts  模板（草稿、发布、版本、预览）；画布预设、素材、字体
+   │  ├─ clients.ts  logs.ts         调用方；调用日志、操作日志、工作台、接口调试
    │  └─ layouts.ts                  拼版版式的增删改、预览、测试页
    ├─ model/                         纯数据和规则（Node 能直接运行，不碰 DOM）
    │  ├─ template.ts                 模板 JSON 的 TypeScript 镜像（契约）
-   │  ├─ layout.ts                   拼版版式 JSON 的镜像（契约），越界和重叠检查、自动排列、重新编号、页数
+   │  ├─ layout.ts                   拼版版式 JSON 的镜像（契约），越界和重叠检查、页数、取整
+   │  ├─ layoutArrange.ts            拼版的自动排列、按纸张排满、重新编号、调整顺序、新建版式
    │  ├─ units.ts                    mm、pt、打印点换算
    │  ├─ elements.ts                 新建元素、补全默认值、复制
    │  ├─ bindings.ts                 {{key:format}} 预览替换和 .NET 格式子集、字段改名
@@ -35,15 +40,21 @@ frontend/
    │  ├─ format.ts  chart.ts         时间、尺寸、文件大小的显示；工作台柱状图几何
    │  └─ fonts.ts  icons.ts
    ├─ editor/                        画布引擎
-   │  ├─ stage.ts                    Konva 舞台：节点同步、选择框、拖动吸附、缩放平移
+   │  ├─ stage.ts                    设计画布：节点同步、选择框、框选、拖动吸附、变换
+   │  ├─ stageViewport.ts            画布视口（stage.ts 的基类）：舞台和图层、缩放、平移、坐标换算、网格
    │  ├─ sheetStage.ts               拼版画布：纸张、格子位图、拖动吸附、拖入模板
-   │  ├─ draw.ts                     按元素类型绘制（和服务端绘制器规则一致）
+   │  ├─ draw.ts                     按元素类型绘制（和服务端绘制器规则一致）：入口和图片、图标、线、矩形
+   │  ├─ drawText.ts  drawCodes.ts   文字排版和测量；一维码、二维码
    │  ├─ rulers.ts                   mm 标尺
    │  ├─ barcode.ts                  bwip-js 编码和缓存
    │  ├─ images.ts                   图片加载缓存、黑白化
    │  └─ history.ts  snapping.ts  arrange.ts  geometry.ts  clipboard.ts   纯逻辑，有检查
    ├─ stores/                        状态和操作
-   │  ├─ designer.ts                 模板、选择、撤销、自动保存、只读、元素和字段操作
+   │  ├─ designer.ts                 设计器 store 的统一入口（window.__labelDesigner 就是它）
+   │  ├─ designerState.ts            状态：模板、选择、画布和视图、提示消息
+   │  ├─ designerHistory.ts          撤销历史、自动保存草稿、只读时撤回修改
+   │  ├─ designerTemplate.ts         打开模板、导入导出 JSON、画布尺寸
+   │  ├─ designerElements.ts  designerFields.ts   元素操作；字段操作
    │  ├─ workspace.ts                模板工作区：从服务端打开、保存草稿、发布、版本、回滚、换分组
    │  ├─ sheet.ts                    拼版设计器：正在编辑的版式、选择、撤销、格子操作、保存
    │  ├─ session.ts                  登录状态、权限点 can()、业务范围 inScope()
@@ -52,6 +63,7 @@ frontend/
    │  ├─ dialogs.ts                  确认框、一次性密钥框、新建模板对话框、复制
    │  ├─ assets.ts                   图片素材（服务端素材库，按需下载成 blob URL）
    │  └─ drag.ts                     从面板拖到画布的内容
+   ├─ composables/                   组件用的组合函数：useTextEdit（画布上直接编辑文本）、useCanvasDrop（拖放到画布）
    ├─ pages/                         管理后台的页面（每页一个文件）
    ├─ components/                    设计器：工具栏、左侧面板、画布、属性面板、状态栏
    │  ├─ admin/                      顶栏、模板树、弹窗、新建模板、缩略图、接口调试面板
@@ -88,3 +100,4 @@ npm run build     # 类型检查（vue-tsc）+ 打包
 - `src/model/layout.ts` 是后端 `Contracts/Layouts/SheetLayout.cs` 的镜像（ADR 0005），后端检查程序按属性名核对；越界、重叠的规则和容差（0.05 mm）和服务端保存前的检查一致。
 - 拼版画布的格子画的是服务端缩略图（一张位图），24 个格子一帧约 0.5 ms，和模板有多少元素无关。对齐、分布直接用 `editor/arrange.ts`（它接受任意矩形），吸附用 `editor/snapping.ts`，撤销用 `editor/history.ts`。
 - 不引用 `frontend/` 以外的文件（后端检查程序会拦）。
+- 注释（AGENTS.md R5）：每个模块级的函数、常量、接口和类型（含属性）、store 的状态、组件的 props 和 emits 都写多行 JSDoc，函数写 `@param`、`@returns`；`npm run check` 用 `tests/docs.ts` 核对。`src/` 下的文件不超过 500 行，同样由 `npm run check` 核对。

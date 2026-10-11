@@ -11,6 +11,8 @@ internal static class OutputDocuments
     /// <summary>
     /// 格式是否已实现。
     /// </summary>
+    /// <param name="format">输出格式。</param>
+    /// <returns>已实现时为 true。</returns>
     public static bool IsSupported(LabelFormat format) => format switch
     {
         LabelFormat.Png => true,
@@ -28,6 +30,7 @@ internal static class OutputDocuments
     /// <param name="dpi">分辨率。</param>
     /// <param name="mono">是否黑白输出。</param>
     /// <param name="page">模板画布，PDF 按它的 mm 尺寸定页面大小（不受打印点取整影响）。</param>
+    /// <returns>新的输出文档，用完释放。</returns>
     /// <exception cref="NotSupportedException">格式尚未实现。</exception>
     public static OutputDocument Create(LabelFormat format, int widthDots, int heightDots, int dpi, bool mono, LabelPage page) => format switch
     {

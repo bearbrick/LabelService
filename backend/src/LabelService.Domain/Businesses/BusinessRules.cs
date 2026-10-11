@@ -45,9 +45,17 @@ public static partial class BusinessRules
     /// <returns>合法时为 true。</returns>
     public static bool IsValidColor(string? color) => color is not null && ColorPattern().IsMatch(color);
 
+    /// <summary>
+    /// 编码的正则：大写字母开头，大写字母、数字、下划线，最长 32 位。
+    /// </summary>
+    /// <returns>编译好的正则。</returns>
     [GeneratedRegex("^[A-Z][A-Z0-9_]{0,31}$", RegexOptions.CultureInvariant)]
     private static partial Regex CodePattern();
 
+    /// <summary>
+    /// 标识色的正则：#RRGGBB。
+    /// </summary>
+    /// <returns>编译好的正则。</returns>
     [GeneratedRegex("^#[0-9A-Fa-f]{6}$", RegexOptions.CultureInvariant)]
     private static partial Regex ColorPattern();
 }

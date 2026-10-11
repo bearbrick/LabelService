@@ -6,11 +6,21 @@ import * as adminApi from '../api/admin.ts'
 import type { Me } from '../api/admin.ts'
 import { handleUnauthorized, hasToken, setToken } from '../api/http.ts'
 
+/**
+ * 登录状态。
+ */
 export const session = reactive({
+  /**
+   * 当前用户；没登录时为 null。
+   */
   me: null as Me | null,
-  /** 启动时检查完已保存的令牌后为 true。 */
+  /**
+   * 启动时检查完已保存的令牌后为 true。
+   */
   ready: false,
-  /** 登录失效被踢回登录页时的提示。 */
+  /**
+   * 登录失效被踢回登录页时的提示。
+   */
   notice: '',
 })
 
@@ -19,12 +29,17 @@ handleUnauthorized(() => {
   clear()
 })
 
+/**
+ * 清掉令牌和当前用户（回到登录页）。
+ */
 function clear(): void {
   setToken(null)
   session.me = null
 }
 
-/** 启动时用保存的令牌取当前用户；令牌无效时留在登录页。 */
+/**
+ * 启动时用保存的令牌取当前用户；令牌无效时留在登录页。
+ */
 export async function restoreSession(): Promise<void> {
   try {
     if (hasToken()) session.me = await adminApi.getMe()
@@ -35,6 +50,13 @@ export async function restoreSession(): Promise<void> {
   }
 }
 
+/**
+ * 登录并保存令牌。
+ * @param account 账号。
+ * @param password 密码。
+ * @param remember 7 天内自动登录。
+ * @returns 登录成功时结束；失败时抛出接口的错误。
+ */
 export async function signIn(account: string, password: string, remember: boolean): Promise<void> {
   const result = await adminApi.login(account, password, remember)
   setToken(result.token, remember)
@@ -42,6 +64,10 @@ export async function signIn(account: string, password: string, remember: boolea
   session.me = result.me
 }
 
+/**
+ * 退出登录（令牌已失效也照样退出）。
+ * @returns 退出完成时结束。
+ */
 export async function signOut(): Promise<void> {
   try {
     await adminApi.logout()
@@ -52,17 +78,27 @@ export async function signOut(): Promise<void> {
   clear()
 }
 
-/** 重新读取当前用户（改了个人信息、密码，或管理员改了自己的权限后）。 */
+/**
+ * 重新读取当前用户（改了个人信息、密码，或管理员改了自己的权限后）。
+ */
 export async function refreshMe(): Promise<void> {
   session.me = await adminApi.getMe()
 }
 
-/** 当前用户有没有某个权限点。必须先改密码时一律没有。 */
+/**
+ * 当前用户有没有某个权限点。必须先改密码时一律没有。
+ * @param permission 权限点，如 tpl.edit。
+ * @returns 有这个权限时为 true。
+ */
 export function can(permission: string): boolean {
   return !!session.me && !session.me.mustChangePassword && session.me.permissions.includes(permission)
 }
 
-/** 业务分组在不在当前用户的范围里。 */
+/**
+ * 业务分组在不在当前用户的范围里。
+ * @param businessId 业务分组 ID；没有分组时为 null。
+ * @returns 在范围里时为 true（全部业务范围的用户总是 true）。
+ */
 export function inScope(businessId: number | null | undefined): boolean {
   const me = session.me
   if (!me) return false

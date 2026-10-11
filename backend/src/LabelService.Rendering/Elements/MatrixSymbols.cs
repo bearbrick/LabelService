@@ -20,10 +20,17 @@ namespace LabelService.Rendering.Elements;
 internal static class MatrixSymbols
 {
     /// <summary>
-    /// 编码（带缓存）。内容为空或超出容量时抛 BARCODE_INVALID。
+    /// 编码（带缓存）。
     /// </summary>
+    /// <param name="symbology">码制。</param>
+    /// <param name="ecLevel">纠错级别（只对 QR 生效）。</param>
+    /// <param name="content">已替换绑定的内容。</param>
+    /// <param name="elementId">元素 ID（错误消息里用）。</param>
+    /// <returns>模块矩阵。</returns>
+    /// <exception cref="LabelRenderException">内容为空或超出容量（BARCODE_INVALID）。</exception>
     public static EncodedSymbol Encode(TwoDimensionalSymbology symbology, ErrorCorrectionLevel ecLevel, string content, string elementId)
     {
+        // 缓存键里带上码制（QR 还带纠错级别），同样的内容不同码制不会撞上。
         var kind = symbology == TwoDimensionalSymbology.Qr ? $"2d:{symbology}:{ecLevel}" : "2d:" + symbology;
         return SymbolCache.GetOrAdd(kind, content, value => EncodeUncached(symbology, ecLevel, value, elementId));
     }
@@ -31,6 +38,8 @@ internal static class MatrixSymbols
     /// <summary>
     /// 码制的显示名，用在错误消息里。
     /// </summary>
+    /// <param name="symbology">码制。</param>
+    /// <returns>如 QR 码、PDF417。</returns>
     public static string Name(TwoDimensionalSymbology symbology) => symbology switch
     {
         TwoDimensionalSymbology.Qr => "QR 码",
@@ -39,6 +48,15 @@ internal static class MatrixSymbols
         _ => symbology.ToString(),
     };
 
+    /// <summary>
+    /// 编码（不查缓存）。
+    /// </summary>
+    /// <param name="symbology">码制。</param>
+    /// <param name="ecLevel">纠错级别。</param>
+    /// <param name="content">内容。</param>
+    /// <param name="elementId">元素 ID。</param>
+    /// <returns>模块矩阵，按行存放。</returns>
+    /// <exception cref="LabelRenderException">内容为空或超出容量。</exception>
     private static EncodedSymbol EncodeUncached(TwoDimensionalSymbology symbology, ErrorCorrectionLevel ecLevel, string content, string elementId)
     {
         LabelRenderException Invalid(string message) =>
@@ -49,6 +67,7 @@ internal static class MatrixSymbols
             throw Invalid("内容为空");
         }
 
+        // 有非 ASCII 字符时指定 UTF-8（ZXing 会写入 ECI），纯 ASCII 不加，兼容不认 ECI 的老扫码枪。
         var hints = new Dictionary<EncodeHintType, object> { [EncodeHintType.MARGIN] = 0 };
         if (content.Any(ch => ch >= 128))
         {
@@ -93,6 +112,7 @@ internal static class MatrixSymbols
             throw Invalid(ex.Message.Contains("too big", StringComparison.OrdinalIgnoreCase) ? "内容太长，超出容量" : ex.Message);
         }
 
+        // 矩阵拍平成一维数组，按行存放。
         var modules = new bool[matrix.Width * matrix.Height];
         for (var y = 0; y < matrix.Height; y++)
         {

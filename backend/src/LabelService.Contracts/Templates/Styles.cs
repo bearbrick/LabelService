@@ -7,16 +7,24 @@ namespace LabelService.Contracts.Templates;
 /// </summary>
 public sealed class TextStyle
 {
-    /// <summary>默认字体：思源黑体（SIL OFL，可随服务分发）。</summary>
+    /// <summary>
+    /// 默认字体：思源黑体（SIL OFL，可随服务分发）。
+    /// </summary>
     public const string DefaultFontFamily = "SourceHanSansSC";
 
-    /// <summary>默认字号（pt）。</summary>
+    /// <summary>
+    /// 默认字号（pt）。
+    /// </summary>
     public const double DefaultFontSize = 10;
 
-    /// <summary>默认颜色。</summary>
+    /// <summary>
+    /// 默认颜色。
+    /// </summary>
     public const string DefaultColor = "#000000";
 
-    /// <summary>默认行高倍数。</summary>
+    /// <summary>
+    /// 默认行高倍数。
+    /// </summary>
     public const double DefaultLineHeight = 1.2;
 
     /// <summary>
@@ -35,19 +43,25 @@ public sealed class TextStyle
         get; set;
     }
 
-    /// <summary>粗体。</summary>
+    /// <summary>
+    /// 粗体。
+    /// </summary>
     public bool? Bold
     {
         get; set;
     }
 
-    /// <summary>斜体。</summary>
+    /// <summary>
+    /// 斜体。
+    /// </summary>
     public bool? Italic
     {
         get; set;
     }
 
-    /// <summary>下划线。</summary>
+    /// <summary>
+    /// 下划线。
+    /// </summary>
     public bool? Underline
     {
         get; set;
@@ -115,7 +129,9 @@ public sealed class TextStyle
 /// </summary>
 public sealed class StrokeStyle
 {
-    /// <summary>默认线宽（mm）。</summary>
+    /// <summary>
+    /// 默认线宽（mm）。
+    /// </summary>
     public const double DefaultWidth = 0.3;
 
     /// <summary>
@@ -140,124 +156,196 @@ public sealed class StrokeStyle
     }
 }
 
-/// <summary>水平对齐。</summary>
+/// <summary>
+/// 水平对齐。
+/// </summary>
 public enum TextAlign
 {
-    /// <summary>左对齐。</summary>
+    /// <summary>
+    /// 左对齐。
+    /// </summary>
     Left,
 
-    /// <summary>居中。</summary>
+    /// <summary>
+    /// 居中。
+    /// </summary>
     Center,
 
-    /// <summary>右对齐。</summary>
+    /// <summary>
+    /// 右对齐。
+    /// </summary>
     Right,
 }
 
-/// <summary>垂直对齐。</summary>
+/// <summary>
+/// 垂直对齐。
+/// </summary>
 public enum VerticalAlign
 {
-    /// <summary>顶部。</summary>
+    /// <summary>
+    /// 顶部。
+    /// </summary>
     Top,
 
-    /// <summary>居中。</summary>
+    /// <summary>
+    /// 居中。
+    /// </summary>
     Middle,
 
-    /// <summary>底部。</summary>
+    /// <summary>
+    /// 底部。
+    /// </summary>
     Bottom,
 }
 
-/// <summary>文本放不下时的处理方式。</summary>
+/// <summary>
+/// 文本放不下时的处理方式。
+/// </summary>
 public enum TextFit
 {
-    /// <summary>单行，超出框的部分裁掉。</summary>
+    /// <summary>
+    /// 单行，超出框的部分裁掉。
+    /// </summary>
     None,
 
-    /// <summary>在框宽内自动换行（中文按字、英文按单词），超出框高的部分裁掉。</summary>
+    /// <summary>
+    /// 在框宽内自动换行（中文按字、英文按单词），超出框高的部分裁掉。
+    /// </summary>
     Wrap,
 
-    /// <summary>单行，放不下时缩小字号，最小到 minFontSize，还放不下就裁掉。</summary>
+    /// <summary>
+    /// 单行，放不下时缩小字号，最小到 minFontSize，还放不下就裁掉。
+    /// </summary>
     Shrink,
 }
 
-/// <summary>一维码码制。</summary>
+/// <summary>
+/// 一维码码制。
+/// </summary>
 public enum BarcodeSymbology
 {
-    /// <summary>Code 128。</summary>
+    /// <summary>
+    /// Code 128。
+    /// </summary>
     Code128,
 
-    /// <summary>Code 39。</summary>
+    /// <summary>
+    /// Code 39。
+    /// </summary>
     Code39,
 
-    /// <summary>EAN-13，内容 12 或 13 位数字。</summary>
+    /// <summary>
+    /// EAN-13，内容 12 或 13 位数字。
+    /// </summary>
     Ean13,
 
-    /// <summary>EAN-8，内容 7 或 8 位数字。</summary>
+    /// <summary>
+    /// EAN-8，内容 7 或 8 位数字。
+    /// </summary>
     Ean8,
 
-    /// <summary>UPC-A，内容 11 或 12 位数字。</summary>
+    /// <summary>
+    /// UPC-A，内容 11 或 12 位数字。
+    /// </summary>
     Upca,
 
-    /// <summary>ITF-14，内容 13 或 14 位数字。</summary>
+    /// <summary>
+    /// ITF-14，内容 13 或 14 位数字。
+    /// </summary>
     Itf14,
 
-    /// <summary>GS1-128，内容用 (AI) 写法，如 (01)06901234567892(10)A01。</summary>
+    /// <summary>
+    /// GS1-128，内容用 (AI) 写法，如 (01)06901234567892(10)A01。
+    /// </summary>
     [JsonStringEnumMemberName("gs1-128")]
     Gs1128,
 }
 
-/// <summary>二维码码制。</summary>
+/// <summary>
+/// 二维码码制。
+/// </summary>
 public enum TwoDimensionalSymbology
 {
-    /// <summary>QR Code。</summary>
+    /// <summary>
+    /// QR Code。
+    /// </summary>
     Qr,
 
-    /// <summary>Data Matrix。</summary>
+    /// <summary>
+    /// Data Matrix。
+    /// </summary>
     [JsonStringEnumMemberName("datamatrix")]
     DataMatrix,
 
-    /// <summary>PDF417。</summary>
+    /// <summary>
+    /// PDF417。
+    /// </summary>
     Pdf417,
 }
 
-/// <summary>QR 纠错级别。</summary>
+/// <summary>
+/// QR 纠错级别。
+/// </summary>
 public enum ErrorCorrectionLevel
 {
-    /// <summary>约 7%。</summary>
+    /// <summary>
+    /// 约 7%。
+    /// </summary>
     [JsonStringEnumMemberName("L")]
     L,
 
-    /// <summary>约 15%。</summary>
+    /// <summary>
+    /// 约 15%。
+    /// </summary>
     [JsonStringEnumMemberName("M")]
     M,
 
-    /// <summary>约 25%。</summary>
+    /// <summary>
+    /// 约 25%。
+    /// </summary>
     [JsonStringEnumMemberName("Q")]
     Q,
 
-    /// <summary>约 30%。</summary>
+    /// <summary>
+    /// 约 30%。
+    /// </summary>
     [JsonStringEnumMemberName("H")]
     H,
 }
 
-/// <summary>一维码文字位置。</summary>
+/// <summary>
+/// 一维码文字位置。
+/// </summary>
 public enum BarcodeTextPosition
 {
-    /// <summary>条码下方。</summary>
+    /// <summary>
+    /// 条码下方。
+    /// </summary>
     Bottom,
 
-    /// <summary>条码上方。</summary>
+    /// <summary>
+    /// 条码上方。
+    /// </summary>
     Top,
 }
 
-/// <summary>图片适应方式。</summary>
+/// <summary>
+/// 图片适应方式。
+/// </summary>
 public enum ImageFit
 {
-    /// <summary>完整放进框内，保持比例。</summary>
+    /// <summary>
+    /// 完整放进框内，保持比例。
+    /// </summary>
     Contain,
 
-    /// <summary>铺满框，保持比例，超出部分裁掉。</summary>
+    /// <summary>
+    /// 铺满框，保持比例，超出部分裁掉。
+    /// </summary>
     Cover,
 
-    /// <summary>拉伸铺满，不保持比例。</summary>
+    /// <summary>
+    /// 拉伸铺满，不保持比例。
+    /// </summary>
     Stretch,
 }

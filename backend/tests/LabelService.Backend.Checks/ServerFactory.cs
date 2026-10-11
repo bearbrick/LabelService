@@ -11,9 +11,13 @@ namespace LabelService.Backend.Checks;
 /// <remarks>
 /// 内容根目录要显式指定：WebApplicationFactory 默认按 .sln 推断，不认识 .slnx。
 /// </remarks>
+/// <param name="backendRoot">backend 目录。</param>
+/// <param name="dataDirectory">数据目录（一般是 <see cref="TempDataDirectory.Create"/> 新建的临时目录）。</param>
+/// <param name="settings">额外的配置项，覆盖默认值；null 表示没有。</param>
 internal sealed class ServerFactory(string backendRoot, string dataDirectory, IReadOnlyDictionary<string, string?>? settings = null)
     : WebApplicationFactory<global::Program>
 {
+    /// <inheritdoc />
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         var values = new Dictionary<string, string?>
@@ -37,6 +41,10 @@ internal sealed class ServerFactory(string backendRoot, string dataDirectory, IR
 /// </summary>
 internal static class TempDataDirectory
 {
+    /// <summary>
+    /// 在系统临时目录下新建一个空目录。
+    /// </summary>
+    /// <returns>新目录的完整路径。</returns>
     public static string Create()
     {
         var path = Path.Combine(Path.GetTempPath(), "label-service-checks-" + Guid.NewGuid().ToString("N"));
@@ -47,6 +55,7 @@ internal static class TempDataDirectory
     /// <summary>
     /// 删除目录。连接池里的连接还占着库文件（Windows 上删不掉），先清空连接池。
     /// </summary>
+    /// <param name="path">临时数据目录；不存在时什么也不做。</param>
     public static void Delete(string path)
     {
         SqliteConnection.ClearAllPools();

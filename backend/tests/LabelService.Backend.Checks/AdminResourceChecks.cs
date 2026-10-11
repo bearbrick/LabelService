@@ -9,11 +9,18 @@ using SkiaSharp;
 namespace LabelService.Backend.Checks;
 
 /// <summary>
-/// 管理接口（T-014）：业务分组、模板的全流程（新建、草稿、发布、版本、回滚、换分组、删除）和业务范围、调用方的业务授权和 IP 白名单、
+/// 管理接口：业务分组、模板的全流程（新建、草稿、发布、版本、回滚、换分组、删除）和业务范围、调用方的业务授权和 IP 白名单、
 /// 画布预设、素材上传（类型判断、SVG 清洗）、调用日志和操作日志、概览、接口调试。
 /// </summary>
 internal static class AdminResourceChecks
 {
+    /// <summary>
+    /// 运行各项管理功能的检查：先建“成品包装”分组和设计员、只读访客两个用户，再逐项检查。
+    /// </summary>
+    /// <param name="http">调用服务的客户端。</param>
+    /// <param name="admin">已登录并改过密码的 admin 会话。</param>
+    /// <param name="check">记录检查结果。</param>
+    /// <returns>检查做完时完成。</returns>
     public static async Task RunAsync(HttpClient http, AdminSession admin, Action<string, bool> check)
     {
         var pack = await admin.JsonAsync(HttpMethod.Post, "/api/admin/businesses", new
@@ -43,6 +50,16 @@ internal static class AdminResourceChecks
         await CheckLogsAsync(admin, designer, viewer, check);
     }
 
+    /// <summary>
+    /// 模板的全流程：新建、保存草稿、发布前检查、发布、模板库列表和缩略图、版本、回滚、业务范围、换分组、删除。
+    /// </summary>
+    /// <param name="http">调用服务的客户端。</param>
+    /// <param name="admin">admin 会话（全部业务范围）。</param>
+    /// <param name="designer">设计员会话（只有“成品包装”分组）。</param>
+    /// <param name="packId">“成品包装”分组的 ID。</param>
+    /// <param name="sampleId">示例分组的 ID。</param>
+    /// <param name="check">记录检查结果。</param>
+    /// <returns>检查做完时完成。</returns>
     private static async Task CheckTemplatesAsync(HttpClient http, AdminSession admin, AdminSession designer, int packId, int sampleId, Action<string, bool> check)
     {
         check("设计员不能在自己范围以外的业务分组里新建模板",
@@ -125,6 +142,14 @@ internal static class AdminResourceChecks
         check("发布前检查接口不保存，只返回问题", check1.GetProperty("errors").GetArrayLength() > 0 && check1.GetProperty("canPublish").GetBoolean() == false);
     }
 
+    /// <summary>
+    /// 调用方：Key 只返回一次、按业务分组授权、IP 白名单、重置 Key、停用；模板删除后编码不能再用。
+    /// </summary>
+    /// <param name="http">调用服务的客户端。</param>
+    /// <param name="admin">admin 会话。</param>
+    /// <param name="packId">“成品包装”分组的 ID。</param>
+    /// <param name="check">记录检查结果。</param>
+    /// <returns>检查做完时完成。</returns>
     private static async Task CheckClientsAsync(HttpClient http, AdminSession admin, int packId, Action<string, bool> check)
     {
         var created = await admin.JsonAsync(HttpMethod.Post, "/api/admin/clients", new
@@ -208,6 +233,15 @@ internal static class AdminResourceChecks
             })) == "INVALID");
     }
 
+    /// <summary>
+    /// 资源：画布预设的增删改和权限，素材上传（类型判断、SVG 清洗、大小限制）、改名、删除，字体列表。
+    /// </summary>
+    /// <param name="http">调用服务的客户端。</param>
+    /// <param name="admin">admin 会话。</param>
+    /// <param name="designer">设计员会话。</param>
+    /// <param name="viewer">只读访客会话。</param>
+    /// <param name="check">记录检查结果。</param>
+    /// <returns>检查做完时完成。</returns>
     private static async Task CheckResourcesAsync(HttpClient http, AdminSession admin, AdminSession designer, AdminSession viewer, Action<string, bool> check)
     {
         var presets = await viewer.JsonAsync(HttpMethod.Get, "/api/admin/presets");
@@ -286,6 +320,14 @@ internal static class AdminResourceChecks
         check("字体列表", fonts.GetProperty("families").GetArrayLength() > 0);
     }
 
+    /// <summary>
+    /// 日志和工作台：调用日志按链路 ID 查、按业务范围过滤，概览的统计，接口调试，写操作都记了操作日志。
+    /// </summary>
+    /// <param name="admin">admin 会话。</param>
+    /// <param name="designer">设计员会话。</param>
+    /// <param name="viewer">只读访客会话。</param>
+    /// <param name="check">记录检查结果。</param>
+    /// <returns>检查做完时完成。</returns>
     private static async Task CheckLogsAsync(AdminSession admin, AdminSession designer, AdminSession viewer, Action<string, bool> check)
     {
         JsonElement logs = default;
@@ -346,6 +388,13 @@ internal static class AdminResourceChecks
             types.IsSupersetOf(["业务分组", "新建模板", "编辑模板", "发布模板", "回滚版本", "删除模板", "调用方", "画布预设", "素材"]));
     }
 
+    /// <summary>
+    /// 保存草稿的请求体：80×50 的模板，一个必填字段 lot 和一个文本元素。
+    /// </summary>
+    /// <param name="code">模板编码。</param>
+    /// <param name="name">模板名称。</param>
+    /// <param name="text">文本元素的内容（可以带绑定或素材引用）。</param>
+    /// <returns>请求体（属性名 → 值）。</returns>
     private static Dictionary<string, object> Template(string code, string name, string text) => new()
     {
         ["code"] = code,
@@ -360,6 +409,13 @@ internal static class AdminResourceChecks
         ["elements"] = new object[] { new { id = "t1", type = "text", x = 2, y = 2, width = 60, height = 8, content = text } },
     };
 
+    /// <summary>
+    /// 用指定的 Key 调一次单张生成（数据同时满足检查用模板和示例箱标）。
+    /// </summary>
+    /// <param name="http">调用服务的客户端。</param>
+    /// <param name="apiKey">API Key。</param>
+    /// <param name="template">模板编码。</param>
+    /// <returns>HTTP 状态码。</returns>
     private static async Task<int> RenderStatus(HttpClient http, string apiKey, string template)
     {
         using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/render")
@@ -370,6 +426,12 @@ internal static class AdminResourceChecks
         return (int)(await http.SendAsync(request)).StatusCode;
     }
 
+    /// <summary>
+    /// 用开发 Key 调一次单张生成，返回错误码。
+    /// </summary>
+    /// <param name="http">调用服务的客户端。</param>
+    /// <param name="template">模板编码。</param>
+    /// <returns>错误码；成功时为 null。</returns>
     private static async Task<string?> RenderCode(HttpClient http, string template)
     {
         using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/render")
@@ -380,6 +442,10 @@ internal static class AdminResourceChecks
         return await AdminSession.CodeAsync(await http.SendAsync(request));
     }
 
+    /// <summary>
+    /// 上传素材用的 16×16 红色 PNG。
+    /// </summary>
+    /// <returns>PNG 文件内容。</returns>
     private static byte[] Png()
     {
         using var bitmap = new SKBitmap(16, 16);
@@ -394,6 +460,12 @@ internal static class AdminResourceChecks
 /// </summary>
 internal static class AdminChecks
 {
+    /// <summary>
+    /// 运行管理后台的全部检查，结束后删除临时数据目录。
+    /// </summary>
+    /// <param name="backendRoot">backend 目录。</param>
+    /// <param name="check">记录检查结果。</param>
+    /// <returns>检查做完时完成。</returns>
     public static async Task RunAsync(string backendRoot, Action<string, bool> check)
     {
         var dataDirectory = TempDataDirectory.Create();

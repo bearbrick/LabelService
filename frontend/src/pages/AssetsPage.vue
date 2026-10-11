@@ -1,5 +1,7 @@
 <script setup lang="ts">
-/** 素材与字体：图片素材（上传、改名、删除；内置素材只读），服务端已加载的字体。 */
+/**
+ * 素材与字体：图片素材（上传、改名、删除；内置素材只读），服务端已加载的字体。
+ */
 import { onMounted, ref } from 'vue'
 import { deleteAsset, listFonts, renameAsset } from '../api/admin.ts'
 import { errorText } from '../api/http.ts'
@@ -13,9 +15,24 @@ import { confirmBox } from '../stores/dialogs.ts'
 import { go } from '../stores/router.ts'
 import { can } from '../stores/session.ts'
 
+/**
+ * 当前页签：图片素材或字体。
+ */
 const tab = ref<'images' | 'fonts'>('images')
+
+/**
+ * 服务端加载的字体（模板字体名和文件名）。
+ */
 const fonts = ref<{ families: string[]; files: string[] }>({ families: [], files: [] })
+
+/**
+ * 正在改名的素材 key；没在改名时为空。
+ */
 const renaming = ref('')
+
+/**
+ * 改名输入框里的名称。
+ */
 const draftName = ref('')
 
 onMounted(async () => {
@@ -26,6 +43,11 @@ onMounted(async () => {
   }
 })
 
+/**
+ * 上传图片素材。
+ * @param event 文件输入框的 change 事件。
+ * @returns 上传结束时完成（失败时提示，不抛）。
+ */
 async function onUpload(event: Event): Promise<void> {
   const input = event.target as HTMLInputElement
   const file = input.files?.[0]
@@ -39,11 +61,20 @@ async function onUpload(event: Event): Promise<void> {
   }
 }
 
+/**
+ * 开始改名。
+ * @param asset 素材。
+ */
 function startRename(asset: Asset): void {
   renaming.value = asset.key
   draftName.value = asset.name
 }
 
+/**
+ * 结束改名：名称有变化才保存。
+ * @param asset 素材。
+ * @returns 保存结束时完成。
+ */
 async function finishRename(asset: Asset): Promise<void> {
   if (renaming.value !== asset.key) return
   renaming.value = ''
@@ -57,6 +88,11 @@ async function finishRename(asset: Asset): Promise<void> {
   }
 }
 
+/**
+ * 删除素材（确认后）。
+ * @param asset 素材。
+ * @returns 操作结束时完成。
+ */
 async function remove(asset: Asset): Promise<void> {
   const text = `确定删除“${asset.name}”？引用 asset:${asset.key} 的模板渲染时会报素材不存在，发布前检查也会拦下。`
   if (!(await confirmBox('删除素材', text, '删除', true))) return
@@ -68,6 +104,11 @@ async function remove(asset: Asset): Promise<void> {
   }
 }
 
+/**
+ * 字体的显示名称。
+ * @param family 模板字体名。
+ * @returns 中文名；不认识时原样返回。
+ */
 function fontLabel(family: string): string {
   return FONT_OPTIONS.find((font) => font.value === family)?.label ?? family
 }

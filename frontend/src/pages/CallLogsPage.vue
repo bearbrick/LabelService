@@ -1,5 +1,7 @@
 <script setup lang="ts">
-/** 调用日志：按时间、结果、调用方、模板筛选，按时间倒序分批加载（翻页用上一批最后一条）；点一行看详情和各阶段耗时。 */
+/**
+ * 调用日志：按时间、结果、调用方、模板筛选，按时间倒序分批加载（翻页用上一批最后一条）；点一行看详情和各阶段耗时。
+ */
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { listClients, searchCallLogs } from '../api/admin.ts'
 import type { ApiClient, CallLog, CallLogFilter } from '../api/admin.ts'
@@ -12,7 +14,14 @@ import { copyText } from '../stores/dialogs.ts'
 import { go } from '../stores/router.ts'
 import { can } from '../stores/session.ts'
 
+/**
+ * 每批加载的条数。
+ */
 const PAGE_SIZE = 50
+
+/**
+ * 时间范围的选项。
+ */
 const RANGES = [
   { value: 'today', label: '今天' },
   { value: '7d', label: '近 7 天' },
@@ -20,12 +29,64 @@ const RANGES = [
   { value: 'all', label: '全部' },
 ]
 
-const filter = reactive({ range: '7d', status: '', clientId: '', templateCode: '', q: '' })
+/**
+ * 筛选条件（改了 300 毫秒后重新加载）。
+ */
+const filter = reactive({
+  /**
+   * 时间范围：today、7d、30d、all。
+   */
+  range: '7d',
+  /**
+   * 结果：ok、error，空表示全部。
+   */
+  status: '',
+  /**
+   * 调用方 ID 的文本，空表示全部。
+   */
+  clientId: '',
+  /**
+   * 模板编码，空表示全部。
+   */
+  templateCode: '',
+  /**
+   * 搜索：链路 ID、X-Request-Id、模板编码、错误码。
+   */
+  q: '',
+})
+
+/**
+ * 已加载的日志，新的在前。
+ */
 const logs = ref<CallLog[]>([])
+
+/**
+ * 调用方（筛选用，没有 api.manage 权限时为空）。
+ */
 const clients = ref<ApiClient[]>([])
-const state = reactive({ loading: false, more: false })
+
+/**
+ * 加载状态。
+ */
+const state = reactive({
+  /**
+   * 正在加载。
+   */
+  loading: false,
+  /**
+   * 后面可能还有（上一批取满了）。
+   */
+  more: false,
+})
+
+/**
+ * 正在看详情的日志。
+ */
 const detail = ref<CallLog | null>(null)
 
+/**
+ * 已加载部分的汇总：调用次数、成功率、成功生成的张数、成功调用的平均耗时。
+ */
 const summary = computed(() => {
   const list = logs.value
   const ok = list.filter((l) => l.status === 'ok')
@@ -37,6 +98,9 @@ const summary = computed(() => {
   }
 })
 
+/**
+ * 详情里的各阶段耗时（阶段名和毫秒）。
+ */
 const stages = computed(() => {
   if (!detail.value) return []
   try {
@@ -51,12 +115,19 @@ onMounted(async () => {
   await load()
 })
 
+/**
+ * 筛选条件变化后延迟加载的计时器。
+ */
 let timer: ReturnType<typeof setTimeout> | undefined
 watch(() => ({ ...filter }), () => {
   clearTimeout(timer)
   timer = setTimeout(() => void load(), 300)
 })
 
+/**
+ * 时间范围的开始时间。
+ * @returns ISO 时间；全部时为 undefined。
+ */
 function from(): string | undefined {
   const now = new Date()
   if (filter.range === 'today') return new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString()
@@ -65,6 +136,11 @@ function from(): string | undefined {
   return undefined
 }
 
+/**
+ * 按筛选条件加载一批日志。
+ * @param append true 时接着上一批往后加载，否则从头加载。
+ * @returns 加载结束时完成。
+ */
 async function load(append = false): Promise<void> {
   const last = append ? logs.value.at(-1) : undefined
   const query: CallLogFilter = {
@@ -89,14 +165,25 @@ async function load(append = false): Promise<void> {
   }
 }
 
+/**
+ * 恢复默认的筛选条件（近 7 天、全部）。
+ */
 function reset(): void {
   Object.assign(filter, { range: '7d', status: '', clientId: '', templateCode: '', q: '' })
 }
 
+/**
+ * 结果的显示文字。
+ * @param log 日志。
+ * @returns 成功、客户端断开或错误码。
+ */
 function resultText(log: CallLog): string {
   return log.status === 'ok' ? '成功' : log.status === 'aborted' ? '客户端断开' : log.errorCode ?? '失败'
 }
 
+/**
+ * 把已加载的日志复制成 CSV 文本（可以贴进表格软件）。
+ */
 function csv(): void {
   const head = ['时间', '调用方', '接口', '模板', '版本', '格式', '张数', '耗时ms', '结果', '错误码', 'traceId']
   const rows = logs.value.map((l) => [fmtDateTime(l.createdAt), l.clientName, l.endpoint, l.templateCode, l.versionNo ?? '', l.format, l.itemCount, l.durationMs, l.status, l.errorCode ?? '', l.traceId])

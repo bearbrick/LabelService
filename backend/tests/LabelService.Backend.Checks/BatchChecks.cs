@@ -13,12 +13,21 @@ using ZXing.Common;
 namespace LabelService.Backend.Checks;
 
 /// <summary>
-/// 批量接口（T-007）：merge（PDF、ZPL）、zip（每条一个文件，PNG 每份一个文件）、顺序、先校验全部条目、错误带序号、上限、计时和张数头。
+/// 批量接口：merge（PDF、ZPL）、zip（每条一个文件，PNG 每份一个文件）、顺序、先校验全部条目、错误带序号、上限、计时和张数头。
 /// </summary>
 internal static partial class BatchChecks
 {
+    /// <summary>
+    /// 批量请求的公共字段：示例箱标除箱号以外的数据。
+    /// </summary>
     private const string Common = """{"partName":"电源适配器","partNo":"3100-0123","qty":50,"batchNo":"20261008-A","prodDate":"2026-10-08"}""";
 
+    /// <summary>
+    /// 运行批量接口的全部检查：用临时数据目录启动服务。
+    /// </summary>
+    /// <param name="backendRoot">backend 目录。</param>
+    /// <param name="check">记录检查结果。</param>
+    /// <returns>检查做完时完成。</returns>
     public static async Task RunAsync(string backendRoot, Action<string, bool> check)
     {
         var dataDirectory = TempDataDirectory.Create();
@@ -37,6 +46,12 @@ internal static partial class BatchChecks
         }
     }
 
+    /// <summary>
+    /// merge：PDF 多页、ZPL 多段，顺序和份数正确，张数和计时头。
+    /// </summary>
+    /// <param name="http">调用服务的客户端。</param>
+    /// <param name="check">记录检查结果。</param>
+    /// <returns>检查做完时完成。</returns>
     private static async Task CheckMergeAsync(HttpClient http, Action<string, bool> check)
     {
         var pdf = await Post(http, Batch("pdf", "merge", Item("C2610080001"), Item("C2610080002", 2)));
@@ -53,6 +68,12 @@ internal static partial class BatchChecks
             zpl.IsSuccessStatusCode && Regex.Count(zplText, @"\^XA") == 2 && zplText.IndexOf("^PQ1", StringComparison.Ordinal) < zplText.IndexOf("^PQ2", StringComparison.Ordinal));
     }
 
+    /// <summary>
+    /// zip：每条一个文件、按顺序命名，PNG 每份一个文件，条码内容和条目一致。
+    /// </summary>
+    /// <param name="http">调用服务的客户端。</param>
+    /// <param name="check">记录检查结果。</param>
+    /// <returns>检查做完时完成。</returns>
     private static async Task CheckZipAsync(HttpClient http, Action<string, bool> check)
     {
         var response = await Post(http, Batch("png", "zip", Item("C2610080001"), Item("C2610080002", 2), Item("C2610080003")));
@@ -76,6 +97,12 @@ internal static partial class BatchChecks
         check("zip PDF：每条一个文件，份数在文件里（第 2 个文件 2 页）", pages.SequenceEqual([1, 2]) && ServerChecks.Header(pdf, HeaderNames.LabelCount) == "3");
     }
 
+    /// <summary>
+    /// 错误：先校验全部条目、明细带序号，PNG 不能 merge，超过张数上限。
+    /// </summary>
+    /// <param name="http">调用服务的客户端。</param>
+    /// <param name="check">记录检查结果。</param>
+    /// <returns>检查做完时完成。</returns>
     private static async Task CheckErrorsAsync(HttpClient http, Action<string, bool> check)
     {
         var missing = await Error(await Post(http, Batch("pdf", "merge", Item("C2610080001"), """{"data":{}}""", """{"data":{"qty":"x"}}""")));
@@ -97,6 +124,12 @@ internal static partial class BatchChecks
         check("items 为空返回 INVALID_JSON", (await Error(await Post(http, """{"templateCode":"BOX_LABEL","format":"pdf","items":[]}""")))?.Code == ErrorCodes.InvalidJson);
     }
 
+    /// <summary>
+    /// 性能：100 张合并 PDF 在 3 秒内（先预热一次）。
+    /// </summary>
+    /// <param name="http">调用服务的客户端。</param>
+    /// <param name="check">记录检查结果。</param>
+    /// <returns>检查做完时完成。</returns>
     private static async Task CheckPerformanceAsync(HttpClient http, Action<string, bool> check)
     {
         var items = Enumerable.Range(1, 100).Select(i => Item($"C26100800{i:D2}")).ToArray();
@@ -108,6 +141,12 @@ internal static partial class BatchChecks
         check("批量 100 张合并 PDF 在 3 秒内", response.IsSuccessStatusCode && ServerChecks.Header(response, HeaderNames.LabelCount) == "100" && elapsed < 3000);
     }
 
+    /// <summary>
+    /// 批量的一条：只给箱号，份数不是 1 时带上 copies。
+    /// </summary>
+    /// <param name="boxNo">箱号。</param>
+    /// <param name="copies">份数。</param>
+    /// <returns>条目 JSON。</returns>
     private static string Item(string boxNo, int copies = 1) =>
         JsonSerializer.Serialize(copies == 1 ? new
         {
@@ -124,12 +163,25 @@ internal static partial class BatchChecks
             copies
         });
 
+    /// <summary>
+    /// 批量请求体。
+    /// </summary>
+    /// <param name="format">输出格式。</param>
+    /// <param name="output">merge 或 zip；null 表示不传。</param>
+    /// <param name="items">条目 JSON。</param>
+    /// <returns>请求体 JSON。</returns>
     private static string Batch(string format, string? output, params string[] items)
     {
         var outputJson = output is null ? "" : $$""","output":"{{output}}" """.TrimEnd();
         return $$"""{"templateCode":"BOX_LABEL","format":"{{format}}"{{outputJson}},"common":{{Common}},"items":[{{string.Join(",", items)}}]}""";
     }
 
+    /// <summary>
+    /// 用开发 Key 调批量接口。
+    /// </summary>
+    /// <param name="http">调用服务的客户端。</param>
+    /// <param name="json">请求体。</param>
+    /// <returns>响应。</returns>
     private static async Task<HttpResponseMessage> Post(HttpClient http, string json)
     {
         using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/render/batch") { Content = new StringContent(json, Encoding.UTF8, "application/json") };
@@ -137,9 +189,19 @@ internal static partial class BatchChecks
         return await http.SendAsync(request);
     }
 
+    /// <summary>
+    /// 读错误响应。
+    /// </summary>
+    /// <param name="response">响应。</param>
+    /// <returns>错误响应；成功时为 null。</returns>
     private static async Task<ErrorResponse?> Error(HttpResponseMessage response) =>
         response.IsSuccessStatusCode ? null : await response.Content.ReadFromJsonAsync<ErrorResponse>(LabelJson.Options);
 
+    /// <summary>
+    /// 解码 ZIP 里一张 PNG 上的 Code128 条码。
+    /// </summary>
+    /// <param name="entry">ZIP 条目。</param>
+    /// <returns>条码内容；扫不出来时为 null。</returns>
     private static string? DecodeBarcode(ZipArchiveEntry entry)
     {
         using var stream = entry.Open();

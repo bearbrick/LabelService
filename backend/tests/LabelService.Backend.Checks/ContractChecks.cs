@@ -19,6 +19,12 @@ namespace LabelService.Backend.Checks;
 /// </remarks>
 internal static partial class ContractChecks
 {
+    /// <summary>
+    /// 运行契约一致性的全部检查。
+    /// </summary>
+    /// <param name="backendRoot">backend 目录。</param>
+    /// <param name="repositoryRoot">仓库根目录。</param>
+    /// <param name="check">记录检查结果。</param>
     public static void Run(string backendRoot, string repositoryRoot, Action<string, bool> check)
     {
         var templates = Directory.GetFiles(Path.Combine(backendRoot, "samples", "templates"), "*.json");
@@ -70,7 +76,7 @@ internal static partial class ContractChecks
         var backendSample = JsonNode.Parse(File.ReadAllText(Path.Combine(backendRoot, "samples", "templates", "box-label.json")));
         check("前端的示例模板和后端一致", JsonNode.DeepEquals(frontendSample, backendSample));
 
-        // 拼版版式（T-018、T-019）：前端 frontend/src/model/layout.ts 是 SheetLayout 的镜像，按 JSON 属性名核对。
+        // 拼版版式：前端 frontend/src/model/layout.ts 是 SheetLayout 的镜像，按 JSON 属性名核对。
         var frontendLayout = File.ReadAllText(Path.Combine(repositoryRoot, "frontend", "src", "model", "layout.ts"));
         var layoutJson = JsonSerializer.SerializeToNode(new SheetLayout { Slots = [new SheetSlot()] }, LabelJson.Options)!.AsObject();
         var layoutKeys = layoutJson.Select(pair => pair.Key)
@@ -105,12 +111,25 @@ internal static partial class ContractChecks
             frontendAssets.Contains("listAssets") && !frontendAssets.Contains("data:image"));
     }
 
+    /// <summary>
+    /// 前端 icons.ts 里一个图标的定义：key 是 gb191/xxx，d 是 SVG 路径。
+    /// </summary>
+    /// <returns>编译好的正则，key 和 d 两个组。</returns>
     [GeneratedRegex(@"'(?<key>gb191/[^']+)': \{ name: '[^']+', d: '(?<d>[^']+)' \}")]
     private static partial Regex FrontendIcon();
 
+    /// <summary>
+    /// SVG 文件里 path 元素的 d 属性。
+    /// </summary>
+    /// <returns>编译好的正则，路径在 d 组。</returns>
     [GeneratedRegex(@"<path d=""(?<d>[^""]+)""")]
     private static partial Regex SvgPath();
 
+    /// <summary>
+    /// 元素里可以写绑定的文字（文本内容、条码和二维码的值、图片来源）。
+    /// </summary>
+    /// <param name="element">元素。</param>
+    /// <returns>可以带绑定的文字；其他元素为空。</returns>
     private static IEnumerable<string> BoundTexts(LabelElement element) => element switch
     {
         TextElement text => [text.Content],
@@ -120,17 +139,32 @@ internal static partial class ContractChecks
         _ => [],
     };
 
+    /// <summary>
+    /// 用反射取一个类型里全部字符串常量的值。
+    /// </summary>
+    /// <param name="type">常量类，如 ErrorCodes。</param>
+    /// <returns>常量值的集合。</returns>
     private static HashSet<string> Constants(Type type) => type
         .GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static)
         .Where(field => field.IsLiteral && field.FieldType == typeof(string))
         .Select(field => (string)field.GetRawConstantValue()!)
         .ToHashSet(StringComparer.Ordinal);
 
+    /// <summary>
+    /// 按文本取一个 C# 源文件里全部字符串常量的值（调用端副本不能被引用，只能读文本）。
+    /// </summary>
+    /// <param name="path">源文件路径。</param>
+    /// <returns>常量值的集合。</returns>
     private static HashSet<string> SourceConstants(string path) => StringConstant()
         .Matches(File.ReadAllText(path))
         .Select(match => match.Groups["value"].Value)
         .ToHashSet(StringComparer.Ordinal);
 
+    /// <summary>
+    /// 执行一个操作，看它是否抛出任何异常。
+    /// </summary>
+    /// <param name="action">操作。</param>
+    /// <returns>抛出异常时为 true。</returns>
     private static bool Throws(Action action)
     {
         try
@@ -144,6 +178,10 @@ internal static partial class ContractChecks
         }
     }
 
+    /// <summary>
+    /// C# 源码里的字符串常量声明（const string 名称 = "值";）。
+    /// </summary>
+    /// <returns>编译好的正则，值在 value 组。</returns>
     [GeneratedRegex("""const\s+string\s+\w+\s*=\s*"(?<value>[^"]*)"\s*;""")]
     private static partial Regex StringConstant();
 }

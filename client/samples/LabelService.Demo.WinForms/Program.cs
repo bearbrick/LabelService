@@ -2,8 +2,15 @@ using System.Windows.Forms;
 
 namespace LabelService.Demo;
 
+/// <summary>
+/// 演示程序入口。
+/// </summary>
 internal static class Program
 {
+    /// <summary>
+    /// 启动主窗口；带 --smoke 输出目录 [服务地址] 时跑自检后退出。
+    /// </summary>
+    /// <param name="args">命令行参数。</param>
     [STAThread]
     private static void Main(string[] args)
     {

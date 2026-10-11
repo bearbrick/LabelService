@@ -68,15 +68,23 @@ public sealed class FieldDefinition
 /// </summary>
 public enum FieldType
 {
-    /// <summary>字符串。</summary>
+    /// <summary>
+    /// 字符串。
+    /// </summary>
     String,
 
-    /// <summary>数字，或能解析成 decimal 的字符串。</summary>
+    /// <summary>
+    /// 数字，或能解析成 decimal 的字符串。
+    /// </summary>
     Number,
 
-    /// <summary>ISO 8601 日期或日期时间字符串，如 2026-10-08、2026-10-08T14:30:00。</summary>
+    /// <summary>
+    /// ISO 8601 日期或日期时间字符串，如 2026-10-08、2026-10-08T14:30:00。
+    /// </summary>
     Date,
 
-    /// <summary>PNG 或 JPG 的 base64，可带 data:image/png;base64, 前缀，解码后不超过 1 MB。</summary>
+    /// <summary>
+    /// PNG 或 JPG 的 base64，可带 data:image/png;base64, 前缀，解码后不超过 1 MB。
+    /// </summary>
     Image,
 }

@@ -16,16 +16,33 @@ namespace LabelService.Demo;
 /// </remarks>
 internal sealed partial class MainForm
 {
+    /// <summary>
+    /// 自检的输出目录；不是自检时为 null。
+    /// </summary>
     private string? smokeDirectory;
+
+    /// <summary>
+    /// 自检连的真实服务地址；null 表示用内置模拟服务。
+    /// </summary>
     private string? smokeServer;
 
-    /// <summary>窗口显示后跑自检，结果写到 <paramref name="directory"/>；<paramref name="server"/> 为空时用内置模拟服务。</summary>
+    /// <summary>
+    /// 窗口显示后跑自检，结果写到 <paramref name="directory"/>；<paramref name="server"/> 为空时用内置模拟服务。
+    /// </summary>
+    /// <param name="directory">输出目录（截图和 smoke.txt）。</param>
+    /// <param name="server">真实服务的地址；null 表示用内置模拟服务。</param>
     public void RunSmokeOnShown(string directory, string? server)
     {
         smokeDirectory = directory;
         smokeServer = server;
     }
 
+    /// <summary>
+    /// 按顺序走一遍：读取字段、三种格式生成、批量、四种错误、慢调用、调用代码；每一步记 PASS/FAIL，关键步骤截图，最后关闭窗口。
+    /// </summary>
+    /// <param name="directory">输出目录。</param>
+    /// <param name="server">真实服务的地址；null 表示用内置模拟服务。</param>
+    /// <returns>自检结束（窗口已关闭）时完成。</returns>
     private async Task RunSmokeAsync(string directory, string? server)
     {
         Directory.CreateDirectory(directory);
@@ -136,6 +153,11 @@ internal sealed partial class MainForm
         Close();
     }
 
+    /// <summary>
+    /// 改字段表格里一行的值并刷新必填标记。
+    /// </summary>
+    /// <param name="row">行；null 时什么也不做。</param>
+    /// <param name="value">新值。</param>
     private void SetValue(DataGridViewRow? row, string value)
     {
         if (row is not null)
@@ -145,6 +167,11 @@ internal sealed partial class MainForm
         }
     }
 
+    /// <summary>
+    /// 响应信息里有没有显示某个错误码。
+    /// </summary>
+    /// <param name="errorCode">错误码。</param>
+    /// <returns>有时为 true。</returns>
     private bool ResponseHas(string errorCode) =>
         responseList.Items.Cast<ListViewItem>().Any(item => item.SubItems[1].Text == errorCode);
 

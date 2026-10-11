@@ -1,16 +1,38 @@
 <script setup lang="ts">
-/** 图层：上面的在上层。单击选择（Shift 多选），拖动调整叠放顺序，双击重命名。 */
+/**
+ * 图层：上面的在上层。单击选择（Shift 多选），拖动调整叠放顺序，双击重命名。
+ */
 import { computed, nextTick, ref } from 'vue'
 import { ELEMENT_META } from '../model/elements.ts'
 import type { LabelElement } from '../model/template.ts'
 import { commit, designer, moveLayer, select, toast, toggleHidden, toggleLock } from '../stores/designer.ts'
 import AppIcon from './AppIcon.vue'
 
+/**
+ * 图层列表：上层的在前（模板里后面的元素在上层）。
+ */
 const topFirst = computed(() => [...designer.template.elements].reverse())
+
+/**
+ * 正在拖动的元素 ID。
+ */
 const dragging = ref<string | null>(null)
+
+/**
+ * 拖动经过的元素 ID（显示放置位置）。
+ */
 const over = ref<string | null>(null)
+
+/**
+ * 正在重命名的元素 ID。
+ */
 const renaming = ref<string | null>(null)
 
+/**
+ * 单击选择（Shift、Ctrl 加选或减选）；隐藏的元素不能选中。
+ * @param element 元素。
+ * @param event 鼠标事件。
+ */
 function choose(element: LabelElement, event: MouseEvent): void {
   if (element.hidden) {
     toast('隐藏的元素不能在画布上选中，先点眼睛图标显示')
@@ -24,6 +46,10 @@ function choose(element: LabelElement, event: MouseEvent): void {
   }
 }
 
+/**
+ * 开始重命名：显示输入框并全选文字。
+ * @param element 元素。
+ */
 function startRename(element: LabelElement): void {
   renaming.value = element.id
   nextTick(() => {
@@ -33,16 +59,28 @@ function startRename(element: LabelElement): void {
   })
 }
 
+/**
+ * 结束重命名并记录撤销。
+ */
 function endRename(): void {
   renaming.value = null
   commit()
 }
 
+/**
+ * 开始拖动图层。
+ * @param event 拖动事件。
+ * @param element 元素。
+ */
 function onDragStart(event: DragEvent, element: LabelElement): void {
   dragging.value = element.id
   if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move'
 }
 
+/**
+ * 放下：把拖动的元素放到目标上面一层。
+ * @param target 目标元素。
+ */
 function onDrop(target: LabelElement): void {
   const id = dragging.value
   dragging.value = null

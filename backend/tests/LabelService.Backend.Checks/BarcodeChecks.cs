@@ -11,11 +11,16 @@ using ZXing.Common;
 namespace LabelService.Backend.Checks;
 
 /// <summary>
-/// 一维码（T-002）：各码制编码和校验位、模块对齐打印点、过密和非法内容的错误码、人眼可读文字、对齐、旋转，
+/// 一维码：各码制编码和校验位、模块对齐打印点、过密和非法内容的错误码、人眼可读文字、对齐、旋转，
 /// 以及用 ZXing.Net 把渲染出的 PNG 解码回来核对内容。
 /// </summary>
 internal static class BarcodeChecks
 {
+    /// <summary>
+    /// 运行一维码的全部检查。
+    /// </summary>
+    /// <param name="backendRoot">backend 目录。</param>
+    /// <param name="check">记录检查结果。</param>
     public static void Run(string backendRoot, Action<string, bool> check)
     {
         var renderer = Fixtures.Renderer(backendRoot);
@@ -26,6 +31,12 @@ internal static class BarcodeChecks
         CheckLayout(renderer, check);
     }
 
+    /// <summary>
+    /// 示例箱标在 203、300 dpi 下渲染出的条码能被扫出来，内容和数据一致。
+    /// </summary>
+    /// <param name="backendRoot">backend 目录。</param>
+    /// <param name="renderer">渲染引擎。</param>
+    /// <param name="check">记录检查结果。</param>
     private static void CheckSample(string backendRoot, LabelRenderer renderer, Action<string, bool> check)
     {
         var template = Fixtures.LoadTemplate(backendRoot);
@@ -37,6 +48,11 @@ internal static class BarcodeChecks
         }
     }
 
+    /// <summary>
+    /// 各码制：编码后解码回来内容一致，自动补校验位，GS1-128 带 FNC1。
+    /// </summary>
+    /// <param name="renderer">渲染引擎。</param>
+    /// <param name="check">记录检查结果。</param>
     private static void CheckSymbologies(LabelRenderer renderer, Action<string, bool> check)
     {
         (BarcodeSymbology Symbology, string Value, BarcodeFormat Format, string Expected)[] cases =
@@ -74,6 +90,11 @@ internal static class BarcodeChecks
         check("GS1-128 开头带 FNC1（扫描枪识别为 ]C1）", symbologyId as string == "]C1");
     }
 
+    /// <summary>
+    /// 模块宽度是整数个打印点：框放在非整点位置、旋转直角后，条宽仍然是整点，只有纯黑纯白。
+    /// </summary>
+    /// <param name="renderer">渲染引擎。</param>
+    /// <param name="check">记录检查结果。</param>
     private static void CheckDots(LabelRenderer renderer, Action<string, bool> check)
     {
         foreach (var dpi in new[] { 203, 300 })
@@ -100,6 +121,11 @@ internal static class BarcodeChecks
         check("非直角的旋转按最近的直角画", layout.Rotation == 90);
     }
 
+    /// <summary>
+    /// 错误码：过密返回 BARCODE_TOO_DENSE（带建议宽度），内容不符合码制、校验位不对、为空返回 BARCODE_INVALID。
+    /// </summary>
+    /// <param name="renderer">渲染引擎。</param>
+    /// <param name="check">记录检查结果。</param>
     private static void CheckErrors(LabelRenderer renderer, Action<string, bool> check)
     {
         string? Error(BarcodeElement element)
@@ -138,6 +164,11 @@ internal static class BarcodeChecks
         check("内容为空返回 BARCODE_INVALID", Error(Bar(BarcodeSymbology.Code128, "")) == ErrorCodes.BarcodeInvalid);
     }
 
+    /// <summary>
+    /// 排版：人眼可读文字在条码下方或上方、可以关掉，左中右对齐和空白区。
+    /// </summary>
+    /// <param name="renderer">渲染引擎。</param>
+    /// <param name="check">记录检查结果。</param>
     private static void CheckLayout(LabelRenderer renderer, Action<string, bool> check)
     {
         int Dark(BarcodeElement element, double x, double y, double width, double height)
@@ -185,6 +216,13 @@ internal static class BarcodeChecks
         check("同样的码制和内容只编码一次（缓存）", ReferenceEquals(first, LinearSymbols.Encode(BarcodeSymbology.Code128, "CACHE-1", "y")) && SymbolCache.Count <= SymbolCache.Capacity);
     }
 
+    /// <summary>
+    /// 渲染一张 PNG 的任务。
+    /// </summary>
+    /// <param name="template">模板。</param>
+    /// <param name="dpi">分辨率。</param>
+    /// <param name="values">字段值；没有时为空。</param>
+    /// <returns>渲染任务。</returns>
     private static RenderJob Job(LabelTemplate template, int dpi, IReadOnlyDictionary<string, object?>? values = null) =>
         new()
         {
@@ -194,6 +232,13 @@ internal static class BarcodeChecks
             Dpi = dpi
         };
 
+    /// <summary>
+    /// 只有一个元素的模板。
+    /// </summary>
+    /// <param name="element">元素。</param>
+    /// <param name="width">画布宽度，mm。</param>
+    /// <param name="height">画布高度，mm。</param>
+    /// <returns>模板。</returns>
     private static LabelTemplate Single(LabelElement element, double width = 80, double height = 30) =>
         new()
         {
@@ -202,14 +247,29 @@ internal static class BarcodeChecks
             Elements = [element]
         };
 
+    /// <summary>
+    /// 直接调绘制器用的上下文：没有字段、字体和素材。
+    /// </summary>
+    /// <param name="dpi">分辨率。</param>
+    /// <returns>渲染上下文。</returns>
     private static RenderContext Context(int dpi) =>
         new(dpi, false, new Dictionary<string, object?>(), new Dictionary<string, FieldDefinition>(), Rendering.Fonts.FontRegistry.Empty, Rendering.Assets.AssetLibrary.Empty, new WarningList());
 
+    /// <summary>
+    /// 把渲染结果解码成位图。
+    /// </summary>
+    /// <param name="result">PNG 渲染结果。</param>
+    /// <returns>位图，用完释放。</returns>
     private static SKBitmap Bitmap(RenderResult result) => SKBitmap.Decode(result.Content.ToArray());
 
     /// <summary>
     /// 解码。<paramref name="gs1"/> 为 true 时按 GS1 解读：开头的 FNC1 输出为 ]C1，中间的 FNC1 输出为 GS（0x1D）。
     /// </summary>
+    /// <param name="bitmap">渲染出的图。</param>
+    /// <param name="format">要找的码制。</param>
+    /// <param name="autoRotate">是否尝试旋转后再找（旋转过的条码）。</param>
+    /// <param name="gs1">是否按 GS1 解读。</param>
+    /// <returns>解码结果；扫不出来时为 null。</returns>
     private static Result? Decode(SKBitmap bitmap, BarcodeFormat format, bool autoRotate = false, bool gs1 = false)
     {
         var gray = new byte[bitmap.Width * bitmap.Height];
@@ -230,13 +290,27 @@ internal static class BarcodeChecks
         return reader.Decode(new RGBLuminanceSource(gray, bitmap.Width, bitmap.Height, RGBLuminanceSource.BitmapFormat.Gray8));
     }
 
+    /// <summary>
+    /// 取一行像素的红色分量（图是黑白灰的，红色分量就是亮度）。
+    /// </summary>
+    /// <param name="bitmap">位图。</param>
+    /// <param name="y">行。</param>
+    /// <returns>这一行每个像素的亮度。</returns>
     private static byte[] Row(SKBitmap bitmap, int y) => Enumerable.Range(0, bitmap.Width).Select(x => bitmap.GetPixel(x, y).Red).ToArray();
 
+    /// <summary>
+    /// 取一列像素的红色分量。
+    /// </summary>
+    /// <param name="bitmap">位图。</param>
+    /// <param name="x">列。</param>
+    /// <returns>这一列每个像素的亮度。</returns>
     private static byte[] Column(SKBitmap bitmap, int x) => Enumerable.Range(0, bitmap.Height).Select(y => bitmap.GetPixel(x, y).Red).ToArray();
 
     /// <summary>
     /// 一行像素的黑白游程长度。Pure 表示只有纯黑和纯白。第一段和最后一段是两侧空白。
     /// </summary>
+    /// <param name="pixels">一行（或一列）像素的亮度。</param>
+    /// <returns>是否只有纯黑纯白，以及每段的长度（像素）。</returns>
     private static (bool Pure, List<int> Lengths) Runs(byte[] pixels)
     {
         var lengths = new List<int>();
@@ -259,6 +333,15 @@ internal static class BarcodeChecks
         return (pure, lengths);
     }
 
+    /// <summary>
+    /// 数一个区域里的深色像素（按 300 dpi 换算坐标）。
+    /// </summary>
+    /// <param name="bitmap">位图。</param>
+    /// <param name="xMm">区域左边，mm。</param>
+    /// <param name="yMm">区域上边，mm。</param>
+    /// <param name="widthMm">区域宽度，mm。</param>
+    /// <param name="heightMm">区域高度，mm。</param>
+    /// <returns>深色像素的个数。</returns>
     private static int DarkPixels(SKBitmap bitmap, double xMm, double yMm, double widthMm, double heightMm)
     {
         int Dot(double mm) => (int)Math.Round(LabelUnits.MmToDots(mm, 300));

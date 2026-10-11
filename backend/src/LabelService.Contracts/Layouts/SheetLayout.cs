@@ -54,6 +54,8 @@ public sealed class SheetLayout
     /// <summary>
     /// 格子在纸上占的宽高：旋转 90°、270° 时是格子尺寸的宽高互换。
     /// </summary>
+    /// <param name="slot">格子。</param>
+    /// <returns>格子在纸上占的宽和高，mm。</returns>
     public (double Width, double Height) Footprint(SheetSlot slot) =>
         slot.Rotation is 90 or 270 ? (Slot.Height, Slot.Width) : (Slot.Width, Slot.Height);
 }
@@ -63,13 +65,17 @@ public sealed class SheetLayout
 /// </summary>
 public sealed class SheetSize
 {
-    /// <summary>宽度（mm）。</summary>
+    /// <summary>
+    /// 宽度（mm）。
+    /// </summary>
     public double Width
     {
         get; set;
     }
 
-    /// <summary>高度（mm）。</summary>
+    /// <summary>
+    /// 高度（mm）。
+    /// </summary>
     public double Height
     {
         get; set;
@@ -81,19 +87,25 @@ public sealed class SheetSize
 /// </summary>
 public sealed class SheetSlot
 {
-    /// <summary>格子所占矩形左上角的 x（mm）。旋转后的格子也按它在纸上实际占的矩形算。</summary>
+    /// <summary>
+    /// 格子所占矩形左上角的 x（mm）。旋转后的格子也按它在纸上实际占的矩形算。
+    /// </summary>
     public double X
     {
         get; set;
     }
 
-    /// <summary>格子所占矩形左上角的 y（mm）。</summary>
+    /// <summary>
+    /// 格子所占矩形左上角的 y（mm）。
+    /// </summary>
     public double Y
     {
         get; set;
     }
 
-    /// <summary>标签顺时针旋转的角度：0、90、180、270。</summary>
+    /// <summary>
+    /// 标签顺时针旋转的角度：0、90、180、270。
+    /// </summary>
     public int Rotation
     {
         get; set;
@@ -105,13 +117,17 @@ public sealed class SheetSlot
 /// </summary>
 public sealed class SheetOffset
 {
-    /// <summary>向右为正。</summary>
+    /// <summary>
+    /// 向右为正。
+    /// </summary>
     public double X
     {
         get; set;
     }
 
-    /// <summary>向下为正。</summary>
+    /// <summary>
+    /// 向下为正。
+    /// </summary>
     public double Y
     {
         get; set;

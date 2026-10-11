@@ -24,21 +24,62 @@ import type { WorkspaceView } from '../stores/router.ts'
 import { can, inScope } from '../stores/session.ts'
 import { canEdit, discardDraft, loadWorkspace, moveToBusiness, workspace } from '../stores/workspace.ts'
 
+/**
+ * 发布对话框是否打开。
+ */
 const publishOpen = ref(false)
+
+/**
+ * 服务端预览对话框是否打开。
+ */
 const previewOpen = ref(false)
+
+/**
+ * 换业务分组的对话框是否打开。
+ */
 const moveOpen = ref(false)
+
+/**
+ * 要换到的业务分组 ID。
+ */
 const moveTarget = ref(0)
+
+/**
+ * 导入模板 JSON 用的文件输入框。
+ */
 const fileInput = ref<HTMLInputElement>()
 
 watch(() => route.code, (code) => code && loadWorkspace(code), { immediate: true })
 onBeforeUnmount(() => void saveDraft())
 
+/**
+ * 打开的模板的概要。
+ */
 const detail = computed(() => workspace.detail)
+
+/**
+ * 模板所在的业务分组。
+ */
 const business = computed(() => businessOf(detail.value?.businessId))
+
+/**
+ * 模板状态的显示信息。
+ */
 const state = computed(() => (detail.value ? templateState(detail.value) : null))
+
+/**
+ * 模板的纸张尺寸。
+ */
 const page = computed(() => designer.template.page)
+
+/**
+ * 模板种类：A4 等纸张模板，或标签模板。
+ */
 const kind = computed(() => (paperName(page.value) ? `${paperName(page.value)} 纸张模板` : '标签模板'))
-/** 格子尺寸和当前画布相同、已启用的拼版版式（设计书第 4 节“模板详情页列出可用的版式”）。 */
+
+/**
+ * 格子尺寸和当前画布相同、已启用的拼版版式（设计书第 4 节“模板详情页列出可用的版式”）。
+ */
 const layouts = ref<LayoutView[]>([])
 watch(
   () => [detail.value?.code, page.value.width, page.value.height] as const,
@@ -55,8 +96,19 @@ watch(
   { immediate: true },
 )
 
+/**
+ * 有没有未发布的改动（有草稿或有还没保存的修改）。
+ */
 const changed = computed(() => !!detail.value && (detail.value.hasDraft || designer.dirty))
+
+/**
+ * 能不能发布（有 tpl.publish 且模板在自己的业务范围里）。
+ */
 const canPublish = computed(() => can('tpl.publish') && !!detail.value && inScope(detail.value.businessId))
+
+/**
+ * 标题栏里草稿的保存状态。
+ */
 const saveText = computed(() => {
   if (designer.readOnly) return ''
   if (designer.saveError) return '草稿保存失败'
@@ -64,10 +116,17 @@ const saveText = computed(() => {
   return designer.savedAt ? `草稿已保存 ${designer.savedAt}` : ''
 })
 
+/**
+ * 切换页签。
+ * @param view 页签。
+ */
 function setView(view: WorkspaceView): void {
   openWorkspace(route.code, view)
 }
 
+/**
+ * 导出模板 JSON 文件（有不能导出的问题时提示）。
+ */
 function download(): void {
   try {
     const link = document.createElement('a')
@@ -81,6 +140,11 @@ function download(): void {
   }
 }
 
+/**
+ * 导入模板 JSON 文件（替换画布、字段和元素，可以撤销）。
+ * @param event 文件输入框的 change 事件。
+ * @returns 导入结束时完成（失败时提示，不抛）。
+ */
 async function onFile(event: Event): Promise<void> {
   const input = event.target as HTMLInputElement
   const file = input.files?.[0]
@@ -94,6 +158,10 @@ async function onFile(event: Event): Promise<void> {
   }
 }
 
+/**
+ * 放弃未发布的改动（确认后），回到最新发布版本。
+ * @returns 操作结束时完成。
+ */
 async function discard(): Promise<void> {
   if (!(await confirmBox('放弃未发布的改动', `草稿会被删除，模板回到 v${detail.value?.latestVersion} 的内容。这一步不能撤销。`, '放弃改动', true))) return
   try {
@@ -104,11 +172,18 @@ async function discard(): Promise<void> {
   }
 }
 
+/**
+ * 打开换业务分组的对话框，默认选当前分组。
+ */
 function openMove(): void {
   moveTarget.value = detail.value?.businessId ?? catalog.businesses[0]?.id ?? 0
   moveOpen.value = true
 }
 
+/**
+ * 把模板换到选中的业务分组。
+ * @returns 操作结束时完成。
+ */
 async function move(): Promise<void> {
   try {
     await moveToBusiness(moveTarget.value)

@@ -1,4 +1,4 @@
-﻿# 打包客户端 SDK（T-011）：生成 LabelService.Client.{版本}.nupkg（含 .snupkg）和 LabelService.Client-{版本}.zip。
+﻿# 打包客户端 SDK：生成 LabelService.Client.{版本}.nupkg（含 .snupkg）和 LabelService.Client-{版本}.zip。
 # zip 里有三个目标框架的 DLL 和 XML 注释、System.Text.Json 依赖说明、README、CHANGELOG、演示程序源码。
 #
 # 用法（在仓库根目录）：

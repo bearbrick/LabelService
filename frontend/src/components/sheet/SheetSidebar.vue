@@ -3,14 +3,59 @@
  * 拼版设计器左侧：尺寸相同的已发布模板（拖到纸上生成格子，点一下换格子里的预览），自动排列（行列、页边距、间距，一键排满）。
  */
 import { computed, reactive, watch } from 'vue'
-import { fitGrid } from '../../model/layout.ts'
+import { fitGrid } from '../../model/layoutArrange.ts'
 import type { FillOrder } from '../../model/layout.ts'
 import { applyArrange, matchingTemplates, setPreview, sheet } from '../../stores/sheet.ts'
 import TemplateThumb from '../admin/TemplateThumb.vue'
 
-defineProps<{ readOnly: boolean }>()
+defineProps<{
+  /**
+   * 只读：不能拖入模板、不能自动排列。
+   */
+  readOnly: boolean
+}>()
 
-const form = reactive({ rows: 1, cols: 1, marginTop: 0, marginLeft: 0, gapX: 0, gapY: 0, rotate: false, order: 'rows' as FillOrder })
+/**
+ * 自动排列的参数（打开版式时按纸张排满）。
+ */
+const form = reactive({
+  /**
+   * 行数。
+   */
+  rows: 1,
+  /**
+   * 列数。
+   */
+  cols: 1,
+  /**
+   * 上边距，mm。
+   */
+  marginTop: 0,
+  /**
+   * 左边距，mm。
+   */
+  marginLeft: 0,
+  /**
+   * 列间距，mm。
+   */
+  gapX: 0,
+  /**
+   * 行间距，mm。
+   */
+  gapY: 0,
+  /**
+   * 格子都转 90°。
+   */
+  rotate: false,
+  /**
+   * 填充顺序。
+   */
+  order: 'rows' as FillOrder,
+})
+
+/**
+ * 按当前参数排列是否放得下（放不下时提示，按钮不可用）。
+ */
 const fits = computed(() => {
   const layout = sheet.layout
   if (!layout) return true
@@ -20,7 +65,9 @@ const fits = computed(() => {
     && form.marginTop + form.rows * height + (form.rows - 1) * form.gapY <= layout.paper.height + 0.05
 })
 
-/** 按纸张和格子尺寸算出最多几行几列、居中的页边距。 */
+/**
+ * 按纸张和格子尺寸算出最多几行几列、居中的页边距。
+ */
 function maximize(): void {
   const layout = sheet.layout
   if (!layout) return
@@ -29,6 +76,11 @@ function maximize(): void {
 
 watch(() => sheet.layout?.code, maximize, { immediate: true })
 
+/**
+ * 开始拖模板：记下模板编码，同时把格子里的预览换成它。
+ * @param event 拖动事件。
+ * @param code 模板编码。
+ */
 function onDragStart(event: DragEvent, code: string): void {
   if (!event.dataTransfer) return
   event.dataTransfer.effectAllowed = 'copy'

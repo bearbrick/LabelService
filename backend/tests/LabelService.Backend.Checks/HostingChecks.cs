@@ -15,10 +15,16 @@ using Microsoft.Extensions.Options;
 namespace LabelService.Backend.Checks;
 
 /// <summary>
-/// 运行保障（T-017）：就绪检查等预热完成、渲染并发限制和排队超时 503、每日备份的快照和保留份数、用快照恢复的演练。
+/// 运行保障：就绪检查等预热完成、渲染并发限制和排队超时 503、每日备份的快照和保留份数、用快照恢复的演练。
 /// </summary>
 internal static class HostingChecks
 {
+    /// <summary>
+    /// 运行运行保障的全部检查：用临时数据目录启动服务，备份后停服务做恢复演练。
+    /// </summary>
+    /// <param name="backendRoot">backend 目录。</param>
+    /// <param name="check">记录检查结果。</param>
+    /// <returns>检查做完时完成。</returns>
     public static async Task RunAsync(string backendRoot, Action<string, bool> check)
     {
         await CheckGateAsync(check);
@@ -42,6 +48,11 @@ internal static class HostingChecks
         }
     }
 
+    /// <summary>
+    /// 渲染并发闸门本身：名额用完时排队、超时返回 null、重复释放不多放名额，默认并发数和排队上限。
+    /// </summary>
+    /// <param name="check">记录检查结果。</param>
+    /// <returns>检查做完时完成。</returns>
     private static async Task CheckGateAsync(Action<string, bool> check)
     {
         using var provider = new ServiceCollection().AddMetrics().BuildServiceProvider();
@@ -61,6 +72,13 @@ internal static class HostingChecks
         check("渲染并发数默认等于 CPU 核数，排队上限默认 2 秒", cores.Capacity == Environment.ProcessorCount && cores.TimeoutSeconds == 2);
     }
 
+    /// <summary>
+    /// 就绪检查：预热完成前不通过，/health 只看存活，预热完成后 /health/ready 通过。
+    /// </summary>
+    /// <param name="services">服务的根容器。</param>
+    /// <param name="http">调用服务的客户端。</param>
+    /// <param name="check">记录检查结果。</param>
+    /// <returns>检查做完时完成。</returns>
     private static async Task CheckReadyAsync(IServiceProvider services, HttpClient http, Action<string, bool> check)
     {
         var fresh = new WarmupHealthCheck(new WarmupState());
@@ -81,6 +99,13 @@ internal static class HostingChecks
             && state.Templates >= 1 && state.Duration < TimeSpan.FromSeconds(30));
     }
 
+    /// <summary>
+    /// 占满渲染名额后请求排队，超时返回 503 和 Retry-After；释放后恢复正常。
+    /// </summary>
+    /// <param name="services">服务的根容器。</param>
+    /// <param name="http">调用服务的客户端。</param>
+    /// <param name="check">记录检查结果。</param>
+    /// <returns>检查做完时完成。</returns>
     private static async Task CheckBusyAsync(IServiceProvider services, HttpClient http, Action<string, bool> check)
     {
         var gate = services.GetRequiredService<RenderGate>();
@@ -101,6 +126,12 @@ internal static class HostingChecks
         check("名额释放后恢复正常", (await RenderAsync(http)).StatusCode == HttpStatusCode.OK);
     }
 
+    /// <summary>
+    /// 每日备份：生成主库和日志库的快照，只保留最近 7 份，快照是完整的 WAL 模式的库。
+    /// </summary>
+    /// <param name="services">服务的根容器。</param>
+    /// <param name="check">记录检查结果。</param>
+    /// <returns>这次备份的快照目录，给恢复演练用。</returns>
     private static async Task<string> CheckBackupAsync(IServiceProvider services, Action<string, bool> check)
     {
         var backup = services.GetRequiredService<BackupService>();
@@ -121,6 +152,14 @@ internal static class HostingChecks
         return snapshot;
     }
 
+    /// <summary>
+    /// 恢复演练：删掉数据后用快照替换主库，服务正常启动、数据回来；库文件不是 WAL 模式时也能启动。
+    /// </summary>
+    /// <param name="backendRoot">backend 目录。</param>
+    /// <param name="dataDirectory">临时数据目录（服务已停）。</param>
+    /// <param name="snapshot">备份的快照目录。</param>
+    /// <param name="check">记录检查结果。</param>
+    /// <returns>检查做完时完成。</returns>
     private static async Task CheckRestoreAsync(string backendRoot, string dataDirectory, string snapshot, Action<string, bool> check)
     {
         var database = Path.Combine(dataDirectory, "label.db");
@@ -149,6 +188,11 @@ internal static class HostingChecks
             (await RenderAsync(client)).StatusCode == HttpStatusCode.OK && await ScalarAsync(database, "PRAGMA journal_mode") == "wal");
     }
 
+    /// <summary>
+    /// 用示例请求体和开发 Key 调一次单张生成。
+    /// </summary>
+    /// <param name="http">调用服务的客户端。</param>
+    /// <returns>响应。</returns>
     private static Task<HttpResponseMessage> RenderAsync(HttpClient http)
     {
         var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/render")
@@ -159,6 +203,12 @@ internal static class HostingChecks
         return http.SendAsync(request);
     }
 
+    /// <summary>
+    /// 直接打开 SQLite 库文件执行一条 COUNT 查询（不用连接池，执行完库文件不被占用）。
+    /// </summary>
+    /// <param name="database">库文件路径。</param>
+    /// <param name="sql">查询语句。</param>
+    /// <returns>查询结果。</returns>
     private static async Task<long> CountAsync(string database, string sql)
     {
         await using var connection = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = database, Pooling = false }.ToString());
@@ -168,6 +218,12 @@ internal static class HostingChecks
         return (long)(await command.ExecuteScalarAsync())!;
     }
 
+    /// <summary>
+    /// 直接打开 SQLite 库文件执行一条查询，取第一行第一列（不用连接池）。
+    /// </summary>
+    /// <param name="database">库文件路径。</param>
+    /// <param name="sql">查询语句，如 PRAGMA journal_mode。</param>
+    /// <returns>结果的文本；没有结果时为 null。</returns>
     private static async Task<string?> ScalarAsync(string database, string sql)
     {
         await using var connection = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = database, Pooling = false }.ToString());
@@ -177,6 +233,12 @@ internal static class HostingChecks
         return (await command.ExecuteScalarAsync())?.ToString();
     }
 
+    /// <summary>
+    /// 直接打开 SQLite 库文件执行一条语句（不用连接池）。
+    /// </summary>
+    /// <param name="database">库文件路径。</param>
+    /// <param name="sql">语句。</param>
+    /// <returns>执行完时完成。</returns>
     private static async Task ExecuteAsync(string database, string sql)
     {
         await using var connection = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = database, Pooling = false }.ToString());

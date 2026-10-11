@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * 拼版版式（ADR 0005，T-019）：`#/layouts` 是版式列表，`#/layouts/编码` 是拼版设计器。
+ * 拼版版式（ADR 0005）：`#/layouts` 是版式列表，`#/layouts/编码` 是拼版设计器。
  * 新建时选纸张和一个已发布的模板，格子尺寸取模板尺寸，先按纸张排满再拖动微调；保存后开放接口立即能用。
  */
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
@@ -9,7 +9,8 @@ import { deleteLayout, getLayout, listLayouts } from '../api/layouts.ts'
 import AppIcon from '../components/AppIcon.vue'
 import ModalDialog from '../components/admin/ModalDialog.vue'
 import SheetEditor from '../components/sheet/SheetEditor.vue'
-import { PAPERS, fitGrid, newLayout, suggestCode } from '../model/layout.ts'
+import { PAPERS } from '../model/layout.ts'
+import { fitGrid, newLayout, suggestCode } from '../model/layoutArrange.ts'
 import type { LayoutView } from '../model/layout.ts'
 import { fmtTime } from '../model/format.ts'
 import { catalog } from '../stores/catalog.ts'
@@ -19,15 +20,83 @@ import { go, route } from '../stores/router.ts'
 import { can } from '../stores/session.ts'
 import { closeLayout, dirty, openLayout, problems, saveLayout, sheet } from '../stores/sheet.ts'
 
+/**
+ * 版式列表。
+ */
 const layouts = ref<LayoutView[]>([])
+
+/**
+ * 正在读取列表。
+ */
 const loading = ref(false)
+
+/**
+ * 读取失败的原因。
+ */
 const error = ref('')
+
+/**
+ * 能不能新建、修改、删除版式（res.manage）。
+ */
 const canEdit = computed(() => can('res.manage'))
+
+/**
+ * 发布过的模板（新建版式时可选）。
+ */
 const published = computed(() => catalog.templates.filter((item) => item.latestVersion > 0))
-const form = reactive({ open: false, paper: PAPERS[0].name, width: 210, height: 297, template: '', code: '', name: '', error: '' })
+
+/**
+ * 新建版式的表单。
+ */
+const form = reactive({
+  /**
+   * 新建对话框是否打开。
+   */
+  open: false,
+  /**
+   * 纸张名称（PAPERS 里的一项，或“自定义”）。
+   */
+  paper: PAPERS[0].name,
+  /**
+   * 纸张宽度，mm。
+   */
+  width: 210,
+  /**
+   * 纸张高度，mm。
+   */
+  height: 297,
+  /**
+   * 格子尺寸取自哪个模板（模板编码）。
+   */
+  template: '',
+  /**
+   * 版式编码。
+   */
+  code: '',
+  /**
+   * 版式名称。
+   */
+  name: '',
+  /**
+   * 表单错误。
+   */
+  error: '',
+})
+
+/**
+ * 选中的模板；没选时为 null。
+ */
 const chosen = computed(() => published.value.find((item) => item.code === form.template) ?? null)
+
+/**
+ * 按纸张和模板尺寸最多能排几行几列。
+ */
 const grid = computed(() => (chosen.value ? fitGrid({ width: form.width, height: form.height }, { width: chosen.value.width, height: chosen.value.height }, false) : null))
 
+/**
+ * 重新读取版式列表。
+ * @returns 读取结束时完成。
+ */
 async function refresh(): Promise<void> {
   loading.value = true
   try {
@@ -40,7 +109,11 @@ async function refresh(): Promise<void> {
   }
 }
 
-/** 地址里有编码时打开设计器（刚新建、还没保存的版式直接用内存里的）。 */
+/**
+ * 地址里有编码时打开设计器（刚新建、还没保存的版式直接用内存里的）。
+ * @param code 版式编码；空字符串表示回到列表。
+ * @returns 打开或刷新完成时结束。
+ */
 async function load(code: string): Promise<void> {
   if (!code) {
     closeLayout()
@@ -59,6 +132,9 @@ async function load(code: string): Promise<void> {
 
 watch(() => (route.page === 'layouts' ? route.section : null), (code) => code !== null && void load(code), { immediate: true })
 
+/**
+ * 打开新建对话框：默认 A4 纵向，选第一个一张纸能放两个以上的模板，并给出建议的编码和名称。
+ */
 function startNew(): void {
   // 默认选一张纸上能放两个以上的模板（A4 唛头这种整页的模板拼版没有意义）。
   const several = published.value.find((item) => {
@@ -69,18 +145,27 @@ function startNew(): void {
   suggest()
 }
 
+/**
+ * 换纸张：带出宽高，重新给出建议的编码和名称。
+ */
 function onPaper(): void {
   const paper = PAPERS.find((item) => item.name === form.paper)
   if (paper) Object.assign(form, { width: paper.width, height: paper.height })
   suggest()
 }
 
+/**
+ * 按纸张、模板和能排的行列给出建议的编码和名称。
+ */
 function suggest(): void {
   if (!chosen.value || !grid.value) return
   form.code = suggestCode(form.paper, { width: chosen.value.width, height: chosen.value.height }, grid.value.rows, grid.value.cols)
   form.name = `${form.paper.startsWith('A') ? form.paper.slice(0, 2) : `${form.width}×${form.height}`} · ${chosen.value.width}×${chosen.value.height} · ${grid.value.cols} 列 × ${grid.value.rows} 行`
 }
 
+/**
+ * 新建版式：编码不能重复，纸张至少放得下一个格子；在内存里打开（还没保存），进入拼版设计器。
+ */
 function create(): void {
   if (!chosen.value) return
   if (layouts.value.some((item) => item.layout.code === form.code)) {
@@ -99,6 +184,10 @@ function create(): void {
   go('layouts', layout.code)
 }
 
+/**
+ * 保存版式（有越界、重叠时不保存并提示第一个问题）。
+ * @returns 保存结束时完成。
+ */
 async function save(): Promise<void> {
   if (!canEdit.value || !sheet.layout) return
   if (problems.value.messages.length) {
@@ -113,12 +202,21 @@ async function save(): Promise<void> {
   }
 }
 
+/**
+ * 回到版式列表（有未保存的改动时先确认）。
+ * @returns 操作结束时完成。
+ */
 async function back(): Promise<void> {
   if (dirty.value && !(await confirmBox('离开拼版设计器', '有还没保存的改动，确定离开？', '离开', true))) return
   closeLayout()
   go('layouts')
 }
 
+/**
+ * 删除版式（确认后）。
+ * @param view 版式。
+ * @returns 操作结束时完成。
+ */
 async function remove(view: LayoutView): Promise<void> {
   if (!(await confirmBox('删除版式', `确定删除“${view.layout.name}”（${view.layout.code}）？之后带这个编码的请求会返回 LAYOUT_NOT_FOUND。`, '删除', true))) return
   try {
@@ -129,6 +227,10 @@ async function remove(view: LayoutView): Promise<void> {
   }
 }
 
+/**
+ * 有未保存的改动时，关闭或刷新页面前让浏览器提示确认。
+ * @param event 页面卸载前的事件。
+ */
 function onBeforeUnload(event: BeforeUnloadEvent): void {
   if (dirty.value) event.preventDefault()
 }

@@ -1,15 +1,25 @@
 /**
  * 图标元素用的图标库：GB/T 191 包装储运图示标志（简化示意，24×24 网格的线条路径）。
- * 模板里写 `icon: "gb191/fragile"`。服务端图标库（T-004）要提供同名图标。
+ * 模板里写 `icon: "gb191/fragile"`。服务端图标库（backend/assets/icons）要提供同名图标。
  */
 
+/**
+ * 图标库里的一个图标。
+ */
 export interface LabelIcon {
-  /** 中文名。 */
+  /**
+   * 中文名。
+   */
   name: string
-  /** SVG 路径，24×24 网格，只描边不填充。 */
+  /**
+   * SVG 路径，24×24 网格，只描边不填充。
+   */
   d: string
 }
 
+/**
+ * 全部图标，key 是模板里写的路径（如 gb191/fragile）。后端检查程序会核对它们和 backend/assets/icons 一致。
+ */
 export const LABEL_ICONS: Readonly<Record<string, LabelIcon>> = {
   'gb191/fragile': { name: '易碎物品', d: 'M7 3h10l-.7 5.6a4.3 4.3 0 0 1-8.6 0z M12 12.3v7.2 M8.5 20.5h7 M11 3.2l1.4 2.4-1.6 1.3 1.4 2' },
   'gb191/up': { name: '向上', d: 'M8 18V4.5 M4.8 7.7L8 4.5l3.2 3.2 M16 18V4.5 M12.8 7.7L16 4.5l3.2 3.2 M4 20.5h16' },
@@ -21,9 +31,16 @@ export const LABEL_ICONS: Readonly<Record<string, LabelIcon>> = {
   'gb191/center-of-gravity': { name: '重心', d: 'M4 4h16v16H4z M12 8v8 M8 12h8 M9.5 12a2.5 2.5 0 1 0 5 0a2.5 2.5 0 1 0-5 0' },
 }
 
+/**
+ * 新建图标元素时的默认图标（易碎物品）。
+ */
 export const DEFAULT_ICON = 'gb191/fragile'
 
-/** 按路径找图标；找不到时用默认图标。 */
+/**
+ * 按路径找图标；找不到时用默认图标。
+ * @param key 图标路径。
+ * @returns 图标。
+ */
 export function findIcon(key: string | undefined): LabelIcon {
   return LABEL_ICONS[key ?? ''] ?? LABEL_ICONS[DEFAULT_ICON]
 }

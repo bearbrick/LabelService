@@ -8,6 +8,8 @@ internal static class BenchmarkPaths
     /// <summary>
     /// backend 目录（有 LabelService.Backend.slnx 的那一层）。
     /// </summary>
+    /// <returns>backend 目录的完整路径。</returns>
+    /// <exception cref="DirectoryNotFoundException">不在仓库里运行。</exception>
     public static string BackendDirectory()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
@@ -22,10 +24,12 @@ internal static class BenchmarkPaths
     /// <summary>
     /// 字体目录 backend/assets/fonts。
     /// </summary>
+    /// <returns>字体目录的完整路径。</returns>
     public static string FontDirectory() => Path.Combine(BackendDirectory(), "assets", "fonts");
 
     /// <summary>
     /// 基线文件 backend/tests/LabelService.Benchmarks/baseline.json。
     /// </summary>
+    /// <returns>基线文件的完整路径。</returns>
     public static string BaselineFile() => Path.Combine(BackendDirectory(), "tests", "LabelService.Benchmarks", "baseline.json");
 }

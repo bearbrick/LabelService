@@ -100,25 +100,39 @@ public abstract class LabelElement(string type)
 /// </summary>
 public static class ElementTypes
 {
-    /// <summary>文本。</summary>
+    /// <summary>
+    /// 文本。
+    /// </summary>
     public const string Text = "text";
 
-    /// <summary>一维码。</summary>
+    /// <summary>
+    /// 一维码。
+    /// </summary>
     public const string Barcode = "barcode";
 
-    /// <summary>二维码（QR、DataMatrix、PDF417）。</summary>
+    /// <summary>
+    /// 二维码（QR、DataMatrix、PDF417）。
+    /// </summary>
     public const string QrCode = "qrcode";
 
-    /// <summary>图片。</summary>
+    /// <summary>
+    /// 图片。
+    /// </summary>
     public const string Image = "image";
 
-    /// <summary>图标库里的 SVG 图标。</summary>
+    /// <summary>
+    /// 图标库里的 SVG 图标。
+    /// </summary>
     public const string Icon = "icon";
 
-    /// <summary>横线或竖线。</summary>
+    /// <summary>
+    /// 横线或竖线。
+    /// </summary>
     public const string Line = "line";
 
-    /// <summary>矩形。</summary>
+    /// <summary>
+    /// 矩形。
+    /// </summary>
     public const string Rect = "rect";
 
     /// <summary>

@@ -10,7 +10,7 @@ using BenchmarkDotNet.Running;
 namespace LabelService.Benchmarks;
 
 /// <summary>
-/// 基准门禁（T-015、设计书第 9 节“压测与防退化”）：跑全部基准，中位数比基线慢 20% 以上就返回非零退出码，CI 据此拦住合并。
+/// 基准门禁（设计书第 9 节“压测与防退化”）：跑全部基准，中位数比基线慢 20% 以上就返回非零退出码，CI 据此拦住合并。
 /// </summary>
 /// <remarks>
 /// <para>
@@ -28,11 +28,16 @@ internal static class BaselineGate
     /// </summary>
     public const double Threshold = 0.20;
 
+    /// <summary>
+    /// 读写基线文件的 JSON 设置：缩进、中文不转义（方便人看和比较差异）。
+    /// </summary>
     private static readonly JsonSerializerOptions Json = new() { WriteIndented = true, Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
 
     /// <summary>
     /// 运行门禁或更新基线，返回退出码。
     /// </summary>
+    /// <param name="args">命令行参数（--gate、--update-baseline、--filter、--baseline）。</param>
+    /// <returns>退出码：0 通过，1 有基准变慢或运行不完整。</returns>
     public static int Run(string[] args)
     {
         var path = Option(args, "--baseline") ?? BenchmarkPaths.BaselineFile();
@@ -131,14 +136,26 @@ internal static class BaselineGate
     /// <summary>
     /// 基准名：类名.方法名(参数)，如 TemplateBenchmarks.Render(Format=Pdf, Template=a4-shipping-mark)。
     /// </summary>
+    /// <param name="report">一项基准的结果。</param>
+    /// <returns>基准名。</returns>
     private static string Name(BenchmarkReport report) => Name(report.BenchmarkCase);
 
+    /// <summary>
+    /// 基准名：类名.方法名(参数)，参数部分去掉 BenchmarkDotNet 加的方括号。
+    /// </summary>
+    /// <param name="benchmark">一项基准。</param>
+    /// <returns>基准名。</returns>
     private static string Name(BenchmarkCase benchmark)
     {
         var parameters = benchmark.Parameters.DisplayInfo;
         return $"{benchmark.Descriptor.Type.Name}.{benchmark.Descriptor.WorkloadMethod.Name}{(string.IsNullOrEmpty(parameters) ? "" : "(" + parameters.Trim('[', ']') + ")")}";
     }
 
+    /// <summary>
+    /// 这次运行的机器信息：CPU 型号、逻辑核数、运行时版本，写进基线、比较时提示是否一致。
+    /// </summary>
+    /// <param name="summaries">各基准类的运行汇总。</param>
+    /// <returns>机器信息。</returns>
     private static string Machine(Summary[] summaries)
     {
         var host = summaries.FirstOrDefault()?.HostEnvironmentInfo;
@@ -146,13 +163,21 @@ internal static class BaselineGate
         return $"{cpu.Trim()}，{Environment.ProcessorCount} 个逻辑核，{host?.RuntimeVersion}";
     }
 
+    /// <summary>
+    /// 取命令行里某个选项后面的值。
+    /// </summary>
+    /// <param name="args">命令行参数。</param>
+    /// <param name="name">选项名，如 --filter。</param>
+    /// <returns>选项的值；没有这个选项或后面没有值时为 null。</returns>
     private static string? Option(string[] args, string name)
     {
         var index = Array.IndexOf(args, name);
         return index >= 0 && index + 1 < args.Length ? args[index + 1] : null;
     }
 
-    /// <summary>基线文件。</summary>
+    /// <summary>
+    /// 基线文件。
+    /// </summary>
     /// <param name="Machine">测基线的机器。</param>
     /// <param name="Updated">更新日期。</param>
     /// <param name="Results">各基准的中位数，毫秒。</param>

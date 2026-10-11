@@ -5,15 +5,21 @@ using LabelService.Contracts.Protocol;
 namespace LabelService.Backend.Checks;
 
 /// <summary>
-/// 管理后台的账号和权限（T-014，ADR 0006）：登录、首次改密码、锁定、令牌和 API Key 互不相通、用户和角色的规则、停用立即生效、操作日志。
+/// 管理后台的账号和权限（ADR 0006）：登录、首次改密码、锁定、令牌和 API Key 互不相通、用户和角色的规则、停用立即生效、操作日志。
 /// </summary>
 internal static class AdminAccountChecks
 {
+    /// <summary>
+    /// 检查程序给 admin 改的新密码（只在临时数据目录里用）。
+    /// </summary>
     public const string AdminPassword = "Admin2026x";
 
     /// <summary>
     /// 跑完返回管理员会话，给后面的检查用。
     /// </summary>
+    /// <param name="http">调用服务的客户端。</param>
+    /// <param name="check">记录检查结果。</param>
+    /// <returns>已登录并改过密码的 admin 会话。</returns>
     public static async Task<AdminSession> RunAsync(HttpClient http, Action<string, bool> check)
     {
         var (login, first, me) = await AdminSession.LoginAsync(http, "admin", "admin123");
@@ -64,6 +70,13 @@ internal static class AdminAccountChecks
         return admin;
     }
 
+    /// <summary>
+    /// 用户和角色的规则：新建用户给临时密码、不能改自己的角色、不能停用自己、停用立即生效、内置角色不能删、在用的角色不能删。
+    /// </summary>
+    /// <param name="http">调用服务的客户端。</param>
+    /// <param name="admin">已登录并改过密码的 admin 会话。</param>
+    /// <param name="check">记录检查结果。</param>
+    /// <returns>检查做完时完成。</returns>
     private static async Task CheckUsersAndRolesAsync(HttpClient http, AdminSession admin, Action<string, bool> check)
     {
         var roles = await admin.JsonAsync(HttpMethod.Get, "/api/admin/roles");
@@ -189,6 +202,13 @@ internal static class AdminAccountChecks
     /// <summary>
     /// 新建一个用户并改好密码，返回登录会话。
     /// </summary>
+    /// <param name="http">调用服务的客户端。</param>
+    /// <param name="admin">有用户管理权限的会话。</param>
+    /// <param name="account">新账号。</param>
+    /// <param name="roleName">角色名，如“设计员”。</param>
+    /// <param name="allBusinesses">能访问全部业务分组。</param>
+    /// <param name="businessIds">能访问的业务分组 ID。</param>
+    /// <returns>新用户的会话（已改好密码）和用户 ID。</returns>
     public static async Task<(AdminSession Session, int Id)> CreateUserAsync(HttpClient http, AdminSession admin, string account, string roleName, bool allBusinesses, int[] businessIds)
     {
         var roles = await admin.JsonAsync(HttpMethod.Get, "/api/admin/roles");

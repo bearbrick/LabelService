@@ -1,7 +1,7 @@
 #:property ManagePackageVersionsCentrally=false
 #:package Microsoft.Data.Sqlite.Core@10.0.12
 #:package SQLitePCLRaw.bundle_e_sqlite3@2.1.12
-// 从调用日志库 label-log.db 算单张接口在一个时间窗内的耗时分位数（T-021）。duration_ms 从开始处理请求算到写完最后一个字节，
+// 从调用日志库 label-log.db 算单张接口在一个时间窗内的耗时分位数。duration_ms 从开始处理请求算到写完最后一个字节，
 // 是设计书“服务端处理时间”的口径；响应头 Server-Timing 的 total 只到写响应头为止，偏小。包版本和服务端用的一致。
 // 用法（压测前记下 UTC 时间）：dotnet run log-report.cs <label-log.db> <起始 UTC，如 2026-10-10T07:20:00Z> [结束 UTC]
 using System.Globalization;

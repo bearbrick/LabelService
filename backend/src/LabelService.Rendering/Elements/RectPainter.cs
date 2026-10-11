@@ -8,10 +8,13 @@ namespace LabelService.Rendering.Elements;
 /// </summary>
 internal sealed class RectPainter : IElementPainter
 {
+    /// <inheritdoc />
     public string ElementType => ElementTypes.Rect;
 
+    /// <inheritdoc />
     public ElementLayout Layout(LabelElement element, RenderContext context) => new(element, context.Box(element));
 
+    /// <inheritdoc />
     public void Draw(SKCanvas canvas, ElementLayout layout, RenderContext context)
     {
         var element = (RectElement)layout.Element;
@@ -32,6 +35,7 @@ internal sealed class RectPainter : IElementPainter
             return;
         }
 
+        // 边框整个画在框内侧：路径往里收半个线宽，圆角半径也相应减小。
         var strokeWidth = context.Dots(stroke.Width);
         var inner = layout.Bounds;
         inner.Inflate(-strokeWidth / 2, -strokeWidth / 2);

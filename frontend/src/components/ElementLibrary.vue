@@ -1,5 +1,7 @@
 <script setup lang="ts">
-/** 元素库：基础元素、GB/T 191 图标、图片素材。点击添加到视图中心，或拖到画布上指定位置。 */
+/**
+ * 元素库：基础元素、GB/T 191 图标、图片素材。点击添加到视图中心，或拖到画布上指定位置。
+ */
 import { ELEMENT_META } from '../model/elements.ts'
 import { LABEL_ICONS } from '../model/icons.ts'
 import { ELEMENT_TYPES } from '../model/template.ts'
@@ -9,6 +11,11 @@ import { can } from '../stores/session.ts'
 import { endDrag, startDrag } from '../stores/drag.ts'
 import AppIcon from './AppIcon.vue'
 
+/**
+ * 上传图片素材（选文件后自动上传）。
+ * @param event 文件输入框的 change 事件。
+ * @returns 上传结束时完成（失败时提示，不抛）。
+ */
 async function onUpload(event: Event): Promise<void> {
   const input = event.target as HTMLInputElement
   const file = input.files?.[0]

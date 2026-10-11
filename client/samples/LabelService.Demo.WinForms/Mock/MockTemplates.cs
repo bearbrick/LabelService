@@ -5,6 +5,9 @@ namespace LabelService.Demo.Mock;
 /// </summary>
 internal static class MockTemplates
 {
+    /// <summary>
+    /// 全部模拟模板。
+    /// </summary>
     private static readonly MockTemplate[] All =
     [
         new MockTemplate("BOX_LABEL", "成品箱标", 100, 60, 300,
@@ -28,31 +31,65 @@ internal static class MockTemplates
         ]),
     ];
 
-    /// <summary>按编码找模板（忽略大小写和首尾空白）。</summary>
+    /// <summary>
+    /// 按编码找模板（忽略大小写和首尾空白）。
+    /// </summary>
+    /// <param name="code">模板编码。</param>
+    /// <returns>模板；没有时为 null。</returns>
     public static MockTemplate? Find(string code) =>
         All.FirstOrDefault(template => string.Equals(template.Code, code.Trim(), StringComparison.OrdinalIgnoreCase));
 }
 
-/// <summary>模拟模板。</summary>
+/// <summary>
+/// 模拟模板。
+/// </summary>
+/// <param name="code">模板编码。</param>
+/// <param name="name">模板名称。</param>
+/// <param name="width">宽度，mm。</param>
+/// <param name="height">高度，mm。</param>
+/// <param name="dpi">默认分辨率。</param>
+/// <param name="fields">字段定义。</param>
 internal sealed class MockTemplate(string code, string name, double width, double height, int dpi, MockField[] fields)
 {
+    /// <summary>
+    /// 模板编码。
+    /// </summary>
     public string Code { get; } = code;
 
+    /// <summary>
+    /// 模板名称。
+    /// </summary>
     public string Name { get; } = name;
 
+    /// <summary>
+    /// 宽度，mm。
+    /// </summary>
     public double Width { get; } = width;
 
+    /// <summary>
+    /// 高度，mm。
+    /// </summary>
     public double Height { get; } = height;
 
+    /// <summary>
+    /// 默认分辨率。
+    /// </summary>
     public int Dpi { get; } = dpi;
 
+    /// <summary>
+    /// 版本号（模拟服务固定为 1）。
+    /// </summary>
     public int Version => 1;
 
+    /// <summary>
+    /// 字段定义。
+    /// </summary>
     public MockField[] Fields { get; } = fields;
 
     /// <summary>
     /// GET /api/v1/templates/{code}/schema 的响应体。
     /// </summary>
+    /// <returns>响应体（匿名对象，按驼峰序列化）。</returns>
     public object Schema() => new
     {
         templateCode = Code,
@@ -71,6 +108,9 @@ internal sealed class MockTemplate(string code, string name, double width, doubl
     /// <summary>
     /// 缺少的必填字段，按服务端的错误明细格式（index、field、code、message）。
     /// </summary>
+    /// <param name="data">一条标签的字段值（文本）。</param>
+    /// <param name="index">批量里的序号（从 0 开始）；单张时为 null，明细里不写 index。</param>
+    /// <returns>每个缺少的字段一条明细；不缺时为空。</returns>
     public List<Dictionary<string, object>> Missing(Dictionary<string, string> data, int? index)
     {
         var errors = new List<Dictionary<string, object>>();
@@ -89,16 +129,38 @@ internal sealed class MockTemplate(string code, string name, double width, doubl
     }
 }
 
-/// <summary>模拟字段。</summary>
+/// <summary>
+/// 模拟字段。
+/// </summary>
+/// <param name="key">字段 key。</param>
+/// <param name="name">字段名称。</param>
+/// <param name="type">字段类型：string、number、date。</param>
+/// <param name="required">是否必填。</param>
+/// <param name="sample">样例值（文本）。</param>
 internal sealed class MockField(string key, string name, string type, bool required, string sample)
 {
+    /// <summary>
+    /// 字段 key。
+    /// </summary>
     public string Key { get; } = key;
 
+    /// <summary>
+    /// 字段名称。
+    /// </summary>
     public string Name { get; } = name;
 
+    /// <summary>
+    /// 字段类型。
+    /// </summary>
     public string Type { get; } = type;
 
+    /// <summary>
+    /// 是否必填。
+    /// </summary>
     public bool Required { get; } = required;
 
+    /// <summary>
+    /// 样例值。
+    /// </summary>
     public string Sample { get; } = sample;
 }

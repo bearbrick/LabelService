@@ -1,5 +1,7 @@
 <script setup lang="ts">
-/** 调用方与密钥：每个业务系统一个调用方和一把 API Key，按业务分组授权，可选 IP 白名单。Key 只在创建和重置时显示一次。 */
+/**
+ * 调用方与密钥：每个业务系统一个调用方和一把 API Key，按业务分组授权，可选 IP 白名单。Key 只在创建和重置时显示一次。
+ */
 import { computed, onMounted, reactive, ref } from 'vue'
 import { createClient, listClients, resetClientKey, setClientStatus, updateClient } from '../api/admin.ts'
 import type { ApiClient } from '../api/admin.ts'
@@ -13,14 +15,73 @@ import { confirmBox, showSecret } from '../stores/dialogs.ts'
 import { go } from '../stores/router.ts'
 import { session } from '../stores/session.ts'
 
+/**
+ * 调用方列表。
+ */
 const clients = ref<ApiClient[]>([])
+
+/**
+ * 列表加载过（没加载完时不显示“没有调用方”）。
+ */
 const loaded = ref(false)
-// 业务范围受限的用户只能授权自己范围里的分组（服务端同样检查，T-021）；分组列表本来就只有自己范围里的。
+
+/**
+ * 能不能授权“全部业务”：业务范围受限的用户只能授权自己范围里的分组（服务端同样检查）；分组列表本来就只有自己范围里的。
+ */
 const mayGrantAll = computed(() => session.me?.allBusinesses === true)
-const form = reactive({ open: false, id: 0, name: '', appId: '', description: '', allBusinesses: false, businessIds: [] as number[], ipAllowlist: '', error: '', busy: false })
+
+/**
+ * 新建或编辑调用方的表单。
+ */
+const form = reactive({
+  /**
+   * 编辑对话框是否打开。
+   */
+  open: false,
+  /**
+   * 编辑的调用方 ID；0 表示新建。
+   */
+  id: 0,
+  /**
+   * 名称。
+   */
+  name: '',
+  /**
+   * 对方系统的应用标识。
+   */
+  appId: '',
+  /**
+   * 说明。
+   */
+  description: '',
+  /**
+   * 授权全部业务分组。
+   */
+  allBusinesses: false,
+  /**
+   * 授权的业务分组 ID。
+   */
+  businessIds: [] as number[],
+  /**
+   * IP 白名单；空表示不限制。
+   */
+  ipAllowlist: '',
+  /**
+   * 保存失败的原因。
+   */
+  error: '',
+  /**
+   * 正在保存。
+   */
+  busy: false,
+})
 
 onMounted(reload)
 
+/**
+ * 重新读取调用方列表。
+ * @returns 读取结束时完成。
+ */
 async function reload(): Promise<void> {
   try {
     clients.value = await listClients()
@@ -30,16 +91,29 @@ async function reload(): Promise<void> {
   }
 }
 
+/**
+ * 打开编辑对话框。
+ * @param c 要编辑的调用方；null 表示新建。
+ */
 function edit(c: ApiClient | null): void {
   Object.assign(form, c
     ? { open: true, id: c.id, name: c.name, appId: c.appId, description: c.description, allBusinesses: c.allBusinesses, businessIds: [...c.businessIds], ipAllowlist: c.ipAllowlist, error: '' }
     : { open: true, id: 0, name: '', appId: '', description: '', allBusinesses: false, businessIds: [], ipAllowlist: '', error: '' })
 }
 
+/**
+ * 密钥框里的提示。
+ * @param name 调用方名称。
+ * @returns 提示文字。
+ */
 function keyHint(name: string): string {
   return `${name} 的 API Key 只显示这一次，服务端只保存哈希。请现在复制，配置到业务系统的请求头 X-Api-Key。`
 }
 
+/**
+ * 保存调用方：新建时显示 Key（只显示这一次）。
+ * @returns 保存结束时完成。
+ */
 async function save(): Promise<void> {
   form.busy = true
   form.error = ''
@@ -61,6 +135,11 @@ async function save(): Promise<void> {
   }
 }
 
+/**
+ * 启用或停用调用方（停用前确认）。
+ * @param c 调用方。
+ * @returns 操作结束时完成。
+ */
 async function toggle(c: ApiClient): Promise<void> {
   if (c.enabled && !(await confirmBox('停用调用方', `停用后 ${c.name} 的请求立即返回 401。确定停用？`, '停用', true))) return
   try {
@@ -71,6 +150,11 @@ async function toggle(c: ApiClient): Promise<void> {
   }
 }
 
+/**
+ * 重置 Key（确认后），显示新 Key。
+ * @param c 调用方。
+ * @returns 操作结束时完成。
+ */
 async function reset(c: ApiClient): Promise<void> {
   if (!(await confirmBox('重置密钥', `重置后 ${c.name} 的旧 Key 立即失效，业务系统要换成新 Key 才能继续调用。确定重置？`, '重置', true))) return
   try {

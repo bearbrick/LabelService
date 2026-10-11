@@ -2,6 +2,9 @@
 import { designer } from '../stores/designer.ts'
 import AppIcon from './AppIcon.vue'
 
+/**
+ * 快捷键说明：操作和按键。
+ */
 const SHORTCUTS: ReadonlyArray<[string, string]> = [
   ['撤销 / 重做', 'Ctrl+Z / Ctrl+Y'],
   ['复制 / 粘贴', 'Ctrl+C / Ctrl+V'],

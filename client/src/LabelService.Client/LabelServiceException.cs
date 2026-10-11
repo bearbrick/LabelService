@@ -19,31 +19,41 @@ public sealed class LabelServiceException : Exception
         StatusCode = statusCode;
     }
 
-    /// <summary>错误码，见 <see cref="LabelErrorCodes"/>。</summary>
+    /// <summary>
+    /// 错误码，见 <see cref="LabelErrorCodes"/>。
+    /// </summary>
     public string ErrorCode
     {
         get;
     }
 
-    /// <summary>HTTP 状态码；网络错误和超时为 null。</summary>
+    /// <summary>
+    /// HTTP 状态码；网络错误和超时为 null。
+    /// </summary>
     public int? StatusCode
     {
         get;
     }
 
-    /// <summary>服务端链路 ID，反馈问题时提供。</summary>
+    /// <summary>
+    /// 服务端链路 ID，反馈问题时提供。
+    /// </summary>
     public string? TraceId
     {
         get; internal set;
     }
 
-    /// <summary>本次调用的 X-Request-Id。</summary>
+    /// <summary>
+    /// 本次调用的 X-Request-Id。
+    /// </summary>
     public string? RequestId
     {
         get; internal set;
     }
 
-    /// <summary>逐条、逐字段的错误明细。</summary>
+    /// <summary>
+    /// 逐条、逐字段的错误明细。
+    /// </summary>
     public IReadOnlyList<LabelFieldError> Errors { get; internal set; } = new LabelFieldError[0];
 
     /// <summary>
@@ -60,22 +70,30 @@ public sealed class LabelServiceException : Exception
 /// </summary>
 public sealed class LabelFieldError
 {
-    /// <summary>批量条目序号，从 0 开始；单张请求为 null。</summary>
+    /// <summary>
+    /// 批量条目序号，从 0 开始；单张请求为 null。
+    /// </summary>
     public int? Index
     {
         get; set;
     }
 
-    /// <summary>字段 key 或请求参数名。</summary>
+    /// <summary>
+    /// 字段 key 或请求参数名。
+    /// </summary>
     public string? Field
     {
         get; set;
     }
 
-    /// <summary>错误码。</summary>
+    /// <summary>
+    /// 错误码。
+    /// </summary>
     public string Code { get; set; } = "";
 
-    /// <summary>中文说明。</summary>
+    /// <summary>
+    /// 中文说明。
+    /// </summary>
     public string? Message
     {
         get; set;
@@ -87,46 +105,64 @@ public sealed class LabelFieldError
 /// </summary>
 public sealed class CallCompletedEventArgs : EventArgs
 {
-    /// <summary>操作：Render、RenderBatch、GetSchema。</summary>
+    /// <summary>
+    /// 操作：Render、RenderBatch、GetSchema。
+    /// </summary>
     public string Operation { get; internal set; } = "";
 
-    /// <summary>模板编码。</summary>
+    /// <summary>
+    /// 模板编码。
+    /// </summary>
     public string TemplateCode { get; internal set; } = "";
 
-    /// <summary>最后一次尝试的 HTTP 状态码；网络错误和超时为 null。</summary>
+    /// <summary>
+    /// 最后一次尝试的 HTTP 状态码；网络错误和超时为 null。
+    /// </summary>
     public int? StatusCode
     {
         get; internal set;
     }
 
-    /// <summary>失败时的错误码；成功为 null。</summary>
+    /// <summary>
+    /// 失败时的错误码；成功为 null。
+    /// </summary>
     public string? ErrorCode
     {
         get; internal set;
     }
 
-    /// <summary>含重试在内的总耗时。</summary>
+    /// <summary>
+    /// 含重试在内的总耗时。
+    /// </summary>
     public TimeSpan Duration
     {
         get; internal set;
     }
 
-    /// <summary>最后一次尝试的服务端耗时（Server-Timing total）。</summary>
+    /// <summary>
+    /// 最后一次尝试的服务端耗时（Server-Timing total）。
+    /// </summary>
     public TimeSpan? ServerDuration
     {
         get; internal set;
     }
 
-    /// <summary>尝试次数，1 表示没有重试。</summary>
+    /// <summary>
+    /// 尝试次数，1 表示没有重试。
+    /// </summary>
     public int Attempts
     {
         get; internal set;
     }
 
-    /// <summary>本次调用的 X-Request-Id。</summary>
+    /// <summary>
+    /// 本次调用的 X-Request-Id。
+    /// </summary>
     public string RequestId { get; internal set; } = "";
 
-    /// <summary>服务端链路 ID。</summary>
+    /// <summary>
+    /// 服务端链路 ID。
+    /// </summary>
     public string? TraceId
     {
         get; internal set;

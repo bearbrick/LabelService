@@ -13,6 +13,9 @@ namespace LabelService.Rendering.Diagnostics;
 /// </remarks>
 public sealed class RenderTimings
 {
+    /// <summary>
+    /// 阶段名和累计毫秒数，按首次记录的顺序（阶段只有几个，用列表比字典快）。
+    /// </summary>
     private readonly List<KeyValuePair<string, double>> stages = new(8);
 
     /// <summary>
@@ -100,6 +103,11 @@ public sealed class RenderTimings
         return builder.ToString();
     }
 
+    /// <summary>
+    /// 往 Server-Timing 头里追加一项：<c>名称;dur=毫秒</c>，项之间用逗号分隔。
+    /// </summary>
+    /// <param name="builder">正在拼的头。</param>
+    /// <param name="item">阶段名和毫秒数。</param>
     private static void Append(StringBuilder builder, KeyValuePair<string, double> item)
     {
         if (builder.Length > 0)

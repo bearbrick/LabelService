@@ -13,7 +13,13 @@ namespace LabelService.Demo.Mock;
 /// </summary>
 internal static class MockDocuments
 {
-    /// <summary>PNG：一张标签。</summary>
+    /// <summary>
+    /// PNG：一张标签。
+    /// </summary>
+    /// <param name="template">模板。</param>
+    /// <param name="dpi">分辨率。</param>
+    /// <param name="data">字段值。</param>
+    /// <returns>PNG 文件内容。</returns>
     public static byte[] Png(MockTemplate template, int dpi, Dictionary<string, string> data)
     {
         using var bitmap = Draw(template, dpi, data);
@@ -22,13 +28,20 @@ internal static class MockDocuments
         return stream.ToArray();
     }
 
-    /// <summary>ZPL：每张标签一段 ^XA … ^XZ，份数用 ^PQ。位图不压缩（真实服务端会压缩）。</summary>
+    /// <summary>
+    /// ZPL：每张标签一段 ^XA … ^XZ，份数用 ^PQ。位图不压缩（真实服务端会压缩）。
+    /// </summary>
+    /// <param name="template">模板。</param>
+    /// <param name="dpi">分辨率。</param>
+    /// <param name="labels">每张标签的字段值和份数。</param>
+    /// <returns>ZPL 文本的 UTF-8 字节。</returns>
     public static byte[] Zpl(MockTemplate template, int dpi, IEnumerable<(Dictionary<string, string> Data, int Copies)> labels)
     {
         var zpl = new StringBuilder();
         foreach (var (data, copies) in labels)
         {
             using var bitmap = Draw(template, dpi, data);
+            // 每行按 8 个像素一个字节打包，暗的像素是 1（黑点），写成十六进制。
             var bytesPerRow = (bitmap.Width + 7) / 8;
             var hex = new StringBuilder(bytesPerRow * bitmap.Height * 2);
             var locked = bitmap.LockBits(new Rectangle(0, 0, bitmap.Width, bitmap.Height), ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
@@ -54,6 +67,7 @@ internal static class MockDocuments
                 }
             }
 
+            // 一张标签一段 ^XA…^XZ：纸宽、纸长、^GFA 位图、份数。
             var total = bytesPerRow * bitmap.Height;
             zpl.Append("^XA^PW").Append(bitmap.Width).Append("^LL").Append(bitmap.Height)
                 .Append("^FO0,0^GFA,").Append(total).Append(',').Append(total).Append(',').Append(bytesPerRow).Append(',')
@@ -63,7 +77,12 @@ internal static class MockDocuments
         return Encoding.UTF8.GetBytes(zpl.ToString());
     }
 
-    /// <summary>PDF：每份一页，页面尺寸等于标签尺寸，内容是 150 dpi 的 JPEG。</summary>
+    /// <summary>
+    /// PDF：每份一页，页面尺寸等于标签尺寸，内容是 150 dpi 的 JPEG。
+    /// </summary>
+    /// <param name="template">模板。</param>
+    /// <param name="labels">每张标签的字段值和份数。</param>
+    /// <returns>PDF 文件内容。</returns>
     public static byte[] Pdf(MockTemplate template, IEnumerable<(Dictionary<string, string> Data, int Copies)> labels)
     {
         var pages = new List<byte[]>();
@@ -79,6 +98,7 @@ internal static class MockDocuments
             }
         }
 
+        // 手写一个最小的 PDF：目录、页树，每页一个内容流和一张 JPEG 图片，最后是交叉引用表。
         var width = template.Width / 25.4 * 72;
         var height = template.Height / 25.4 * 72;
         using var pdf = new MemoryStream();
@@ -126,6 +146,10 @@ internal static class MockDocuments
     /// <summary>
     /// 画一张示意标签：外框、模板名、字段值、按第一个“编号”类字段生成的示意条码、模拟服务水印。
     /// </summary>
+    /// <param name="template">模板。</param>
+    /// <param name="dpi">分辨率。</param>
+    /// <param name="data">字段值。</param>
+    /// <returns>位图，由调用方释放。</returns>
     private static Bitmap Draw(MockTemplate template, int dpi, Dictionary<string, string> data)
     {
         var dotsPerMm = dpi / 25.4f;
@@ -145,6 +169,7 @@ internal static class MockDocuments
         g.DrawString(template.Name, title, Brushes.Black, Mm(4), Mm(3));
         g.DrawString("模拟服务 · 示意图", small, Brushes.Gray, bitmap.Width - g.MeasureString("模拟服务 · 示意图", small).Width - Mm(4), Mm(4));
 
+        // 字段值两列排列。
         var y = Mm(11 * scale);
         var column = 0;
         foreach (var field in template.Fields)
@@ -159,6 +184,7 @@ internal static class MockDocuments
             }
         }
 
+        // 下面画一个示意条码：取第一个带数字的字段值，按字节的位画粗细不同的条（不是真的条码）。
         var code = template.Fields.Select(field => data.TryGetValue(field.Key, out var value) ? value : "").FirstOrDefault(value => value.Any(char.IsDigit)) ?? template.Code;
         var barTop = y + Mm(6 * scale);
         var barHeight = Math.Max(Mm(8), bitmap.Height - barTop - Mm(10 * scale));

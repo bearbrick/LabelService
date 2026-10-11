@@ -8,6 +8,10 @@ namespace LabelService.Backend.Checks;
 /// </summary>
 internal static class BindingChecks
 {
+    /// <summary>
+    /// 运行绑定替换的全部检查。
+    /// </summary>
+    /// <param name="check">记录检查结果。</param>
     public static void Run(Action<string, bool> check)
     {
         var fields = new[]

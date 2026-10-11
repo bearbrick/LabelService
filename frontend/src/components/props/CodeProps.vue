@@ -1,5 +1,7 @@
 <script setup lang="ts">
-/** 一维码和二维码的属性。 */
+/**
+ * 一维码和二维码的属性。
+ */
 import { computed } from 'vue'
 import { SYMBOLOGY_LABELS } from '../../editor/barcode.ts'
 import type { BarcodeElement, ErrorCorrectionLevel, QrCodeElement, TextAlign } from '../../model/template.ts'
@@ -7,32 +9,78 @@ import { commit } from '../../stores/designer.ts'
 import AppIcon from '../AppIcon.vue'
 import FieldPicker from './FieldPicker.vue'
 
-const props = defineProps<{ element: BarcodeElement | QrCodeElement }>()
+/**
+ * 组件参数。
+ */
+const props = defineProps<{
+  /**
+   * 一维码或二维码元素。
+   */
+  element: BarcodeElement | QrCodeElement
+}>()
+
+/**
+ * 一维码可选的码制。
+ */
 const LINEAR = ['code128', 'code39', 'ean13', 'ean8', 'upca', 'itf14', 'gs1-128'] as const
+
+/**
+ * 二维码可选的码制。
+ */
 const MATRIX = ['qr', 'datamatrix', 'pdf417'] as const
+
+/**
+ * QR 纠错级别的按钮。
+ */
 const LEVELS: ErrorCorrectionLevel[] = ['L', 'M', 'Q', 'H']
+
+/**
+ * 一维码在框内水平对齐的按钮。
+ */
 const ALIGNS: ReadonlyArray<{ value: TextAlign; icon: string; label: string }> = [
   { value: 'left', icon: 'alignTextL', label: '左对齐' },
   { value: 'center', icon: 'alignTextC', label: '居中' },
   { value: 'right', icon: 'alignTextR', label: '右对齐' },
 ]
 
+/**
+ * 是一维码时是它，否则为 null。
+ */
 const barcode = computed(() => (props.element.type === 'barcode' ? props.element : null))
+
+/**
+ * 是二维码时是它，否则为 null。
+ */
 const matrix = computed(() => (props.element.type === 'qrcode' ? props.element : null))
+
+/**
+ * 码制下拉框的选项（按元素类型）。
+ */
 const options = computed(() => (props.element.type === 'barcode' ? LINEAR : MATRIX))
 
-/** 一维码：绑定替换整个内容；二维码：追加字段，用 | 分隔。 */
+/**
+ * 一维码：绑定替换整个内容；二维码：追加字段，用 | 分隔。
+ * @param key 字段 key。
+ */
 function pickField(key: string): void {
   if (props.element.type === 'qrcode' && props.element.value) props.element.value += `|{{${key}}}`
   else props.element.value = `{{${key}}}`
   commit()
 }
 
+/**
+ * 设置一维码在框内的水平对齐。
+ * @param value 对齐方式。
+ */
 function setAlign(value: TextAlign): void {
   if (barcode.value) barcode.value.align = value
   commit()
 }
 
+/**
+ * 设置 QR 纠错级别。
+ * @param value 纠错级别。
+ */
 function setLevel(value: ErrorCorrectionLevel): void {
   if (matrix.value) matrix.value.ecLevel = value
   commit()

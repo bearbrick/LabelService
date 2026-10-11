@@ -34,6 +34,7 @@ public static partial class SheetLayoutRules
             problems.Add("名称不能为空，最长 128 字");
         }
 
+        // 先查整体：缺少的部分直接返回，后面的检查都要用到它们。
         if (layout.Paper is null || layout.Slot is null || layout.Slots is null || layout.Offset is null)
         {
             problems.Add("缺少 paper、slot、slots 或 offset");
@@ -60,11 +61,13 @@ public static partial class SheetLayoutRules
             problems.Add("打印偏移要在 ±50 mm 以内");
         }
 
+        // 整体有问题时不再逐个检查格子（尺寸不对时越界、重叠的结论没有意义）。
         if (problems.Count > 0)
         {
             return problems;
         }
 
+        // 逐个格子检查旋转和越界，并和前面的格子比较是否重叠；贴边在误差以内不算（两边都按 0.1 mm 记录）。
         var boxes = new List<(double Left, double Top, double Right, double Bottom)>(layout.Slots.Count);
         for (var i = 0; i < layout.Slots.Count; i++)
         {
@@ -149,6 +152,10 @@ public static partial class SheetLayoutRules
     /// <returns>在范围里时为 true。</returns>
     private static bool InRange(double value, double max) => double.IsFinite(value) && value > 0 && value <= max;
 
+    /// <summary>
+    /// 版式编码的正则：字母开头，字母、数字、下划线、连字符，最长 64 个字符（和模板编码同一规则）。
+    /// </summary>
+    /// <returns>编译好的正则。</returns>
     [GeneratedRegex("^[A-Za-z][A-Za-z0-9_-]{0,63}$", RegexOptions.CultureInvariant)]
     private static partial Regex CodePattern();
 }

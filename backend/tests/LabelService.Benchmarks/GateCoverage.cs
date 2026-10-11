@@ -16,6 +16,7 @@ internal static class GateCoverage
     /// <param name="baseline">基线；更新基线时为 null。</param>
     /// <param name="fullRun">没带 --filter（跑全部）：基线里的每一项都必须跑出来。</param>
     /// <param name="criticalErrors">BenchmarkDotNet 的严重验证错误（如构建失败）。</param>
+    /// <returns>问题描述的列表；运行完整时为空。</returns>
     public static List<string> Problems(
         IReadOnlyCollection<string> discovered,
         IReadOnlyDictionary<string, double> results,
@@ -60,6 +61,8 @@ internal static class GateCoverage
     /// <summary>
     /// 基准名去掉参数部分：TemplateBenchmarks.Render(Format=Pdf, …) → TemplateBenchmarks.Render。
     /// </summary>
+    /// <param name="name">基准名。</param>
+    /// <returns>类名.方法名。</returns>
     public static string Method(string name)
     {
         var index = name.IndexOf('(', StringComparison.Ordinal);
@@ -69,6 +72,7 @@ internal static class GateCoverage
     /// <summary>
     /// <c>--self-test</c>：用合成的运行结果检查上面的规则，不跑基准。返回退出码。
     /// </summary>
+    /// <returns>退出码：0 全部规则符合预期，1 有规则不对。</returns>
     public static int SelfTest()
     {
         var baseline = new Dictionary<string, double> { ["A.Run(X=1)"] = 1, ["A.Run(X=2)"] = 2, ["B.Run"] = 3 };

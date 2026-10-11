@@ -56,6 +56,7 @@ public sealed class WarmupService(
         var published = options.Value.Enabled ? templates.LatestPublished() : [];
         try
         {
+            // 先反序列化一次请求体，把 JSON 序列化的元数据准备好；再在时间预算内逐个渲染已发布的模板。
             JsonSerializer.Deserialize<RenderApiRequest>(SampleRequest, LabelJson.Options);
             foreach (var template in published)
             {
@@ -86,6 +87,7 @@ public sealed class WarmupService(
     private bool Render(PublishedTemplate published)
     {
         var template = published.Template;
+        // 用字段的样例值（和发布前试渲染一样）把三种格式各渲染一次，字体、图片、条码编码的缓存都会被填好。
         var data = TemplateSampleData.Create(template.Fields, []);
         var validation = FieldValidator.Validate(template.Fields, null, data);
         if (!validation.IsValid)

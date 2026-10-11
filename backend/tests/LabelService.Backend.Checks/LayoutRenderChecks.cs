@@ -14,12 +14,20 @@ using SkiaSharp;
 namespace LabelService.Backend.Checks;
 
 /// <summary>
-/// 拼版渲染（T-018）：格子位置（逐格 ≤ 0.1 mm）、旋转方向、起始格子和分页、打印偏移、裁切线、固定元素只排版一次、输出格式。
+/// 拼版渲染：格子位置（逐格 ≤ 0.1 mm）、旋转方向、起始格子和分页、打印偏移、裁切线、固定元素只排版一次、输出格式。
 /// </summary>
 internal static partial class LayoutRenderChecks
 {
+    /// <summary>
+    /// 检查用的分辨率。
+    /// </summary>
     private const int Dpi = 300;
 
+    /// <summary>
+    /// 运行拼版渲染的全部检查。
+    /// </summary>
+    /// <param name="backendRoot">backend 目录。</param>
+    /// <param name="check">记录检查结果。</param>
     public static void Run(string backendRoot, Action<string, bool> check)
     {
         var renderer = Fixtures.Renderer(backendRoot);
@@ -33,6 +41,12 @@ internal static partial class LayoutRenderChecks
         CheckValidator(check);
     }
 
+    /// <summary>
+    /// 格子位置和旋转方向：逐格量外框的四条边，看标记块落在标签自己的左上角。
+    /// </summary>
+    /// <param name="renderer">渲染引擎。</param>
+    /// <param name="layout">检查用的版式。</param>
+    /// <param name="check">记录检查结果。</param>
     private static void CheckPositions(LabelRenderer renderer, SheetLayout layout, Action<string, bool> check)
     {
         var result = renderer.Render(Job(FrameTemplate(), layout, LabelFormat.Png, Labels(layout.Slots.Count)));
@@ -55,6 +69,12 @@ internal static partial class LayoutRenderChecks
             marks.All(mark => mark.Item1 && !mark.Item2));
     }
 
+    /// <summary>
+    /// 分页和起始格子：PDF 页数、页面尺寸，PNG 多页打包 ZIP，startSlot 前面的格子空着。
+    /// </summary>
+    /// <param name="backendRoot">backend 目录。</param>
+    /// <param name="renderer">渲染引擎。</param>
+    /// <param name="check">记录检查结果。</param>
     private static void CheckPaging(string backendRoot, LabelRenderer renderer, Action<string, bool> check)
     {
         var sample = SeedFiles.ReadLayouts(Path.Combine(backendRoot, "samples", "layouts")).Single(item => item.Code == "A4_100x60_2x4");
@@ -87,6 +107,11 @@ internal static partial class LayoutRenderChecks
             && Dark(second, layout, layout.Slots[0], 7, 5) && !Dark(second, layout, layout.Slots[1], 7, 5));
     }
 
+    /// <summary>
+    /// 打印偏移作用于整页；裁切线只给放了标签的格子画，可以关掉。
+    /// </summary>
+    /// <param name="renderer">渲染引擎。</param>
+    /// <param name="check">记录检查结果。</param>
     private static void CheckOffsetAndCutLines(LabelRenderer renderer, Action<string, bool> check)
     {
         var shifted = TestLayout(offsetX: 2, offsetY: -1.5);
@@ -114,6 +139,12 @@ internal static partial class LayoutRenderChecks
         check("裁切线可以开关：cutLines 为 true 时放了标签的格子画边框，空格子和 cutLines 为 false 时不画", EdgeInked(true) && !EdgeInked(false));
     }
 
+    /// <summary>
+    /// 固定元素只排版一次、各格子回放，和逐格重新排版的像素完全一样。
+    /// </summary>
+    /// <param name="backendRoot">backend 目录。</param>
+    /// <param name="renderer">渲染引擎。</param>
+    /// <param name="check">记录检查结果。</param>
     private static void CheckStaticElements(string backendRoot, LabelRenderer renderer, Action<string, bool> check)
     {
         var box = Fixtures.LoadTemplate(backendRoot);
@@ -128,6 +159,10 @@ internal static partial class LayoutRenderChecks
         check("固定元素只排版一次、各格子回放，和逐格重新排版画出来的像素完全一样", shared.Content.Span.SequenceEqual(separate.Content.Span));
     }
 
+    /// <summary>
+    /// 版式检查：重叠、超出纸张、旋转不是直角、编码不合法都能报出来，贴边不算重叠。
+    /// </summary>
+    /// <param name="check">记录检查结果。</param>
     private static void CheckValidator(Action<string, bool> check)
     {
         var overlap = TestLayout();
@@ -149,6 +184,10 @@ internal static partial class LayoutRenderChecks
     /// <summary>
     /// 格子所占矩形四条边的实测位置和期望位置（坐标 + 偏移）的最大偏差，mm。从格子外往里找第一个深色像素。
     /// </summary>
+    /// <param name="page">渲染出的整页。</param>
+    /// <param name="layout">版式。</param>
+    /// <param name="slot">要量的格子。</param>
+    /// <returns>最大偏差，mm；找不到边时为 double.MaxValue 换算的值。</returns>
     private static double EdgeError(SKBitmap page, SheetLayout layout, SheetSlot slot)
     {
         var (width, height) = layout.Footprint(slot);
@@ -185,6 +224,12 @@ internal static partial class LayoutRenderChecks
     /// <summary>
     /// 标签坐标 (u, v) mm 按格子的旋转换算到纸上，看那里是不是深色（3×3 平均）。
     /// </summary>
+    /// <param name="page">渲染出的整页。</param>
+    /// <param name="layout">版式。</param>
+    /// <param name="slot">格子。</param>
+    /// <param name="u">标签内的横坐标，mm。</param>
+    /// <param name="v">标签内的纵坐标，mm。</param>
+    /// <returns>那里是深色时为 true。</returns>
     private static bool Dark(SKBitmap page, SheetLayout layout, SheetSlot slot, double u, double v)
     {
         var (w, h) = (layout.Slot.Width, layout.Slot.Height);
@@ -209,10 +254,27 @@ internal static partial class LayoutRenderChecks
         return sum / 9 < 160;
     }
 
+    /// <summary>
+    /// 一个像素是不是深色（红色分量低于 128）；超出图片范围算浅色。
+    /// </summary>
+    /// <param name="page">图片。</param>
+    /// <param name="x">横坐标，像素。</param>
+    /// <param name="y">纵坐标，像素。</param>
+    /// <returns>深色时为 true。</returns>
     private static bool IsDark(SKBitmap page, int x, int y) => x >= 0 && y >= 0 && x < page.Width && y < page.Height && page.GetPixel(x, y).Red < 128;
 
+    /// <summary>
+    /// 毫米换算成检查用分辨率下的打印点（不取整）。
+    /// </summary>
+    /// <param name="mm">毫米。</param>
+    /// <returns>打印点。</returns>
     private static double Dots(double mm) => LabelUnits.MmToDots(mm, Dpi);
 
+    /// <summary>
+    /// 解码 ZIP 里的一张 PNG。
+    /// </summary>
+    /// <param name="entry">ZIP 条目。</param>
+    /// <returns>位图，用完释放。</returns>
     private static SKBitmap Decode(ZipArchiveEntry entry)
     {
         using var stream = entry.Open();
@@ -221,8 +283,23 @@ internal static partial class LayoutRenderChecks
         return SKBitmap.Decode(memory.ToArray());
     }
 
+    /// <summary>
+    /// 数 PDF 的页数（数 /Type /Page 对象）。
+    /// </summary>
+    /// <param name="result">渲染结果。</param>
+    /// <returns>页数。</returns>
     private static int PdfPages(RenderResult result) => PdfPage().Count(Encoding.Latin1.GetString(result.Content.Span));
 
+    /// <summary>
+    /// 拼版渲染任务。
+    /// </summary>
+    /// <param name="template">模板。</param>
+    /// <param name="layout">版式。</param>
+    /// <param name="format">输出格式。</param>
+    /// <param name="labels">标签数据。</param>
+    /// <param name="startSlot">起始格子。</param>
+    /// <param name="share">是否共享固定元素（false 时逐格重新排版，用来对比）。</param>
+    /// <returns>渲染任务。</returns>
     private static RenderJob Job(LabelTemplate template, SheetLayout layout, LabelFormat format, IReadOnlyList<LabelInstance> labels, int startSlot = 1, bool share = true) => new()
     {
         Template = template,
@@ -234,9 +311,20 @@ internal static partial class LayoutRenderChecks
         ShareStaticElements = share,
     };
 
+    /// <summary>
+    /// 检查模板用的若干张数据：每张的 no 是“第 n 张”。
+    /// </summary>
+    /// <param name="count">张数。</param>
+    /// <returns>标签数据。</returns>
     private static List<LabelInstance> Labels(int count) =>
         Enumerable.Range(1, count).Select(i => new LabelInstance(new Dictionary<string, object?> { ["no"] = "第 " + i + " 张" })).ToList();
 
+    /// <summary>
+    /// 示例箱标的数据：读示例请求体，按模板字段校验转换。
+    /// </summary>
+    /// <param name="backendRoot">backend 目录。</param>
+    /// <param name="box">示例箱标模板。</param>
+    /// <returns>校验后的字段值。</returns>
     private static IReadOnlyDictionary<string, object?> BoxValues(string backendRoot, LabelTemplate box)
     {
         var request = System.Text.Json.JsonDocument.Parse(File.ReadAllText(Path.Combine(backendRoot, "samples", "requests", "box-label.render.json")));
@@ -247,6 +335,10 @@ internal static partial class LayoutRenderChecks
     /// <summary>
     /// 检查用的 A4 版式：两个正放的格子，再加 90°、180°、270° 各一个。
     /// </summary>
+    /// <param name="offsetX">整页的横向打印偏移，mm。</param>
+    /// <param name="offsetY">整页的纵向打印偏移，mm。</param>
+    /// <param name="cutLines">是否画裁切线。</param>
+    /// <returns>版式。</returns>
     private static SheetLayout TestLayout(double offsetX = 0, double offsetY = 0, bool cutLines = false) => new()
     {
         Code = "CHECK_A4",
@@ -268,6 +360,8 @@ internal static partial class LayoutRenderChecks
     /// <summary>
     /// 100×60 的检查模板：0.5 mm 外框（可去掉）、左上角一个实心标记块、中间一行随数据变化的文字。
     /// </summary>
+    /// <param name="frame">是否带外框（量格子位置用；检查裁切线时去掉）。</param>
+    /// <returns>模板。</returns>
     private static LabelTemplate FrameTemplate(bool frame = true)
     {
         List<LabelElement> elements =
@@ -290,9 +384,17 @@ internal static partial class LayoutRenderChecks
         };
     }
 
+    /// <summary>
+    /// PDF 里的页对象（/Type /Page，不含 /Pages）。
+    /// </summary>
+    /// <returns>编译好的正则。</returns>
     [GeneratedRegex(@"/Type\s*/Page(?![s\w])")]
     private static partial Regex PdfPage();
 
+    /// <summary>
+    /// PDF 页面的 MediaBox（宽、高，pt）。
+    /// </summary>
+    /// <returns>编译好的正则。</returns>
     [GeneratedRegex(@"/MediaBox\s*\[\s*0\s+0\s+(?<w>[\d.]+)\s+(?<h>[\d.]+)\s*\]")]
     private static partial Regex MediaBox();
 }

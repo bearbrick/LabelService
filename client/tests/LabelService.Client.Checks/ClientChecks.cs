@@ -10,6 +10,11 @@ namespace LabelService.Client.Checks;
 /// </summary>
 internal static class ClientChecks
 {
+    /// <summary>
+    /// 运行 SDK 对假服务端的全部检查。
+    /// </summary>
+    /// <param name="check">记录检查结果。</param>
+    /// <returns>检查做完时完成。</returns>
     public static async Task RunAsync(Action<string, bool> check)
     {
         var handler = new FakeHandler((_, _, _) => Task.FromResult(PngResponse()));
@@ -103,6 +108,11 @@ internal static class ClientChecks
         await CheckLayoutAsync(check);
     }
 
+    /// <summary>
+    /// 拼版参数：请求体带 layout、startSlot，PageCount 取 X-Page-Count，本地预校验拦住 ZPL 拼版和起始格子越界。
+    /// </summary>
+    /// <param name="check">记录检查结果。</param>
+    /// <returns>检查做完时完成。</returns>
     private static async Task CheckLayoutAsync(Action<string, bool> check)
     {
         FakeHandler handler = null!;
@@ -136,6 +146,12 @@ internal static class ClientChecks
             && handler.Requests.Count == 3);
     }
 
+    /// <summary>
+    /// 连假服务端的客户端：固定地址和 Key，重试间隔缩短到 5 毫秒。
+    /// </summary>
+    /// <param name="handler">假的消息处理器。</param>
+    /// <param name="options">额外的设置；null 时用默认值。</param>
+    /// <returns>客户端，用完释放。</returns>
     private static LabelServiceClient Client(HttpMessageHandler handler, LabelServiceClientOptions? options = null)
     {
         options ??= new LabelServiceClientOptions();
@@ -145,6 +161,12 @@ internal static class ClientChecks
         return new LabelServiceClient(options, handler);
     }
 
+    /// <summary>
+    /// 调一次单张生成，返回抛出的 <see cref="LabelServiceException"/>。
+    /// </summary>
+    /// <param name="handler">假的消息处理器。</param>
+    /// <param name="options">额外的设置；null 时用默认值。</param>
+    /// <returns>抛出的异常；调用成功时为 null。</returns>
     private static async Task<LabelServiceException?> Fails(HttpMessageHandler handler, LabelServiceClientOptions? options = null)
     {
         using var client = Client(handler, options);
@@ -159,6 +181,11 @@ internal static class ClientChecks
         }
     }
 
+    /// <summary>
+    /// 执行一个调用，看它是否在本地预校验时抛出 <see cref="ArgumentException"/>。
+    /// </summary>
+    /// <param name="action">调用。</param>
+    /// <returns>抛出 ArgumentException 时为 true。</returns>
     private static bool ThrowsArgument(Func<Task> action)
     {
         try
@@ -172,6 +199,10 @@ internal static class ClientChecks
         }
     }
 
+    /// <summary>
+    /// 单张 PNG 的成功响应：PNG 文件头和全部响应头（版本、张数、DPI、跟踪 ID、计时、警告）。
+    /// </summary>
+    /// <returns>响应。</returns>
     private static HttpResponseMessage PngResponse()
     {
         var response = new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent([0x89, 0x50, 0x4E, 0x47]) };
@@ -186,6 +217,13 @@ internal static class ClientChecks
         return response;
     }
 
+    /// <summary>
+    /// 指定状态码和响应体的响应。
+    /// </summary>
+    /// <param name="status">状态码。</param>
+    /// <param name="body">响应体文本。</param>
+    /// <param name="mediaType">内容类型。</param>
+    /// <returns>响应。</returns>
     private static HttpResponseMessage Status(HttpStatusCode status, string body = "", string mediaType = "application/json") =>
         new(status)
         {
@@ -195,10 +233,15 @@ internal static class ClientChecks
     /// <summary>
     /// 记录请求并按尝试次数返回预设响应的假处理器。
     /// </summary>
+    /// <param name="respond">按请求、第几次请求（从 1 开始）、取消令牌给出响应的函数。</param>
     private sealed class FakeHandler(Func<HttpRequestMessage, int, CancellationToken, Task<HttpResponseMessage>> respond) : HttpMessageHandler
     {
+        /// <summary>
+        /// 收到的请求和请求体文本，按顺序。
+        /// </summary>
         public List<(HttpRequestMessage Request, string? Body)> Requests { get; } = [];
 
+        /// <inheritdoc />
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             var body = request.Content is null ? null : await request.Content.ReadAsStringAsync(cancellationToken);

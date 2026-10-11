@@ -9,11 +9,19 @@ using SkiaSharp;
 namespace LabelService.Backend.Checks;
 
 /// <summary>
-/// 服务端预览和字体下载（T-016）：未保存的模板直接渲染、错误位置、和开放接口鉴权隔离、指标单独维度；
+/// 服务端预览和字体下载：未保存的模板直接渲染、错误位置、和开放接口鉴权隔离、指标单独维度；
 /// /fonts 提供和渲染同一份字体文件。
 /// </summary>
 internal static class PreviewChecks
 {
+    /// <summary>
+    /// 运行预览和字体下载的全部检查。
+    /// </summary>
+    /// <param name="backendRoot">backend 目录。</param>
+    /// <param name="http">调用服务的客户端。</param>
+    /// <param name="admin">已登录并改过密码的 admin 会话。</param>
+    /// <param name="check">记录检查结果。</param>
+    /// <returns>检查做完时完成。</returns>
     public static async Task RunAsync(string backendRoot, HttpClient http, AdminSession admin, Action<string, bool> check)
     {
         CheckFontSources(backendRoot, check);
@@ -21,6 +29,11 @@ internal static class PreviewChecks
         await CheckFontFilesAsync(http, check);
     }
 
+    /// <summary>
+    /// 字体注册表能按模板字体名查到字体文件（认别名、可变字体有标记），不认识的名字返回 null。
+    /// </summary>
+    /// <param name="backendRoot">backend 目录。</param>
+    /// <param name="check">记录检查结果。</param>
     private static void CheckFontSources(string backendRoot, Action<string, bool> check)
     {
         var fonts = Fixtures.Fonts(backendRoot);
@@ -30,6 +43,14 @@ internal static class PreviewChecks
             && fonts.SourceOf("SourceHanSansSC")?.Path != serif.Path && fonts.SourceOf("Arial") is null);
     }
 
+    /// <summary>
+    /// 预览接口：未保存的模板直接渲染，报错时带元素位置，和开放接口的鉴权互不通用，指标单独记。
+    /// </summary>
+    /// <param name="backendRoot">backend 目录。</param>
+    /// <param name="http">调用服务的客户端。</param>
+    /// <param name="admin">admin 会话。</param>
+    /// <param name="check">记录检查结果。</param>
+    /// <returns>检查做完时完成。</returns>
     private static async Task CheckPreviewAsync(string backendRoot, HttpClient http, AdminSession admin, Action<string, bool> check)
     {
         var template = JsonNode.Parse(File.ReadAllText(Path.Combine(backendRoot, "samples", "templates", "box-label.json")))!.AsObject();
@@ -125,6 +146,12 @@ internal static class PreviewChecks
             })).StatusCode == HttpStatusCode.NotFound);
     }
 
+    /// <summary>
+    /// 字体下载：fonts.css 按模板字体名声明 @font-face，字体文件和渲染用的是同一份、带缓存版本号。
+    /// </summary>
+    /// <param name="http">调用服务的客户端。</param>
+    /// <param name="check">记录检查结果。</param>
+    /// <returns>检查做完时完成。</returns>
     private static async Task CheckFontFilesAsync(HttpClient http, Action<string, bool> check)
     {
         var css = await http.GetStringAsync("/fonts/fonts.css");

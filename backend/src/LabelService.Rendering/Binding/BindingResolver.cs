@@ -107,6 +107,10 @@ public static partial class BindingResolver
         }
     }
 
+    /// <summary>
+    /// 绑定写法 {{key}} 或 {{key:format}}：key 以字母开头，format 是冒号后到右花括号前的全部文字。
+    /// </summary>
+    /// <returns>编译好的正则，字段名在 key 组、格式在 format 组。</returns>
     [GeneratedRegex(@"\{\{\s*(?<key>[A-Za-z][A-Za-z0-9_]*)\s*(?::(?<format>[^}]*))?\}\}", RegexOptions.CultureInvariant)]
     private static partial Regex BindingPattern();
 }

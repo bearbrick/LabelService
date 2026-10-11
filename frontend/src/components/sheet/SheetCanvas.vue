@@ -1,12 +1,29 @@
 <script setup lang="ts">
-/** 拼版画布：把 editor/sheetStage.ts 接到 stores/sheet.ts，版式、选择、预览图、设置变了就重画。 */
+/**
+ * 拼版画布：把 editor/sheetStage.ts 接到 stores/sheet.ts，版式、选择、预览图、设置变了就重画。
+ */
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { SheetStage } from '../../editor/sheetStage.ts'
 import { addSlotAt, moveSlots, problems, select, sheet } from '../../stores/sheet.ts'
 
+/**
+ * 画布的外层容器。
+ */
 const wrap = ref<HTMLElement | null>(null)
+
+/**
+ * Konva 的容器。
+ */
 const container = ref<HTMLDivElement | null>(null)
+
+/**
+ * 当前缩放比例（右下角显示）。
+ */
 const zoom = ref(1)
+
+/**
+ * 拼版画布；挂载后创建。
+ */
 let stage: SheetStage | null = null
 
 onMounted(() => {
@@ -35,17 +52,26 @@ watch(
   { deep: true },
 )
 
+/**
+ * 按倍数缩放（工具栏按钮）。
+ * @param factor 缩放倍数。
+ */
 function zoomBy(factor: number): void {
   stage?.zoomTo(stage.zoom * factor)
   zoom.value = stage?.zoom ?? 1
 }
 
+/**
+ * 整张纸放进可见区域。
+ */
 function fit(): void {
   stage?.fit()
   zoom.value = stage?.zoom ?? 1
 }
 
-/** 画布里 Ctrl+滚轮缩放后同步右下角的比例。 */
+/**
+ * 画布里 Ctrl+滚轮缩放后同步右下角的比例。
+ */
 function syncZoom(): void {
   zoom.value = stage?.zoom ?? zoom.value
 }

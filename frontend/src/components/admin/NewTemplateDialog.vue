@@ -1,5 +1,7 @@
 <script setup lang="ts">
-/** 新建模板：名称、编码、画布（预设或自定义）、方向、业务、DPI。创建后直接打开设计器。 */
+/**
+ * 新建模板：名称、编码、画布（预设或自定义）、方向、业务、DPI。创建后直接打开设计器。
+ */
 import { computed, reactive } from 'vue'
 import { createTemplate } from '../../api/admin.ts'
 import type { Preset } from '../../api/admin.ts'
@@ -9,33 +11,87 @@ import { dialogs } from '../../stores/dialogs.ts'
 import { openWorkspace, route } from '../../stores/router.ts'
 import ModalDialog from './ModalDialog.vue'
 
+/**
+ * 模板编码的规则：字母开头，只含字母、数字、下划线、连字符，最长 64 个字符。
+ */
 const CODE_PATTERN = /^[A-Za-z][A-Za-z0-9_-]{0,63}$/
+
+/**
+ * 启用的画布预设。
+ */
 const presets = computed(() => catalog.presets.filter((preset) => preset.enabled))
+
+/**
+ * 默认选中的第一个预设；没有预设时为 undefined（用自定义尺寸）。
+ */
 const first = presets.value[0]
+
+/**
+ * 表单。
+ */
 const form = reactive({
+  /**
+   * 模板名称。
+   */
   name: '',
+  /**
+   * 模板编码。
+   */
   code: '',
+  /**
+   * 选中的预设 ID；custom 表示自定义尺寸。
+   */
   presetId: (first?.id ?? 'custom') as number | 'custom',
+  /**
+   * 画布宽度，mm。
+   */
   width: first?.widthMm ?? 100,
+  /**
+   * 画布高度，mm。
+   */
   height: first?.heightMm ?? 60,
+  /**
+   * 业务分组 ID（默认是模板库正在看的分组）。
+   */
   businessId: (typeof route.biz === 'number' ? route.biz : catalog.businesses[0]?.id) ?? 0,
+  /**
+   * 分辨率。
+   */
   dpi: 300,
+  /**
+   * 表单错误或接口错误。
+   */
   error: '',
+  /**
+   * 正在创建。
+   */
   busy: false,
 })
 
+/**
+ * 选一个画布预设。
+ * @param preset 预设。
+ */
 function pick(preset: Preset): void {
   form.presetId = preset.id
   form.width = preset.widthMm
   form.height = preset.heightMm
 }
 
+/**
+ * 切换方向：纵向时短边做宽，横向时长边做宽。
+ * @param direction portrait 纵向，landscape 横向。
+ */
 function orient(direction: 'portrait' | 'landscape'): void {
   const [short, long] = [Math.min(form.width, form.height), Math.max(form.width, form.height)]
   form.width = direction === 'portrait' ? short : long
   form.height = direction === 'portrait' ? long : short
 }
 
+/**
+ * 校验后创建模板，刷新模板库并打开设计器；失败时显示原因。
+ * @returns 操作结束时完成。
+ */
 async function create(): Promise<void> {
   form.error = ''
   if (!form.name.trim()) form.error = '请填写名称'

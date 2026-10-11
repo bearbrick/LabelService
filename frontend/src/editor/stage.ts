@@ -1,75 +1,68 @@
 /**
- * 设计画布：管理 Konva 舞台、元素节点、选择框、拖动吸附、缩放平移。
+ * 设计画布：管理元素节点、选择框、框选、拖动吸附、变换。舞台、缩放平移和坐标换算在基类 StageViewport（stageViewport.ts）。
  * 模板数据由外部的 store 持有，这里只读数据、在拖动或变换结束时改坐标，再通知外部记录撤销历史。
  * 每个元素记一份“内容签名”，只有内容变了才重画，100 个元素时拖动也流畅。
  */
 import Konva from 'konva'
-import type { LabelElement, LabelTemplate } from '../model/template.ts'
-import { BASE_PX_PER_MM, normalizeRotation, roundMm } from '../model/units.ts'
+import type { LabelElement } from '../model/template.ts'
+import { normalizeRotation, roundMm } from '../model/units.ts'
 import { drawElement, setGeometry } from './draw.ts'
-import type { DrawContext } from './draw.ts'
-import { boxFromPoints, clamp, contains, elementBounds } from './geometry.ts'
-import { dragPan, drawGrid, transformRules } from './overlays.ts'
+import { boxFromPoints, contains, elementBounds } from './geometry.ts'
 import type { Box } from './geometry.ts'
+import { transformRules } from './overlays.ts'
 import { snapBox } from './snapping.ts'
+import { StageViewport } from './stageViewport.ts'
+import type { StageHost } from './stageViewport.ts'
 
-export interface StageSettings {
-  showGrid: boolean
-  gridSize: number
-  snap: boolean
-  /** 按住空格时只平移画布，不能拖元素。 */
-  panMode: boolean
-}
-
-export interface StageHost {
-  template(): LabelTemplate
-  selection(): readonly string[]
-  select(ids: string[]): void
-  settings(): StageSettings
-  drawContext(): DrawContext
-  /** 显示方式、字段、DPI、字体或素材变化时改变，用来判断要不要全部重画。 */
-  contextSignature(): string
-  /** 拖动或变换改了坐标，记录一次撤销历史。 */
-  committed(): void
-  pointer(x: number | null, y: number | null): void
-  viewChanged(): void
-  doubleClicked(element: LabelElement): void
-  notify(message: string): void
-}
-
-const MIN_SCALE = BASE_PX_PER_MM * 0.25
-const MAX_SCALE = BASE_PX_PER_MM * 8
-
-export class DesignerStage {
-  readonly stage: Konva.Stage
-  private readonly wrap: HTMLElement
-  private readonly host: StageHost
-  private readonly main = new Konva.Layer({ name: 'elements' })
-  private readonly overlay = new Konva.Layer()
-  private readonly paper = new Konva.Rect({ fill: '#FFFFFF', name: 'paper' })
+/**
+ * 设计器的画布。
+ */
+export class DesignerStage extends StageViewport {
+  /**
+   * 变换框（缩放、旋转手柄）。
+   */
   private readonly transformer: Konva.Transformer
+  /**
+   * 拖动吸附时显示的参考线。
+   */
   private readonly guides = new Konva.Group({ listening: false })
+  /**
+   * 框选框。
+   */
   private readonly marquee = new Konva.Rect({ visible: false, listening: false })
+  /**
+   * 拖字段到条码等元素上时的高亮框。
+   */
   private readonly dropBox = new Konva.Rect({ visible: false, listening: false })
+  /**
+   * 元素 ID → 元素的组。
+   */
   private readonly nodes = new Map<string, Konva.Group>()
+  /**
+   * 元素 ID → 上次绘制时的内容签名（元素 JSON + 上下文签名）。
+   */
   private readonly signatures = new Map<string, string>()
-  private readonly cleanup: Array<() => void> = []
-  private scaleValue = BASE_PX_PER_MM
-  private needsFit = true
+  /**
+   * 框选的起点和开始时的选择；没在框选时为 null。
+   */
   private marqueeStart: { x: number; y: number; additive: boolean; base: string[] } | null = null
-  private panning = false
+  /**
+   * 当前变换框的模式：普通、横线（只拉宽度）、竖线（只拉高度）。
+   */
   private transformMode: 'box' | 'hline' | 'vline' = 'box'
+  /**
+   * 正在直接编辑文本的元素 ID；没有时为 null。
+   */
   private editingId: string | null = null
-  private colors = { accent: '#1555d4', guide: '#e0457b' }
 
+  /**
+   * 建画布：在基类的舞台上加变换框和覆盖层，绑定选择、框选、双击事件。
+   * @param wrap 画布的外层容器。
+   * @param container Konva 的容器。
+   * @param host 外部接口。
+   */
   constructor(wrap: HTMLElement, container: HTMLDivElement, host: StageHost) {
-    this.wrap = wrap
-    this.host = host
-    this.readColors()
-    this.stage = new Konva.Stage({ container, width: wrap.clientWidth || 10, height: wrap.clientHeight || 10 })
-    const background = new Konva.Layer({ listening: true })
-    const shadow = new Konva.Rect({ fill: '#FFFFFF', shadowColor: 'rgba(0,0,0,0.28)', shadowBlur: 2.5, shadowOffsetY: 0.4, listening: false, name: 'shadow' })
-    background.add(shadow, this.paper, new Konva.Shape({ listening: false, sceneFunc: (context) => this.drawGrid(context) }))
+    super(wrap, container, host)
     this.transformer = new Konva.Transformer({
       rotateAnchorOffset: 24,
       anchorSize: 8,
@@ -80,6 +73,7 @@ export class DesignerStage {
       flipEnabled: false,
       rotationSnaps: [0, 45, 90, 135, 180, 225, 270, 315],
       rotationSnapTolerance: 4,
+      // 拉到太小（屏幕上不足 6 像素）时不再缩小；线只限制它有长度的方向。
       boundBoxFunc: (oldBox, newBox) => {
         if (this.transformMode !== 'vline' && Math.abs(newBox.width) < 6) return oldBox
         if (this.transformMode !== 'hline' && Math.abs(newBox.height) < 6) return oldBox
@@ -87,28 +81,13 @@ export class DesignerStage {
       },
     })
     this.overlay.add(this.guides, this.marquee, this.dropBox, this.transformer)
-    this.stage.add(background, this.main, this.overlay)
-    this.stage.scale({ x: this.scaleValue, y: this.scaleValue })
     this.applyColors()
     this.bindEvents()
   }
 
-  /** 每 mm 多少像素。 */
-  get scale(): number {
-    return this.scaleValue
-  }
-
-  /** 缩放比例，1 表示实际大小。 */
-  get zoom(): number {
-    return this.scaleValue / BASE_PX_PER_MM
-  }
-
-  /** 纸张原点在画布上的位置（px）。 */
-  get origin(): { x: number; y: number } {
-    return { x: this.stage.x(), y: this.stage.y() }
-  }
-
-  /** 按模板同步节点：新建、删除、重画内容变化的元素、调整叠放顺序。 */
+  /**
+   * 按模板同步节点：新建、删除、重画内容变化的元素、调整叠放顺序。
+   */
   sync(): void {
     const template = this.host.template()
     const context = this.host.drawContext()
@@ -121,6 +100,7 @@ export class DesignerStage {
       if (!group.isDragging()) setGeometry(group, element)
       group.visible(!element.hidden && element.id !== this.editingId)
       group.draggable(!element.locked && !settings.panMode)
+      // 内容签名没变就不重画，拖动时只改位置。
       const elementSignature = JSON.stringify(element) + signature
       if (this.signatures.get(element.id) !== elementSignature) {
         drawElement(group, element, context)
@@ -144,7 +124,9 @@ export class DesignerStage {
     this.stage.batchDraw()
   }
 
-  /** 按当前选择更新变换框：线只能拉长度，二维码和图标等比缩放，锁定的元素不能变换。 */
+  /**
+   * 按当前选择更新变换框：线只能拉长度，二维码和图标等比缩放，锁定的元素不能变换。
+   */
   refreshSelection(): void {
     const template = this.host.template()
     const selected = this.host.selection()
@@ -165,66 +147,19 @@ export class DesignerStage {
     this.overlay.batchDraw()
   }
 
-  resize(): void {
-    const width = this.wrap.clientWidth
-    const height = this.wrap.clientHeight
-    if (!width || !height) return
-    this.stage.size({ width, height })
-    if (this.needsFit) this.zoomFit()
-    else this.afterView()
-  }
-
-  zoomBy(factor: number): void {
-    this.zoomAt(this.scaleValue * factor, this.stage.width() / 2, this.stage.height() / 2)
-  }
-
-  zoomTo(zoom: number): void {
-    this.zoomAt(BASE_PX_PER_MM * zoom, this.stage.width() / 2, this.stage.height() / 2)
-  }
-
-  /** 让整张纸居中放进可见区域。 */
-  zoomFit(): void {
-    const page = this.host.template().page
-    const width = this.stage.width()
-    const height = this.stage.height()
-    if (width < 40 || height < 40) {
-      this.needsFit = true
-      return
-    }
-
-    this.needsFit = false
-    const scale = clamp(Math.min((width - 96) / page.width, (height - 96) / page.height), MIN_SCALE, MAX_SCALE)
-    this.apply(scale, (width - page.width * scale) / 2, (height - page.height * scale) / 2)
-  }
-
-  /** 下次尺寸可用时重新适应窗口（换模板时用）。 */
-  requestFit(): void {
-    this.needsFit = true
-    this.resize()
-  }
-
-  /** 视图中心对应的纸面坐标（mm），新元素放在这里。 */
-  viewCenter(): { x: number; y: number } {
-    return { x: (this.stage.width() / 2 - this.stage.x()) / this.scaleValue, y: (this.stage.height() / 2 - this.stage.y()) / this.scaleValue }
-  }
-
-  /** 纸面坐标（mm）换算成画布上的位置（px）。 */
-  toScreen(x: number, y: number): { x: number; y: number } {
-    return { x: this.stage.x() + x * this.scaleValue, y: this.stage.y() + y * this.scaleValue }
-  }
-
-  /** 选中元素的屏幕外框，给标尺高亮用。 */
+  /**
+   * 选中元素的屏幕外框，给标尺高亮用。
+   * @returns 外框（px）；没有选中时为 null。
+   */
   selectionScreenBox(): Box | null {
     return this.transformer.nodes().length ? this.transformer.getClientRect() : null
   }
 
-  /** 拖放事件对应的纸面坐标（mm）。 */
-  pointerMm(event: DragEvent): { x: number; y: number } | null {
-    this.stage.setPointersPositions(event)
-    return this.main.getRelativePointerPosition()
-  }
-
-  /** 拖放事件下方的元素 ID。 */
+  /**
+   * 拖放事件下方的元素 ID。
+   * @param event 拖放事件。
+   * @returns 元素 ID；下方没有元素时为 null。
+   */
   elementAt(event: DragEvent): string | null {
     this.stage.setPointersPositions(event)
     const position = this.stage.getPointerPosition()
@@ -232,7 +167,10 @@ export class DesignerStage {
     return shape?.findAncestor('.element', true)?.id() ?? null
   }
 
-  /** 拖字段到条码上时高亮目标元素；传 null 取消。 */
+  /**
+   * 拖字段到条码上时高亮目标元素；传 null 取消。
+   * @param box 目标元素的外框（mm）；null 表示取消高亮。
+   */
   highlight(box: Box | null): void {
     this.dropBox.setAttrs(box
       ? { ...box, width: Math.max(box.width, 1), height: Math.max(box.height, 1), stroke: this.colors.accent, strokeWidth: 2 / this.scaleValue, fill: 'rgba(21,85,212,0.09)', visible: true }
@@ -240,30 +178,36 @@ export class DesignerStage {
     this.overlay.batchDraw()
   }
 
-  /** 正在直接编辑文本的元素在画布上隐藏，由外部的输入框代替。 */
+  /**
+   * 正在直接编辑文本的元素在画布上隐藏，由外部的输入框代替。
+   * @param id 正在编辑的元素 ID；null 表示结束编辑。
+   */
   setEditing(id: string | null): void {
     this.editingId = id
     this.sync()
   }
 
-  /** 页面主题变化后重新读取颜色。 */
-  readColors(): void {
-    const style = getComputedStyle(document.documentElement)
-    this.colors = {
-      accent: style.getPropertyValue('--blue').trim() || '#1555d4',
-      guide: style.getPropertyValue('--guide').trim() || '#e0457b',
-    }
+  /**
+   * 视图变化后：框选框的线宽保持 1 像素，清掉参考线，再重画并通知外部。
+   */
+  protected override afterView(): void {
+    this.marquee.strokeWidth(1 / this.scaleValue)
+    this.guides.destroyChildren()
+    super.afterView()
   }
 
-  destroy(): void {
-    this.cleanup.splice(0).forEach((dispose) => dispose())
-    this.stage.destroy()
-  }
-
+  /**
+   * 变换框用主题的强调色。
+   */
   private applyColors(): void {
     this.transformer.setAttrs({ borderStroke: this.colors.accent, anchorStroke: this.colors.accent })
   }
 
+  /**
+   * 给新元素建一个组，绑定拖动、变换和光标样式。
+   * @param element 元素。
+   * @returns 组（已加到元素层）。
+   */
   private createNode(element: LabelElement): Konva.Group {
     const group = new Konva.Group({ id: element.id, name: 'element' })
     group.on('dragstart', () => this.onDragStart(group))
@@ -283,36 +227,18 @@ export class DesignerStage {
     return group
   }
 
+  /**
+   * 按 ID 找模板里的元素。
+   * @param id 元素 ID。
+   * @returns 元素；不存在时为 undefined。
+   */
   private find(id: string): LabelElement | undefined {
     return this.host.template().elements.find((element) => element.id === id)
   }
 
-  private zoomAt(scale: number, x: number, y: number): void {
-    const next = clamp(scale, MIN_SCALE, MAX_SCALE)
-    const mmX = (x - this.stage.x()) / this.scaleValue
-    const mmY = (y - this.stage.y()) / this.scaleValue
-    this.apply(next, x - mmX * next, y - mmY * next)
-  }
-
-  private apply(scale: number, x: number, y: number): void {
-    this.scaleValue = scale
-    this.stage.scale({ x: scale, y: scale })
-    this.stage.position({ x, y })
-    this.afterView()
-  }
-
-  private afterView(): void {
-    this.marquee.strokeWidth(1 / this.scaleValue)
-    this.guides.destroyChildren()
-    this.stage.batchDraw()
-    this.host.viewChanged()
-  }
-
-  private drawGrid(context: Konva.Context): void {
-    const settings = this.host.settings()
-    if (settings.showGrid) drawGrid(context._context, this.host.template().page, settings.gridSize, this.scaleValue)
-  }
-
+  /**
+   * 绑定舞台事件：按下（选择或开始框选）、移动（光标位置、框选框）、离开、双击；松开鼠标时结束框选。
+   */
   private bindEvents(): void {
     this.stage.on('mousedown touchstart', (event) => this.onPointerDown(event))
     this.stage.on('mousemove touchmove', () => {
@@ -331,21 +257,20 @@ export class DesignerStage {
       if (element && !element.locked) this.host.doubleClicked(element)
     })
 
+    // 框选可能在画布外松开鼠标，结束框选的监听挂在 window 上。
     const endMarquee = () => this.endMarquee()
     window.addEventListener('mouseup', endMarquee)
     window.addEventListener('touchend', endMarquee)
-    const onWheel = (event: WheelEvent) => this.onWheel(event)
-    this.wrap.addEventListener('wheel', onWheel, { passive: false })
-    const onPanStart = (event: PointerEvent) => this.onPanStart(event)
-    this.wrap.addEventListener('pointerdown', onPanStart, true)
     this.cleanup.push(
       () => window.removeEventListener('mouseup', endMarquee),
       () => window.removeEventListener('touchend', endMarquee),
-      () => this.wrap.removeEventListener('wheel', onWheel),
-      () => this.wrap.removeEventListener('pointerdown', onPanStart, true),
     )
   }
 
+  /**
+   * 按下鼠标：点元素选择它（Shift、Ctrl 加选或减选），点空白处开始框选。中键、右键、平移模式、变换框手柄不处理。
+   * @param event Konva 的鼠标或触摸事件。
+   */
   private onPointerDown(event: Konva.KonvaEventObject<MouseEvent | TouchEvent>): void {
     const mouse = event.evt as MouseEvent
     if (mouse.button === 1 || mouse.button === 2 || this.host.settings().panMode) return
@@ -367,6 +292,9 @@ export class DesignerStage {
     if (!additive) this.host.select([])
   }
 
+  /**
+   * 结束框选：选中完全在框里的可见元素；框太小（不足 3 像素）时当作点击空白处。
+   */
   private endMarquee(): void {
     const start = this.marqueeStart
     if (!start) return
@@ -381,6 +309,10 @@ export class DesignerStage {
     this.host.select(start.additive ? [...new Set([...start.base, ...hits])] : hits)
   }
 
+  /**
+   * 开始拖动：平移模式下取消；拖的元素没选中时只选中它。
+   * @param group 被拖动的组。
+   */
   private onDragStart(group: Konva.Group): void {
     if (this.host.settings().panMode) {
       group.stopDrag()
@@ -390,7 +322,11 @@ export class DesignerStage {
     if (!this.host.selection().includes(group.id())) this.host.select([group.id()])
   }
 
-  /** 拖动中吸附到参考线或网格；按住 Alt 暂时不吸附。 */
+  /**
+   * 拖动中吸附到参考线或网格；按住 Alt 暂时不吸附。
+   * @param group 被拖动的组。
+   * @param event 鼠标事件（看 Alt 键）。
+   */
   private onDragMove(group: Konva.Group, event: MouseEvent): void {
     this.guides.destroyChildren()
     const settings = this.host.settings()
@@ -401,6 +337,7 @@ export class DesignerStage {
       return
     }
 
+    // 组的位置是元素中心；参考线来自其他没被选中的可见元素。
     const template = this.host.template()
     const selection = this.host.selection()
     const current = elementBounds({ ...element, x: group.x() - element.width / 2, y: group.y() - element.height / 2 })
@@ -418,7 +355,10 @@ export class DesignerStage {
     this.host.viewChanged()
   }
 
-  /** 选中的元素一起移动（变换框会带着其他选中节点），结束时统一写回坐标。 */
+  /**
+   * 选中的元素一起移动（变换框会带着其他选中节点），结束时统一写回坐标。
+   * @param group 被拖动的组。
+   */
   private onDragEnd(group: Konva.Group): void {
     this.guides.destroyChildren()
     this.overlay.batchDraw()
@@ -434,7 +374,10 @@ export class DesignerStage {
     this.host.committed()
   }
 
-  /** 把缩放折算成宽高，保持节点 scale 为 1，元素内容按新尺寸重画。 */
+  /**
+   * 把缩放折算成宽高，保持节点 scale 为 1，元素内容按新尺寸重画。
+   * @param group 正在变换的组。
+   */
   private onTransform(group: Konva.Group): void {
     const element = this.find(group.id())
     if (!element) return
@@ -453,6 +396,10 @@ export class DesignerStage {
     this.signatures.set(element.id, JSON.stringify(element) + this.host.contextSignature())
   }
 
+  /**
+   * 变换结束：条码的旋转角度对齐到 90° 的整数倍（服务端只支持这几种），记录撤销历史。
+   * @param group 变换完的组。
+   */
   private onTransformEnd(group: Konva.Group): void {
     const element = this.find(group.id())
     if (element?.type === 'barcode' && (element.rotation ?? 0) % 90) {
@@ -462,33 +409,5 @@ export class DesignerStage {
     }
 
     this.host.committed()
-  }
-
-  /** Ctrl+滚轮缩放，滚轮上下平移，Shift+滚轮左右平移。 */
-  private onWheel(event: WheelEvent): void {
-    event.preventDefault()
-    if (event.ctrlKey || event.metaKey) {
-      const rect = this.wrap.getBoundingClientRect()
-      this.zoomAt(this.scaleValue * Math.exp(-event.deltaY * 0.0018), event.clientX - rect.left, event.clientY - rect.top)
-      return
-    }
-
-    const dx = event.shiftKey ? event.deltaY : event.deltaX
-    const dy = event.shiftKey ? 0 : event.deltaY
-    this.stage.position({ x: this.stage.x() - dx, y: this.stage.y() - dy })
-    this.afterView()
-  }
-
-  /** 空格 + 拖动，或按住鼠标中键拖动，平移画布。 */
-  private onPanStart(event: PointerEvent): void {
-    if (!(this.host.settings().panMode || event.button === 1) || this.panning) return
-    event.preventDefault()
-    event.stopPropagation()
-    this.panning = true
-    const move = (x: number, y: number) => {
-      this.stage.position({ x, y })
-      this.afterView()
-    }
-    dragPan(event, this.stage.position(), move, () => (this.panning = false))
   }
 }

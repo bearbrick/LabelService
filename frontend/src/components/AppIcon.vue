@@ -2,7 +2,23 @@
 import { computed } from 'vue'
 import { UI_ICONS } from './uiIcons.ts'
 
-const props = defineProps<{ name: string; small?: boolean }>()
+/**
+ * 组件参数。
+ */
+const props = defineProps<{
+  /**
+   * 图标名（见 uiIcons.ts）。
+   */
+  name: string
+  /**
+   * 小号（12 像素）。
+   */
+  small?: boolean
+}>()
+
+/**
+ * 图标的 SVG 内容；名字不存在时为空。
+ */
 const body = computed(() => UI_ICONS[props.name] ?? '')
 </script>
 

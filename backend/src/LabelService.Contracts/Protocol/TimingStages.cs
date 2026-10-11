@@ -9,25 +9,39 @@ namespace LabelService.Contracts.Protocol;
 /// </remarks>
 public static class TimingStages
 {
-    /// <summary>API Key 校验。</summary>
+    /// <summary>
+    /// API Key 校验。
+    /// </summary>
     public const string Auth = "auth";
 
-    /// <summary>取模板（内存缓存）。</summary>
+    /// <summary>
+    /// 取模板（内存缓存）。
+    /// </summary>
     public const string Template = "tpl";
 
-    /// <summary>数据校验和类型转换。</summary>
+    /// <summary>
+    /// 数据校验和类型转换。
+    /// </summary>
     public const string Validate = "validate";
 
-    /// <summary>替换绑定、文本排版、条码编码。</summary>
+    /// <summary>
+    /// 替换绑定、文本排版、条码编码。
+    /// </summary>
     public const string Layout = "layout";
 
-    /// <summary>SkiaSharp 绘制。</summary>
+    /// <summary>
+    /// SkiaSharp 绘制。
+    /// </summary>
     public const string Draw = "draw";
 
-    /// <summary>输出编码（PNG、PDF、ZPL）。</summary>
+    /// <summary>
+    /// 输出编码（PNG、PDF、ZPL）。
+    /// </summary>
     public const string Encode = "encode";
 
-    /// <summary>从收到请求到开始写响应的总耗时。</summary>
+    /// <summary>
+    /// 从收到请求到开始写响应的总耗时。
+    /// </summary>
     public const string Total = "total";
 
     /// <summary>

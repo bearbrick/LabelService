@@ -14,15 +14,51 @@ namespace LabelService.Demo;
 /// </summary>
 internal sealed class PrintForm : Form
 {
+    /// <summary>
+    /// 要打印的结果。
+    /// </summary>
     private readonly LabelFile file;
+
+    /// <summary>
+    /// 预览中当前这张图片（PNG 打印用）；没有时为 null。
+    /// </summary>
     private readonly Image? image;
+
+    /// <summary>
+    /// 发到网络打印机（只有 ZPL 可用）。
+    /// </summary>
     private readonly RadioButton network = new RadioButton { Text = "网络打印机（ZPL 原始数据，TCP 9100）", AutoSize = true };
+
+    /// <summary>
+    /// 发到 Windows 打印机（ZPL 按 RAW 写入，PNG 按原尺寸打印）。
+    /// </summary>
     private readonly RadioButton windows = new RadioButton { Text = "Windows 打印机", AutoSize = true };
+
+    /// <summary>
+    /// 网络打印机的地址。
+    /// </summary>
     private readonly TextBox host = new TextBox { Text = "192.168.1.50", Width = 160 };
+
+    /// <summary>
+    /// 网络打印机的端口，默认 9100。
+    /// </summary>
     private readonly NumericUpDown port = new NumericUpDown { Minimum = 1, Maximum = 65535, Value = 9100, Width = 70 };
+
+    /// <summary>
+    /// 本机安装的 Windows 打印机。
+    /// </summary>
     private readonly ComboBox printer = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 300 };
+
+    /// <summary>
+    /// 发送按钮（发送中禁用，失败后恢复）。
+    /// </summary>
     private readonly Button send = new Button { Text = "发送", AutoSize = true, DialogResult = DialogResult.None };
 
+    /// <summary>
+    /// 按结果的格式决定能选哪种打印方式，并给出说明。
+    /// </summary>
+    /// <param name="file">要打印的结果。</param>
+    /// <param name="image">预览中当前这张图片；不是 PNG 时可以为 null。</param>
     public PrintForm(LabelFile file, Image? image)
     {
         this.file = file;
@@ -84,6 +120,10 @@ internal sealed class PrintForm : Form
         send.Click += async (_, _) => await SendAsync();
     }
 
+    /// <summary>
+    /// 按选中的方式发送；打印机、网络错误弹框提示，可以改设置再发。
+    /// </summary>
+    /// <returns>发送结束时完成。</returns>
     private async Task SendAsync()
     {
         send.Enabled = false;
@@ -115,6 +155,8 @@ internal sealed class PrintForm : Form
     /// <summary>
     /// 按标签的实际尺寸打印 PNG：像素 ÷ DPI = 英寸，PrintDocument 的单位是百分之一英寸。
     /// </summary>
+    /// <param name="printerName">Windows 打印机名称。</param>
+    /// <exception cref="InvalidOperationException">没有可打印的图片。</exception>
     private void PrintImage(string printerName)
     {
         if (image is null)
@@ -137,6 +179,11 @@ internal sealed class PrintForm : Form
         document.Print();
     }
 
+    /// <summary>
+    /// 横排一组控件。
+    /// </summary>
+    /// <param name="controls">控件。</param>
+    /// <returns>横排面板。</returns>
     private static FlowLayoutPanel Flow(params Control[] controls)
     {
         var flow = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = new Padding(0) };

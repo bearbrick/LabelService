@@ -12,18 +12,41 @@ using LabelService.Rendering.Validation;
 namespace LabelService.Benchmarks;
 
 /// <summary>
-/// 拼版（T-018）：A4 一页 24 张 70×37 mm 的标签（3 列 × 8 行，每张 12 个元素、箱号各不相同），300 dpi。
+/// 拼版：A4 一页 24 张 70×37 mm 的标签（3 列 × 8 行，每张 12 个元素、箱号各不相同），300 dpi。
 /// 预算：PDF 每页 P95 ≤ 250 ms（ADR 0005）。<see cref="ShareStatic"/> 对比“固定元素只排版一次”的效果。
 /// PDF、PNG 都测（门禁要覆盖两种格式）；PNG 的时间主要花在 A4 整页的 PNG 编码上。
 /// </summary>
 [MemoryDiagnoser]
 public class SheetBenchmarks
 {
+    /// <summary>
+    /// backend/assets/fonts 里的字体。
+    /// </summary>
     private FontRegistry fonts = null!;
+
+    /// <summary>
+    /// backend/assets 里的图标和图片素材。
+    /// </summary>
     private AssetLibrary assets = null!;
+
+    /// <summary>
+    /// 渲染引擎（和服务端一样带字体和素材）。
+    /// </summary>
     private LabelRenderer renderer = null!;
+
+    /// <summary>
+    /// 70×37 的小箱标模板。
+    /// </summary>
     private LabelTemplate template = null!;
+
+    /// <summary>
+    /// A4 3 列 × 8 行的版式。
+    /// </summary>
     private SheetLayout layout = null!;
+
+    /// <summary>
+    /// 校验好的 24 张标签数据（箱号各不相同）。
+    /// </summary>
     private List<LabelInstance> labels = null!;
 
     /// <summary>
@@ -85,6 +108,7 @@ public class SheetBenchmarks
     /// <summary>
     /// 渲染一页 24 张。
     /// </summary>
+    /// <returns>输出文件的字节数（返回结果防止被优化掉）。</returns>
     [Benchmark]
     public int A4Sheet24()
     {
@@ -103,6 +127,7 @@ public class SheetBenchmarks
     /// <summary>
     /// 70×37 的小箱标：外框、公司名、标题、横线、图标（固定）；品名、料号、数量、箱号文字、一维码、二维码（随数据变化）。
     /// </summary>
+    /// <returns>模板。</returns>
     private static LabelTemplate Template()
     {
         TextElement Text(string id, double x, double y, double width, string content, double size = 7, bool bold = false) =>

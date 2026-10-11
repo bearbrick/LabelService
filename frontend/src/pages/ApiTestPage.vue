@@ -1,12 +1,21 @@
 <script setup lang="ts">
-/** 接口调试页：选一个已发布的模板，模拟业务系统调用开放接口。 */
+/**
+ * 接口调试页：选一个已发布的模板，模拟业务系统调用开放接口。
+ */
 import { computed, ref, watch } from 'vue'
 import AppIcon from '../components/AppIcon.vue'
 import ApiTestPanel from '../components/admin/ApiTestPanel.vue'
 import { catalog } from '../stores/catalog.ts'
 import { go } from '../stores/router.ts'
 
+/**
+ * 选中的模板编码（默认第一个已发布的模板）。
+ */
 const code = ref('')
+
+/**
+ * 按业务分组列出的模板（下拉框分组显示），空分组不列。
+ */
 const groups = computed(() =>
   catalog.businesses
     .map((b) => ({ ...b, items: catalog.templates.filter((t) => t.businessId === b.id).sort((x, y) => x.name.localeCompare(y.name, 'zh')) }))

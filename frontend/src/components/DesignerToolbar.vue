@@ -2,6 +2,10 @@
 import { align, allSelectedLocked, designer, distribute, duplicate, order, redo, removeSelected, toggleLockSelection, undo, zoomActual, zoomFit, zoomIn, zoomOut } from '../stores/designer.ts'
 import AppIcon from './AppIcon.vue'
 
+/**
+ * 选中的元素个数（决定对齐、分布按钮是否可用）。
+ * @returns 个数。
+ */
 const count = () => designer.selection.length
 </script>
 

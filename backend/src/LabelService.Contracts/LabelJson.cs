@@ -32,6 +32,10 @@ public static class LabelJson
         options.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));
     }
 
+    /// <summary>
+    /// 创建共享选项：按 <see cref="Apply"/> 设置后设为只读，之后多线程直接用，不会被改。
+    /// </summary>
+    /// <returns>只读的序列化选项。</returns>
     private static JsonSerializerOptions Create()
     {
         var options = new JsonSerializerOptions();

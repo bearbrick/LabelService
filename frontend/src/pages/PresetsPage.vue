@@ -1,5 +1,7 @@
 <script setup lang="ts">
-/** 画布预设：新建模板和设计器里一键选用。修改预设不影响已有模板。 */
+/**
+ * 画布预设：新建模板和设计器里一键选用。修改预设不影响已有模板。
+ */
 import { computed, reactive, ref } from 'vue'
 import { createPreset, deletePreset, updatePreset } from '../api/admin.ts'
 import type { Preset } from '../api/admin.ts'
@@ -12,21 +14,86 @@ import { confirmBox } from '../stores/dialogs.ts'
 import { go } from '../stores/router.ts'
 import { can } from '../stores/session.ts'
 
+/**
+ * 预设的类别。
+ */
 const KINDS = ['标签纸', '办公纸张']
+
+/**
+ * 按类别筛选；全部表示不筛选。
+ */
 const kind = ref('全部')
-const form = reactive({ open: false, id: 0, name: '', kind: KINDS[0], width: 100, height: 60, enabled: true, error: '', busy: false })
+
+/**
+ * 新建或编辑预设的表单。
+ */
+const form = reactive({
+  /**
+   * 编辑对话框是否打开。
+   */
+  open: false,
+  /**
+   * 编辑的预设 ID；0 表示新建。
+   */
+  id: 0,
+  /**
+   * 名称。
+   */
+  name: '',
+  /**
+   * 类别。
+   */
+  kind: KINDS[0],
+  /**
+   * 宽度，mm。
+   */
+  width: 100,
+  /**
+   * 高度，mm。
+   */
+  height: 60,
+  /**
+   * 是否启用。
+   */
+  enabled: true,
+  /**
+   * 保存失败的原因。
+   */
+  error: '',
+  /**
+   * 正在保存。
+   */
+  busy: false,
+})
+
+/**
+ * 按类别筛选后的预设。
+ */
 const list = computed(() => catalog.presets.filter((p) => kind.value === '全部' || p.kind === kind.value))
 
+/**
+ * 和预设同尺寸的模板个数。
+ * @param p 预设。
+ * @returns 个数。
+ */
 function usage(p: Preset): number {
   return catalog.templates.filter((t) => t.width === p.widthMm && t.height === p.heightMm).length
 }
 
+/**
+ * 打开编辑对话框。
+ * @param p 要编辑的预设；null 表示新建。
+ */
 function edit(p: Preset | null): void {
   Object.assign(form, p
     ? { open: true, id: p.id, name: p.name, kind: p.kind, width: p.widthMm, height: p.heightMm, enabled: p.enabled, error: '' }
     : { open: true, id: 0, name: '', kind: KINDS[0], width: 100, height: 60, enabled: true, error: '' })
 }
 
+/**
+ * 保存预设并刷新列表。
+ * @returns 保存结束时完成。
+ */
 async function save(): Promise<void> {
   form.busy = true
   form.error = ''
@@ -44,6 +111,11 @@ async function save(): Promise<void> {
   }
 }
 
+/**
+ * 删除预设（确认后；已有模板不受影响）。
+ * @param p 预设。
+ * @returns 操作结束时完成。
+ */
 async function remove(p: Preset): Promise<void> {
   if (!(await confirmBox('删除画布预设', `确定删除“${p.name}”？已有模板不受影响。`, '删除', true))) return
   try {

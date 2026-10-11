@@ -4,24 +4,74 @@
  */
 import bwipjs from 'bwip-js'
 
+/**
+ * 一维码的编码结果。
+ */
 export interface LinearCode {
+  /**
+   * 一维码。
+   */
   kind: 'linear'
-  /** 条、空交替的宽度（模块数），从条开始。 */
+  /**
+   * 条、空交替的宽度（模块数），从条开始。
+   */
   widths: number[]
-  /** 总模块数。 */
+  /**
+   * 总模块数。
+   */
   modules: number
 }
 
+/**
+ * 二维码的编码结果。
+ */
 export interface MatrixCode {
+  /**
+   * 二维码。
+   */
   kind: 'matrix'
-  /** 按行展开的模块，1 为黑。 */
+  /**
+   * 按行展开的模块，1 为黑。
+   */
   pixels: number[]
+  /**
+   * 列数（模块）。
+   */
   columns: number
+  /**
+   * 行数（模块）。
+   */
   rows: number
 }
 
-export type EncodeResult = { ok: true; code: LinearCode | MatrixCode } | { ok: false; message: string }
+/**
+ * 编码结果：成功时是条空或矩阵，失败时是原因。
+ */
+export type EncodeResult =
+  | {
+      /**
+       * 编码成功。
+       */
+      ok: true
+      /**
+       * 编码结果。
+       */
+      code: LinearCode | MatrixCode
+    }
+  | {
+      /**
+       * 编码失败。
+       */
+      ok: false
+      /**
+       * 失败原因（中文）。
+       */
+      message: string
+    }
 
+/**
+ * 码制的显示名称。
+ */
 export const SYMBOLOGY_LABELS: Readonly<Record<string, string>> = {
   code128: 'Code 128',
   code39: 'Code 39',
@@ -35,7 +85,9 @@ export const SYMBOLOGY_LABELS: Readonly<Record<string, string>> = {
   pdf417: 'PDF417',
 }
 
-/** 模板里的码制写法对应 bwip-js 的编码器名。 */
+/**
+ * 模板里的码制写法对应 bwip-js 的编码器名。
+ */
 const ENCODERS: Readonly<Record<string, string>> = {
   code128: 'code128',
   code39: 'code39',
@@ -49,6 +101,9 @@ const ENCODERS: Readonly<Record<string, string>> = {
   pdf417: 'pdf417',
 }
 
+/**
+ * bwip-js 英文错误到中文说明的对照（按顺序匹配第一条）。
+ */
 const MESSAGES: ReadonlyArray<[RegExp, string]> = [
   [/EAN-13 must be 12 or 13 digits/i, '必须是 12 或 13 位数字'],
   [/EAN-8 must be 7 or 8 digits/i, '必须是 7 或 8 位数字'],
@@ -60,9 +115,18 @@ const MESSAGES: ReadonlyArray<[RegExp, string]> = [
   [/GS1|AI/, 'GS1 数据格式不正确，应写成 (01)06901234567892(10)A01 这样'],
 ]
 
+/**
+ * 编码结果缓存，超过 500 条时清空。
+ */
 const cache = new Map<string, EncodeResult>()
 
-/** 编码条码内容，结果按“码制 + 内容 + 选项”缓存。 */
+/**
+ * 编码条码内容，结果按“码制 + 内容 + 选项”缓存。
+ * @param symbology 码制（模板里的写法）。
+ * @param text 内容。
+ * @param ecLevel QR 纠错级别。
+ * @returns 编码结果。
+ */
 export function encode(symbology: string, text: string, ecLevel?: string): EncodeResult {
   const key = `${symbology}|${ecLevel ?? ''}|${text}`
   const hit = cache.get(key)
@@ -73,6 +137,13 @@ export function encode(symbology: string, text: string, ecLevel?: string): Encod
   return result
 }
 
+/**
+ * 调 bwip-js 编码，错误转成中文。
+ * @param symbology 码制。
+ * @param text 内容。
+ * @param ecLevel QR 纠错级别。
+ * @returns 编码结果。
+ */
 function encodeUncached(symbology: string, text: string, ecLevel?: string): EncodeResult {
   const encoder = ENCODERS[symbology]
   if (!encoder) return { ok: false, message: `不支持的码制 ${symbology}` }
@@ -98,7 +169,13 @@ function encodeUncached(symbology: string, text: string, ecLevel?: string): Enco
   }
 }
 
-/** 按框宽算一维码的模块宽度（打印点，向下取整），和服务端规则一致。 */
+/**
+ * 按框宽算一维码的模块宽度（打印点，向下取整），和服务端规则一致。
+ * @param boxWidthMm 框宽，mm。
+ * @param modules 总模块数。
+ * @param dpi 分辨率。
+ * @returns 模块宽度，打印点。
+ */
 export function moduleDots(boxWidthMm: number, modules: number, dpi: number): number {
   return Math.floor((boxWidthMm * dpi) / 25.4 / modules + 1e-6)
 }

@@ -28,6 +28,9 @@ internal static class FontFileEndpoints
     /// </summary>
     public const string CssFamilyPrefix = "LabelService ";
 
+    /// <summary>
+    /// 字体文件扩展名 → @font-face 里的 format 和下载时的 Content-Type。
+    /// </summary>
     private static readonly Dictionary<string, (string Format, string ContentType)> Types = new(StringComparer.OrdinalIgnoreCase)
     {
         [".ttf"] = ("truetype", "font/ttf"),
@@ -37,8 +40,10 @@ internal static class FontFileEndpoints
     };
 
     /// <summary>
-    /// 注册路由。
+    /// 注册路由：/fonts/fonts.css 和 /fonts/{文件名}。
     /// </summary>
+    /// <param name="app">路由。</param>
+    /// <returns>同一个路由，便于链式调用。</returns>
     public static IEndpointRouteBuilder MapFontFiles(this IEndpointRouteBuilder app)
     {
         app.MapGet("/fonts/fonts.css", (HttpContext http, FontRegistry fonts) =>
@@ -63,6 +68,8 @@ internal static class FontFileEndpoints
     /// <summary>
     /// 生成 fonts.css。TrueType / OpenType 集合（.ttc、.otc）浏览器不支持，跳过，设计器会退回本机字体。
     /// </summary>
+    /// <param name="fonts">渲染用的字体注册表。</param>
+    /// <returns>CSS 文本。</returns>
     internal static string Css(FontRegistry fonts)
     {
         var css = new StringBuilder("/* 标签服务的字体：和服务端渲染用同一份文件。 */\n");

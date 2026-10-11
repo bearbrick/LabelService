@@ -1,4 +1,4 @@
-// 批量接口压测（T-015）：每次 100 张示例箱标合并成一个 PDF，默认 4 个并发连续请求 60 秒。
+// 批量接口压测：每次 100 张示例箱标合并成一个 PDF，默认 4 个并发连续请求 60 秒。
 // 用法（在 backend/tests/load 目录）：
 //   k6 run batch.js
 //   k6 run -e BASE_URL=http://服务器:8080 -e API_KEY=lbl_xxx -e VUS=4 -e ITEMS=100 -e OUTPUT=merge batch.js

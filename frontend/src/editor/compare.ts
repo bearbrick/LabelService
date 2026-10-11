@@ -1,33 +1,76 @@
 /**
- * 设计器画布和服务端 PNG 的位置对比（T-016 验收：元素位置偏差 ≤ 0.2 mm）。
+ * 设计器画布和服务端 PNG 的位置对比（验收标准：元素位置偏差 ≤ 0.2 mm）。
  * 两张图按同样的 DPI、白底，逐个元素在它的外框（向外多留一点）里找“墨迹”的上下左右边界，比较两边边界的差。
  * 只做像素计算，不碰 DOM；导出画布和解码 PNG 在 PreviewDialog 里做。
  */
 import { elementBounds } from './geometry.ts'
 import type { LabelElement } from '../model/template.ts'
 
-/** RGBA 像素，和 ImageData 一样的布局。 */
+/**
+ * RGBA 像素，和 ImageData 一样的布局。
+ */
 export interface Pixels {
+  /**
+   * 像素数据，每个像素 RGBA 四个字节。
+   */
   data: Uint8ClampedArray
+  /**
+   * 宽度，像素。
+   */
   width: number
+  /**
+   * 高度，像素。
+   */
   height: number
 }
 
+/**
+ * 矩形的四条边，像素（含边界）。
+ */
 export interface Edges {
+  /**
+   * 左边。
+   */
   left: number
+  /**
+   * 上边。
+   */
   top: number
+  /**
+   * 右边。
+   */
   right: number
+  /**
+   * 下边。
+   */
   bottom: number
 }
 
+/**
+ * 一个元素的位置偏差。
+ */
 export interface ElementOffset {
+  /**
+   * 元素 ID。
+   */
   id: string
+  /**
+   * 元素名称（没有名称时是 ID）。
+   */
   name: string
-  /** 四条边里最大的偏差，mm。两边都没有墨迹时为 0；只有一边有时为 Infinity。 */
+  /**
+   * 四条边里最大的偏差，mm。两边都没有墨迹时为 0；只有一边有时为 Infinity。
+   */
   maxMm: number
 }
 
-/** 区域（像素，含边界）里比阈值暗的像素的外框；没有时返回 null。 */
+/**
+ * 区域（像素，含边界）里比阈值暗的像素的外框；没有时返回 null。
+ * @param pixels 图片。
+ * @param region 查找的区域，像素。
+ * @param threshold 亮度阈值，低于它算墨迹，默认 160。
+ * @returns 墨迹的外框，或 null。
+ */
 export function inkEdges(pixels: Pixels, region: Edges, threshold = 160): Edges | null {
   const left = Math.max(0, Math.floor(region.left))
   const top = Math.max(0, Math.floor(region.top))
@@ -55,6 +98,12 @@ export function inkEdges(pixels: Pixels, region: Edges, threshold = 160): Edges 
 /**
  * 逐个可见元素比较两张图（同尺寸、白底）。pxPerMm 是图上每 mm 的像素数；margin 是外框向外多看的距离，mm。
  * 结果按偏差从大到小排列。
+ * @param elements 模板的元素。
+ * @param canvas 设计器画布导出的图片。
+ * @param server 服务端预览的图片。
+ * @param pxPerMm 图上每 mm 的像素数。
+ * @param margin 外框向外多看的距离，mm。
+ * @returns 每个可见元素的偏差，大的在前。
  */
 export function compareElements(elements: readonly LabelElement[], canvas: Pixels, server: Pixels, pxPerMm: number, margin = 1): ElementOffset[] {
   const result: ElementOffset[] = []

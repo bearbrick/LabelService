@@ -15,6 +15,9 @@ internal sealed record EncodedSymbol(int Columns, int Rows, bool[] Modules, stri
     /// <summary>
     /// 第 <paramref name="row"/> 行第 <paramref name="column"/> 列是不是黑模块。
     /// </summary>
+    /// <param name="column">列，从 0 开始。</param>
+    /// <param name="row">行，从 0 开始。</param>
+    /// <returns>黑模块时为 true。</returns>
     public bool this[int column, int row] => Modules[row * Columns + column];
 }
 
@@ -32,6 +35,9 @@ internal static class SymbolCache
     /// </summary>
     public const int Capacity = 4096;
 
+    /// <summary>
+    /// 缓存的条目：(码制和参数, 内容) → 编码结果。
+    /// </summary>
     private static readonly ConcurrentDictionary<(string Kind, string Content), EncodedSymbol> Entries = new();
 
     /// <summary>
@@ -45,6 +51,7 @@ internal static class SymbolCache
     /// <param name="kind">码制和影响编码结果的参数，如 <c>code128</c>、<c>qr:M</c>。</param>
     /// <param name="content">内容。</param>
     /// <param name="encode">编码函数。</param>
+    /// <returns>编码结果。</returns>
     public static EncodedSymbol GetOrAdd(string kind, string content, Func<string, EncodedSymbol> encode)
     {
         var key = (kind, content);
@@ -75,6 +82,9 @@ internal static class SymbolGeometry
     /// 旋转中心：转直角时取到半个点上，转 90° 或 270° 时再让横纵坐标的小数部分相同，这样整点的模块边转过去仍是整点；
     /// 其他角度用框的中心。
     /// </summary>
+    /// <param name="bounds">元素框（打印点）。</param>
+    /// <param name="rotation">旋转角度（度）。</param>
+    /// <returns>旋转中心。</returns>
     public static SkiaSharp.SKPoint Pivot(SkiaSharp.SKRect bounds, double rotation)
     {
         var normalized = ((rotation % 360) + 360) % 360;

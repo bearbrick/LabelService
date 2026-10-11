@@ -19,6 +19,10 @@ internal static class Monochrome
     /// <summary>
     /// 把 RGBA 位图按阈值打包成 1 位：每行 <c>(宽 + 7) / 8</c> 字节，高位在左，1 为黑（ZPL ^GF 的格式）。
     /// </summary>
+    /// <param name="bitmap">RGBA8888 位图。</param>
+    /// <param name="bytesPerRow">每行的字节数。</param>
+    /// <returns>打包后的数据，按行存放。</returns>
+    /// <exception cref="ArgumentException">位图不是 RGBA8888。</exception>
     public static byte[] Pack(SKBitmap bitmap, out int bytesPerRow)
     {
         if (bitmap.ColorType != SKColorType.Rgba8888)
@@ -48,5 +52,12 @@ internal static class Monochrome
         return packed;
     }
 
+    /// <summary>
+    /// 按亮度（0.299R + 0.587G + 0.114B）判断是不是黑。
+    /// </summary>
+    /// <param name="red">红。</param>
+    /// <param name="green">绿。</param>
+    /// <param name="blue">蓝。</param>
+    /// <returns>亮度低于 <see cref="Threshold"/> 时为 true。</returns>
     internal static bool IsBlack(byte red, byte green, byte blue) => (299 * red + 587 * green + 114 * blue) / 1000 < Threshold;
 }

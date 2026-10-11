@@ -3,18 +3,42 @@
  */
 import type { LabelElement, LabelPage } from '../model/template.ts'
 
+/**
+ * 变换框的全部手柄。
+ */
 export const ALL_ANCHORS = ['top-left', 'top-center', 'top-right', 'middle-right', 'middle-left', 'bottom-left', 'bottom-center', 'bottom-right']
 
+/**
+ * 变换框的规则。
+ */
 export interface TransformRules {
+  /**
+   * 显示的手柄。
+   */
   anchors: string[]
+  /**
+   * 能不能旋转。
+   */
   rotate: boolean
+  /**
+   * 是否等比缩放。
+   */
   keepRatio: boolean
-  /** 横线只能拉宽度，竖线只能拉高度。 */
+  /**
+   * 横线只能拉宽度，竖线只能拉高度。
+   */
   mode: 'box' | 'hline' | 'vline'
+  /**
+   * 选中的元素里有锁定的（不能变换）。
+   */
   locked: boolean
 }
 
-/** 按选中的元素决定变换框：线只能拉长度、不能旋转；二维码和图标等比缩放；有锁定的元素时不能变换。 */
+/**
+ * 按选中的元素决定变换框：线只能拉长度、不能旋转；二维码和图标等比缩放；有锁定的元素时不能变换。
+ * @param selected 选中的元素。
+ * @returns 变换框的规则。
+ */
 export function transformRules(selected: readonly LabelElement[]): TransformRules {
   const rules: TransformRules = { anchors: ALL_ANCHORS, rotate: true, keepRatio: false, mode: 'box', locked: selected.some((element) => element.locked) }
   if (selected.length !== 1) return rules
@@ -29,16 +53,30 @@ export function transformRules(selected: readonly LabelElement[]): TransformRule
   return rules
 }
 
+/**
+ * 网格间距的档位，mm。
+ */
 const GRID_STEPS = [0.5, 1, 2, 5, 10, 20, 50, 100]
 
-/** 实际画出来的网格间距（mm）：从设置的间距开始，缩小时间距不足 6 像素就放大一档。 */
+/**
+ * 实际画出来的网格间距（mm）：从设置的间距开始，缩小时间距不足 6 像素就放大一档。
+ * @param gridSize 设置的网格间距，mm。
+ * @param pxPerMm 每 mm 的屏幕像素。
+ * @returns 实际的网格间距，mm。
+ */
 export function gridStep(gridSize: number, pxPerMm: number): number {
   let index = Math.max(0, GRID_STEPS.indexOf(gridSize))
   while (index < GRID_STEPS.length - 1 && GRID_STEPS[index] * pxPerMm < 6) index++
   return GRID_STEPS[index]
 }
 
-/** 在纸张坐标（mm）里画网格线，线宽 1 像素。 */
+/**
+ * 在纸张坐标（mm）里画网格线，线宽 1 像素。
+ * @param canvas 绘图上下文（已变换到纸张坐标）。
+ * @param page 纸张尺寸。
+ * @param gridSize 设置的网格间距，mm。
+ * @param pxPerMm 每 mm 的屏幕像素。
+ */
 export function drawGrid(canvas: CanvasRenderingContext2D, page: LabelPage, gridSize: number, pxPerMm: number): void {
   const step = gridStep(gridSize, pxPerMm)
   canvas.save()
@@ -59,7 +97,13 @@ export function drawGrid(canvas: CanvasRenderingContext2D, page: LabelPage, grid
   canvas.restore()
 }
 
-/** 按住拖动平移：从 origin 出发，指针每次移动回调新的位置，松开时调用 end。 */
+/**
+ * 按住拖动平移：从 origin 出发，指针每次移动回调新的位置，松开时调用 end。
+ * @param event 按下指针的事件。
+ * @param origin 起始位置。
+ * @param move 移动时调用，参数是新位置。
+ * @param end 松开时调用。
+ */
 export function dragPan(event: PointerEvent, origin: { x: number; y: number }, move: (x: number, y: number) => void, end: () => void): void {
   const startX = event.clientX
   const startY = event.clientY

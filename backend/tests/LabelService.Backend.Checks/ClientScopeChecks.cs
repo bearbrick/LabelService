@@ -4,11 +4,18 @@ using System.Text.Json;
 namespace LabelService.Backend.Checks;
 
 /// <summary>
-/// 调用方管理的业务范围（T-021，ADR 0006）：范围受限的“接口运维”只能把自己范围里的分组授权出去，
+/// 调用方管理的业务范围（ADR 0006）：范围受限的“接口运维”只能把自己范围里的分组授权出去，
 /// 看不到、改不了、重置不了授权超出自己范围的调用方，否则就能拿到一把能调别的业务模板的 Key。
 /// </summary>
 internal static class ClientScopeChecks
 {
+    /// <summary>
+    /// 运行调用方业务范围的全部检查：建一个范围受限的接口运维，看它能授权、看到、修改哪些调用方。
+    /// </summary>
+    /// <param name="http">调用服务的客户端。</param>
+    /// <param name="admin">已登录并改过密码的 admin 会话。</param>
+    /// <param name="check">记录检查结果。</param>
+    /// <returns>检查做完时完成。</returns>
     public static async Task RunAsync(HttpClient http, AdminSession admin, Action<string, bool> check)
     {
         var businesses = await admin.JsonAsync(HttpMethod.Get, "/api/admin/businesses");
@@ -67,6 +74,13 @@ internal static class ClientScopeChecks
         }
     }
 
+    /// <summary>
+    /// 新建或修改调用方的请求体。
+    /// </summary>
+    /// <param name="name">调用方名称。</param>
+    /// <param name="allBusinesses">授权全部业务分组。</param>
+    /// <param name="businessIds">授权的业务分组 ID。</param>
+    /// <returns>请求体（匿名对象）。</returns>
     private static object Client(string name, bool allBusinesses, int[] businessIds) => new
     {
         name,
@@ -77,6 +91,11 @@ internal static class ClientScopeChecks
         ipAllowlist = ""
     };
 
+    /// <summary>
+    /// 等请求完成，只取状态码并释放响应。
+    /// </summary>
+    /// <param name="request">发出的请求。</param>
+    /// <returns>HTTP 状态码。</returns>
     private static async Task<HttpStatusCode> StatusAsync(Task<HttpResponseMessage> request)
     {
         using var response = await request;

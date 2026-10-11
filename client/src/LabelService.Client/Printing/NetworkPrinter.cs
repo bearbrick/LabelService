@@ -7,7 +7,9 @@ namespace LabelService.Client.Printing;
 /// </summary>
 public static class NetworkPrinter
 {
-    /// <summary>默认端口。</summary>
+    /// <summary>
+    /// 默认端口。
+    /// </summary>
     public const int DefaultPort = 9100;
 
     /// <summary>

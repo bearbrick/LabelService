@@ -1,5 +1,7 @@
 <script setup lang="ts">
-/** 左侧模板树：按业务分组列出模板，可搜索；窄屏时还放功能菜单。 */
+/**
+ * 左侧模板树：按业务分组列出模板，可搜索；窄屏时还放功能菜单。
+ */
 import { computed, reactive, ref, watch } from 'vue'
 import type { TemplateItem } from '../../api/admin.ts'
 import { sizeText } from '../../model/format.ts'
@@ -10,10 +12,34 @@ import type { Page } from '../../stores/router.ts'
 import { can } from '../../stores/session.ts'
 import AppIcon from '../AppIcon.vue'
 
-const props = defineProps<{ collapsed: boolean }>()
-const emit = defineEmits<{ navigate: [] }>()
+/**
+ * 组件参数。
+ */
+const props = defineProps<{
+  /**
+   * 收起成窄条（模板工作区里）。
+   */
+  collapsed: boolean
+}>()
 
+/**
+ * 组件事件。
+ */
+const emit = defineEmits<{
+  /**
+   * 点了一项（窄屏时父组件收起模板树）。
+   */
+  navigate: []
+}>()
+
+/**
+ * 搜索框的内容（按名称或编码过滤）。
+ */
 const query = ref('')
+
+/**
+ * 每个业务分组是否展开（分组 ID → 展开），新出现的分组默认展开。
+ */
 const openFolders = reactive<Record<number, boolean>>({})
 
 watch(
@@ -22,6 +48,9 @@ watch(
   { immediate: true },
 )
 
+/**
+ * 树的第一层：业务分组，有不属于任何分组的模板时加一个“未分组”。
+ */
 const folders = computed(() => {
   const ids = new Set(catalog.businesses.map((b) => b.id))
   const list = catalog.businesses.map((b) => ({ id: b.id, name: b.name, code: b.code }))
@@ -29,6 +58,11 @@ const folders = computed(() => {
   return list
 })
 
+/**
+ * 某个分组下符合搜索条件的模板，按名称排序。
+ * @param id 分组 ID；0 是未分组。
+ * @returns 模板。
+ */
 function templatesOf(id: number): TemplateItem[] {
   const q = query.value.toLowerCase()
   return catalog.templates
@@ -37,19 +71,34 @@ function templatesOf(id: number): TemplateItem[] {
     .sort((a, b) => a.name.localeCompare(b.name, 'zh'))
 }
 
+/**
+ * 搜索没有任何结果。
+ */
 const noMatch = computed(() => !!query.value && folders.value.every((folder) => !templatesOf(folder.id).length))
 
+/**
+ * 展开或收起分组，并在模板库里打开它。
+ * @param id 分组 ID；0 是未分组（只展开收起）。
+ */
 function openFolder(id: number): void {
   openFolders[id] = !openFolders[id]
   if (id) goBiz(id)
   emit('navigate')
 }
 
+/**
+ * 打开模板工作区：在工作区里切换模板时停留在当前页签（版本记录页签除外）。
+ * @param template 模板。
+ */
 function open(template: TemplateItem): void {
   openWorkspace(template.code, route.page === 'workspace' && route.view !== 'versions' ? route.view : 'designer')
   emit('navigate')
 }
 
+/**
+ * 打开功能页面（窄屏菜单）。
+ * @param target 页面。
+ */
 function page(target: Page): void {
   go(target)
   emit('navigate')

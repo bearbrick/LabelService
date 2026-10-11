@@ -23,11 +23,14 @@ using Microsoft.Extensions.Logging.Abstractions;
 namespace LabelService.Backend.Checks;
 
 /// <summary>
-/// 旧库升级（T-021）：T-008、T-009 时期的库（迁移到 AddApiClients）升级到业务分组授权时，模板分类、调用方授权按 <see cref="LegacyUpgrade"/> 换算，
+/// 旧库升级：一期早期的库（迁移到 AddApiClients）升级到业务分组授权时，模板分类、调用方授权按 <see cref="LegacyUpgrade"/> 换算，
 /// 授权不扩大也不缩小；升级前自动备份，迁移中途失败（故障注入）能恢复到升级前，重试成功。
 /// </summary>
 internal static class UpgradeChecks
 {
+    /// <summary>
+    /// 旧库里的三个调用方：名称、Key 原文、允许的模板编码（MES 是 *，ERP 里有一个库里不存在的 GONE）。
+    /// </summary>
     private static readonly (string Name, string Key, string Allowed)[] Clients =
     [
         ("MES", "lbl_test_legacy_mes", "*"),
@@ -35,6 +38,12 @@ internal static class UpgradeChecks
         ("ERP", "lbl_test_legacy_erp", "BOX2, A4_SHIPPING_MARK, GONE"),
     ];
 
+    /// <summary>
+    /// 运行旧库升级的全部检查。
+    /// </summary>
+    /// <param name="backendRoot">backend 目录。</param>
+    /// <param name="check">记录检查结果。</param>
+    /// <returns>检查做完时完成。</returns>
     public static async Task RunAsync(string backendRoot, Action<string, bool> check)
     {
         CheckPlan(check);
@@ -45,6 +54,7 @@ internal static class UpgradeChecks
     /// <summary>
     /// 换算规则：逐个调用方、逐个模板核对升级前后能不能用，结果必须一样。
     /// </summary>
+    /// <param name="check">记录检查结果。</param>
     private static void CheckPlan(Action<string, bool> check)
     {
         var snapshot = Snapshot();
@@ -66,6 +76,9 @@ internal static class UpgradeChecks
     /// <summary>
     /// 故障注入：非事务的 PRAGMA foreign_keys = 0 执行成功之后抛异常（和验收的复现一致），库要恢复到升级前，重试成功。
     /// </summary>
+    /// <param name="backendRoot">backend 目录。</param>
+    /// <param name="check">记录检查结果。</param>
+    /// <returns>检查做完时完成。</returns>
     private static async Task CheckFaultInjectionAsync(string backendRoot, Action<string, bool> check)
     {
         var directory = TempDataDirectory.Create();
@@ -120,6 +133,9 @@ internal static class UpgradeChecks
     /// <summary>
     /// 端到端：用旧库启动服务，旧的 API Key 按原来的授权访问模板。
     /// </summary>
+    /// <param name="backendRoot">backend 目录。</param>
+    /// <param name="check">记录检查结果。</param>
+    /// <returns>检查做完时完成。</returns>
     private static async Task CheckServerAsync(string backendRoot, Action<string, bool> check)
     {
         var directory = TempDataDirectory.Create();
@@ -157,6 +173,10 @@ internal static class UpgradeChecks
         }
     }
 
+    /// <summary>
+    /// 和 <see cref="CreateLegacyAsync"/> 造的旧库一样的旧数据（直接给换算规则用）。
+    /// </summary>
+    /// <returns>三个模板、三个调用方。</returns>
     private static LegacySnapshot Snapshot() => new(
         [new LegacyTemplate(1, "BOX_LABEL", "包装"), new LegacyTemplate(2, "BOX2", "包装"), new LegacyTemplate(3, "A4_SHIPPING_MARK", null)],
         Clients.Select((client, index) => new LegacyClient(index + 1, client.Name, client.Allowed)).ToList());
@@ -164,6 +184,9 @@ internal static class UpgradeChecks
     /// <summary>
     /// 造一个 AddApiClients 版本的旧库：三个已发布的模板（两个分类“包装”、一个没有分类）、三个调用方。
     /// </summary>
+    /// <param name="backendRoot">backend 目录（读示例模板）。</param>
+    /// <param name="directory">数据目录。</param>
+    /// <returns>建好时完成。</returns>
     private static async Task CreateLegacyAsync(string backendRoot, string directory)
     {
         await using (var db = Context(directory, null))
@@ -188,6 +211,12 @@ internal static class UpgradeChecks
         }
     }
 
+    /// <summary>
+    /// 数据目录里 label.db 的上下文，可以挂故障注入的拦截器。
+    /// </summary>
+    /// <param name="directory">数据目录。</param>
+    /// <param name="interceptor">拦截器；不注入故障时为 null。</param>
+    /// <returns>上下文，用完释放。</returns>
     private static LabelDbContext Context(string directory, IInterceptor? interceptor)
     {
         var builder = new DbContextOptionsBuilder<SqliteLabelDbContext>().UseSqlite(new SqliteConnectionStringBuilder { DataSource = Path.Combine(directory, DataOptions.DatabaseFileName) }.ToString());
@@ -199,6 +228,11 @@ internal static class UpgradeChecks
         return new SqliteLabelDbContext(builder.Options);
     }
 
+    /// <summary>
+    /// 打开 label.db 的连接（不进连接池，用完就关，方便删目录）。
+    /// </summary>
+    /// <param name="directory">数据目录。</param>
+    /// <returns>已打开的连接。</returns>
     private static SqliteConnection Open(string directory)
     {
         var connection = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = Path.Combine(directory, DataOptions.DatabaseFileName), Pooling = false }.ToString());
@@ -206,6 +240,13 @@ internal static class UpgradeChecks
         return connection;
     }
 
+    /// <summary>
+    /// 执行一条 SQL；有内容参数时绑定到 $content。
+    /// </summary>
+    /// <param name="connection">连接。</param>
+    /// <param name="sql">SQL。</param>
+    /// <param name="content">$content 参数的值；没有时为 null。</param>
+    /// <returns>执行完时完成。</returns>
     private static async Task Execute(SqliteConnection connection, string sql, string? content = null)
     {
         await using var command = connection.CreateCommand();
@@ -218,6 +259,12 @@ internal static class UpgradeChecks
         await command.ExecuteNonQueryAsync();
     }
 
+    /// <summary>
+    /// 查询第一列，每行转成字符串（NULL 是空字符串）。
+    /// </summary>
+    /// <param name="connection">连接。</param>
+    /// <param name="sql">SQL。</param>
+    /// <returns>第一列的值。</returns>
     private static async Task<List<string>> Strings(SqliteConnection connection, string sql)
     {
         await using var command = connection.CreateCommand();
@@ -237,37 +284,51 @@ internal static class UpgradeChecks
     /// </summary>
     private sealed class FaultAfterPragma : DbCommandInterceptor
     {
+        /// <summary>
+        /// 是否已经看到 PRAGMA foreign_keys = 0（之后的下一条命令要出错）。
+        /// </summary>
         private bool armed;
 
+        /// <summary>
+        /// 是否已经抛过注入的异常（只抛一次）。
+        /// </summary>
         public bool Thrown
         {
             get; private set;
         }
 
+        /// <inheritdoc />
         public override int NonQueryExecuted(DbCommand command, CommandExecutedEventData eventData, int result)
         {
             Arm(command);
             return result;
         }
 
+        /// <inheritdoc />
         public override ValueTask<int> NonQueryExecutedAsync(DbCommand command, CommandExecutedEventData eventData, int result, CancellationToken cancellationToken = default)
         {
             Arm(command);
             return ValueTask.FromResult(result);
         }
 
+        /// <inheritdoc />
         public override InterceptionResult<int> NonQueryExecuting(DbCommand command, CommandEventData eventData, InterceptionResult<int> result)
         {
             Fail();
             return result;
         }
 
+        /// <inheritdoc />
         public override ValueTask<InterceptionResult<int>> NonQueryExecutingAsync(DbCommand command, CommandEventData eventData, InterceptionResult<int> result, CancellationToken cancellationToken = default)
         {
             Fail();
             return ValueTask.FromResult(result);
         }
 
+        /// <summary>
+        /// 刚执行完的是 PRAGMA foreign_keys = 0 时上膛。
+        /// </summary>
+        /// <param name="command">刚执行完的命令。</param>
         private void Arm(DbCommand command)
         {
             if (command.CommandText.Contains("PRAGMA foreign_keys = 0", StringComparison.OrdinalIgnoreCase))
@@ -276,6 +337,10 @@ internal static class UpgradeChecks
             }
         }
 
+        /// <summary>
+        /// 上膛后的第一条命令执行前抛异常。
+        /// </summary>
+        /// <exception cref="InvalidOperationException">注入的故障。</exception>
         private void Fail()
         {
             if (armed && !Thrown)

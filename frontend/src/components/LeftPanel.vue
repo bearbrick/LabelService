@@ -5,6 +5,9 @@ import ElementLibrary from './ElementLibrary.vue'
 import FieldList from './FieldList.vue'
 import LayerList from './LayerList.vue'
 
+/**
+ * 左侧面板的页签：元素、字段、图层。
+ */
 const TABS = [
   { id: 'elements', label: '元素', icon: 'shapes' },
   { id: 'fields', label: '字段', icon: 'braces' },

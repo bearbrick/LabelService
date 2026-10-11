@@ -9,6 +9,11 @@ namespace LabelService.Client.Checks;
 /// </remarks>
 internal static class LiveServerChecks
 {
+    /// <summary>
+    /// 运行端到端检查；没设置 LABEL_SERVICE_URL 时只打印说明。
+    /// </summary>
+    /// <param name="check">记录检查结果。</param>
+    /// <returns>检查做完时完成。</returns>
     public static async Task RunAsync(Action<string, bool> check)
     {
         var url = Environment.GetEnvironmentVariable("LABEL_SERVICE_URL");
@@ -79,6 +84,11 @@ internal static class LiveServerChecks
         check("端到端：Key 无效映射为 UNAUTHORIZED", unauthorized is { ErrorCode: LabelErrorCodes.Unauthorized, StatusCode: 401 });
     }
 
+    /// <summary>
+    /// 执行一个调用，返回抛出的 <see cref="LabelServiceException"/>。
+    /// </summary>
+    /// <param name="action">调用。</param>
+    /// <returns>抛出的异常；调用成功时为 null。</returns>
     private static async Task<LabelServiceException?> Fails(Func<Task> action)
     {
         try

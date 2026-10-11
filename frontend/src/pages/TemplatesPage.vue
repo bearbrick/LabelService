@@ -1,5 +1,7 @@
 <script setup lang="ts">
-/** 模板库：按业务分组的模板列表（卡片或表格），可筛选状态、排序；复制、删除模板。 */
+/**
+ * 模板库：按业务分组的模板列表（卡片或表格），可筛选状态、排序；复制、删除模板。
+ */
 import { computed, reactive } from 'vue'
 import { createTemplate, deleteTemplate, getTemplate } from '../api/admin.ts'
 import type { TemplateItem } from '../api/admin.ts'
@@ -15,6 +17,9 @@ import { confirmBox, dialogs } from '../stores/dialogs.ts'
 import { go, goBiz, openWorkspace, route } from '../stores/router.ts'
 import { can, inScope } from '../stores/session.ts'
 
+/**
+ * 状态筛选的选项。
+ */
 const STATUS: { value: 'all' | TemplateState; label: string }[] = [
   { value: 'all', label: '全部' },
   { value: 'published', label: '已发布' },
@@ -22,10 +27,71 @@ const STATUS: { value: 'all' | TemplateState; label: string }[] = [
   { value: 'draft', label: '未发布' },
 ]
 
-const filter = reactive({ status: 'all' as 'all' | TemplateState, sort: 'updated', mode: 'cards' as 'cards' | 'table', query: '' })
-const copy = reactive({ open: false, source: null as TemplateItem | null, code: '', name: '', error: '', busy: false })
+/**
+ * 列表的筛选和显示设置。
+ */
+const filter = reactive({
+  /**
+   * 按状态筛选。
+   */
+  status: 'all' as 'all' | TemplateState,
+  /**
+   * 排序：updated 最近修改、name 名称、code 编码。
+   */
+  sort: 'updated',
+  /**
+   * 显示方式：卡片或表格。
+   */
+  mode: 'cards' as 'cards' | 'table',
+  /**
+   * 搜索：名称或编码。
+   */
+  query: '',
+})
+
+/**
+ * 复制模板的对话框。
+ */
+const copy = reactive({
+  /**
+   * 复制对话框是否打开。
+   */
+  open: false,
+  /**
+   * 被复制的模板。
+   */
+  source: null as TemplateItem | null,
+  /**
+   * 新模板的编码。
+   */
+  code: '',
+  /**
+   * 新模板的名称。
+   */
+  name: '',
+  /**
+   * 复制失败的原因。
+   */
+  error: '',
+  /**
+   * 正在复制。
+   */
+  busy: false,
+})
+
+/**
+ * 正在看的业务分组；看全部时为 null。
+ */
 const currentBiz = computed(() => (route.biz === 'all' ? null : businessOf(route.biz)))
+
+/**
+ * 当前分组里的全部模板（还没按状态和搜索过滤）。
+ */
 const base = computed(() => catalog.templates.filter((t) => route.biz === 'all' || (t.businessId ?? 0) === route.biz))
+
+/**
+ * 过滤并排序后的模板。
+ */
 const list = computed(() => {
   const q = filter.query.trim().toLowerCase()
   const items = base.value.filter((t) => (filter.status === 'all' || templateState(t).key === filter.status) && (!q || t.name.toLowerCase().includes(q) || t.code.toLowerCase().includes(q)))
@@ -37,18 +103,36 @@ const list = computed(() => {
   return [...items].sort(sorters[filter.sort])
 })
 
+/**
+ * 某个状态的模板个数（筛选按钮上显示）。
+ * @param status 状态；all 是全部。
+ * @returns 个数。
+ */
 function count(status: 'all' | TemplateState): number {
   return status === 'all' ? base.value.length : base.value.filter((t) => templateState(t).key === status).length
 }
 
+/**
+ * 当前用户能不能编辑这个模板（有 tpl.edit 且在自己的业务范围里）。
+ * @param t 模板。
+ * @returns 能编辑时为 true。
+ */
 function canEditTemplate(t: TemplateItem): boolean {
   return can('tpl.edit') && inScope(t.businessId)
 }
 
+/**
+ * 打开复制对话框，默认编码加 _COPY、名称加（副本）。
+ * @param t 被复制的模板。
+ */
 function startCopy(t: TemplateItem): void {
   Object.assign(copy, { open: true, source: t, code: `${t.code}_COPY`.slice(0, 64), name: `${t.name}（副本）`, error: '', busy: false })
 }
 
+/**
+ * 复制模板：取原模板当前的内容（有草稿时是草稿），以新编码、新名称新建到同一个分组。
+ * @returns 复制结束时完成（失败时显示原因，不抛）。
+ */
 async function doCopy(): Promise<void> {
   const source = copy.source
   if (!source) return
@@ -67,6 +151,11 @@ async function doCopy(): Promise<void> {
   }
 }
 
+/**
+ * 删除模板（确认后）。
+ * @param t 模板。
+ * @returns 操作结束时完成。
+ */
 async function remove(t: TemplateItem): Promise<void> {
   const text = `删除后开放接口立即不能再调用 ${t.code}，编码也不能再用。确定删除“${t.name}”？`
   if (!(await confirmBox('删除模板', text, '删除', true))) return

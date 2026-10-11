@@ -1,5 +1,7 @@
 <script setup lang="ts">
-/** 图片和图标的属性。 */
+/**
+ * 图片和图标的属性。
+ */
 import { computed } from 'vue'
 import { LABEL_ICONS } from '../../model/icons.ts'
 import type { IconElement, ImageElement, ImageFit } from '../../model/template.ts'
@@ -7,27 +9,62 @@ import { assets } from '../../stores/assets.ts'
 import { commit, designer } from '../../stores/designer.ts'
 import ColorField from './ColorField.vue'
 
-const props = defineProps<{ element: ImageElement | IconElement }>()
+/**
+ * 组件参数。
+ */
+const props = defineProps<{
+  /**
+   * 图片或图标元素。
+   */
+  element: ImageElement | IconElement
+}>()
+
+/**
+ * 图片适应方式的按钮。
+ */
 const FITS: ReadonlyArray<{ value: ImageFit; label: string }> = [
   { value: 'contain', label: '适应' },
   { value: 'cover', label: '填满' },
   { value: 'stretch', label: '拉伸' },
 ]
 
+/**
+ * 是图片时是它，否则为 null。
+ */
 const image = computed(() => (props.element.type === 'image' ? props.element : null))
+
+/**
+ * 是图标时是它，否则为 null。
+ */
 const icon = computed(() => (props.element.type === 'icon' ? props.element : null))
+
+/**
+ * 图片类型的字段（图片来源可以选）。
+ */
 const imageFields = computed(() => designer.template.fields.filter((field) => field.type === 'image'))
 
+/**
+ * 设置图片来源。
+ * @param value asset:素材key 或 {{字段}}。
+ */
 function setSource(value: string): void {
   if (image.value) image.value.src = value
   commit()
 }
 
+/**
+ * 设置图片适应方式。
+ * @param value 适应方式。
+ */
 function setFit(value: ImageFit): void {
   if (image.value) image.value.fit = value
   commit()
 }
 
+/**
+ * 换图标。
+ * @param key 图标路径。
+ */
 function setIcon(key: string): void {
   if (icon.value) icon.value.icon = key
   commit()

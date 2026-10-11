@@ -7,6 +7,11 @@ namespace LabelService.Client.Checks;
 /// </summary>
 internal static partial class ArchitectureChecks
 {
+    /// <summary>
+    /// 运行调用端约定的全部检查。
+    /// </summary>
+    /// <param name="clientRoot">client 目录。</param>
+    /// <param name="check">记录检查结果。</param>
     public static void Run(string clientRoot, Action<string, bool> check)
     {
         string Relative(string path) => Path.GetRelativePath(clientRoot, path).Replace('\\', '/');
@@ -30,9 +35,17 @@ internal static partial class ArchitectureChecks
         check("SDK 不依赖 Newtonsoft.Json 和日志框架" + (heavy.Length > 0 ? "：" + string.Join(", ", heavy) : ""), heavy.Length == 0 && !ForbiddenDependency().IsMatch(sdkProject));
     }
 
+    /// <summary>
+    /// net462 不支持的写法：record、init 访问器、required 成员。
+    /// </summary>
+    /// <returns>编译好的正则。</returns>
     [GeneratedRegex(@"\brecord\b|\binit\s*;|\brequired\s+[A-Za-z<]")]
     private static partial Regex NewRuntimeSyntax();
 
+    /// <summary>
+    /// SDK 不能依赖的库：Newtonsoft.Json 和日志框架。
+    /// </summary>
+    /// <returns>编译好的正则。</returns>
     [GeneratedRegex(@"Newtonsoft|Microsoft\.Extensions\.Logging|Serilog|NLog|log4net")]
     private static partial Regex ForbiddenDependency();
 }

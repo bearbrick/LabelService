@@ -10,13 +10,21 @@ using SkiaSharp;
 namespace LabelService.Backend.Checks;
 
 /// <summary>
-/// 文本（T-001）：字体匹配和降级、换行、自动缩小、对齐、行高、字间距，以及渲染出来的像素。
+/// 文本：字体匹配和降级、换行、自动缩小、对齐、行高、字间距，以及渲染出来的像素。
 /// 字体来自 backend/assets/fonts（准备方法见那里的 README）。
 /// </summary>
 internal static class TextChecks
 {
+    /// <summary>
+    /// 检查用的分辨率。
+    /// </summary>
     private const int Dpi = 300;
 
+    /// <summary>
+    /// 运行文本的全部检查；没有思源黑体时只报这一项。
+    /// </summary>
+    /// <param name="backendRoot">backend 目录。</param>
+    /// <param name="check">记录检查结果。</param>
     public static void Run(string backendRoot, Action<string, bool> check)
     {
         var fonts = Fixtures.Fonts(backendRoot);
@@ -31,6 +39,11 @@ internal static class TextChecks
         CheckPixels(backendRoot, fonts, check);
     }
 
+    /// <summary>
+    /// 字体匹配：模板字体名认别名，粗体、斜体选对字形或合成，找不到时降级并给 FONT_FALLBACK。
+    /// </summary>
+    /// <param name="fonts">字体注册表。</param>
+    /// <param name="check">记录检查结果。</param>
     private static void CheckFonts(FontRegistry fonts, Action<string, bool> check)
     {
         var warnings = new List<string>();
@@ -54,6 +67,11 @@ internal static class TextChecks
             serif.FamilyName.Contains("Serif", StringComparison.Ordinal) ? serifWarnings.Count == 0 : serifWarnings.Count == 1);
     }
 
+    /// <summary>
+    /// 排版规则：不换行时裁切、自动换行（中文按字、英文按单词、避头尾）、自动缩小、对齐、行高、字间距。
+    /// </summary>
+    /// <param name="fonts">字体注册表。</param>
+    /// <param name="check">记录检查结果。</param>
     private static void CheckLayout(FontRegistry fonts, Action<string, bool> check)
     {
         var face = fonts.Resolve(null, false, false, new List<string>());
@@ -102,6 +120,12 @@ internal static class TextChecks
             Math.Abs(middle.Lines[0].Baseline - (middle.Lines[0].Top + (middle.LineBox - (face.Ascent + face.Descent) * em) / 2 + face.Ascent * em)) < 0.01f);
     }
 
+    /// <summary>
+    /// 渲染出来的像素：示例箱标的文字落在框里，裁掉的部分不画，下划线、颜色正确。
+    /// </summary>
+    /// <param name="backendRoot">backend 目录。</param>
+    /// <param name="fonts">字体注册表。</param>
+    /// <param name="check">记录检查结果。</param>
     private static void CheckPixels(string backendRoot, FontRegistry fonts, Action<string, bool> check)
     {
         var renderer = new LabelRenderer(fonts, Fixtures.Assets(backendRoot));
@@ -183,6 +207,12 @@ internal static class TextChecks
         check("渲染结果里带 FONT_FALLBACK:SimSun", Render(renderer, unknown, values).Warnings.Contains(WarningCodes.FontFallback + ":SimSun"));
     }
 
+    /// <summary>
+    /// 一段文字的宽度，单位是字号（不含字间距）。
+    /// </summary>
+    /// <param name="face">字体。</param>
+    /// <param name="text">文字。</param>
+    /// <returns>宽度，乘以字号就是实际宽度。</returns>
     private static float WidthEm(FontFace face, string text)
     {
         var codepoints = text.EnumerateRunes().Select(rune => rune.Value).ToArray();
@@ -191,6 +221,11 @@ internal static class TextChecks
         return advances.Sum();
     }
 
+    /// <summary>
+    /// 只有一个文本元素的 40×40 模板。
+    /// </summary>
+    /// <param name="element">文本元素。</param>
+    /// <returns>模板。</returns>
     private static LabelTemplate Single(TextElement element) => new()
     {
         Code = "TEXT",
@@ -198,14 +233,32 @@ internal static class TextChecks
         Elements = [element],
     };
 
+    /// <summary>
+    /// 渲染一张 PNG。
+    /// </summary>
+    /// <param name="renderer">渲染引擎。</param>
+    /// <param name="template">模板。</param>
+    /// <param name="values">字段值。</param>
+    /// <returns>渲染结果。</returns>
     private static RenderResult Render(LabelRenderer renderer, LabelTemplate template, IReadOnlyDictionary<string, object?> values) =>
         renderer.Render(new RenderJob { Template = template, Labels = [new LabelInstance(values)], Format = LabelFormat.Png, Dpi = Dpi });
 
+    /// <summary>
+    /// 毫米换算成整数打印点。
+    /// </summary>
+    /// <param name="mm">毫米。</param>
+    /// <returns>打印点。</returns>
     private static int Dot(double mm) => (int)Math.Round(LabelUnits.MmToDots(mm, Dpi));
 
     /// <summary>
     /// 区域内有深色像素的行数。
     /// </summary>
+    /// <param name="bitmap">位图。</param>
+    /// <param name="xMm">区域左边，mm。</param>
+    /// <param name="yMm">区域上边，mm。</param>
+    /// <param name="widthMm">区域宽度，mm。</param>
+    /// <param name="heightMm">区域高度，mm。</param>
+    /// <returns>行数。</returns>
     private static int DarkRows(SKBitmap bitmap, double xMm, double yMm, double widthMm, double heightMm) =>
         Enumerable.Range(Dot(yMm), Dot(heightMm))
             .Count(y => Enumerable.Range(Dot(xMm), Dot(widthMm)).Any(x => bitmap.GetPixel(x, y).Red < 128));
@@ -213,6 +266,12 @@ internal static class TextChecks
     /// <summary>
     /// 区域内的深色像素数。区域用 mm，超出图片的部分忽略。
     /// </summary>
+    /// <param name="bitmap">位图。</param>
+    /// <param name="xMm">区域左边，mm。</param>
+    /// <param name="yMm">区域上边，mm。</param>
+    /// <param name="widthMm">区域宽度，mm。</param>
+    /// <param name="heightMm">区域高度，mm。</param>
+    /// <returns>深色像素的个数。</returns>
     private static int DarkPixels(SKBitmap bitmap, double xMm, double yMm, double widthMm, double heightMm)
     {
         var count = 0;
