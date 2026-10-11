@@ -20,7 +20,7 @@ frontend/
 ├─ tests/docs.ts                     注释规范检查（TypeScript 编译器解析 .ts 和 .vue 的 <script>）
 └─ src/
    ├─ main.ts  App.vue               入口；外壳（登录页，或顶栏 + 模板树 + 当前页面）
-   ├─ style.css  admin.css           设计器样式（沿用 DB Studio）、管理后台样式（从原型移植）
+   ├─ style.css  admin.css  layout-recovery.css           设计器样式（沿用 DB Studio）、管理后台样式（从原型移植）
    ├─ api/                           管理接口客户端
    │  ├─ http.ts                     带登录令牌的请求、统一错误（ApiError），401 时回登录页
    │  ├─ admin.ts                    统一入口，按业务转导出下面几个文件（和 docs/admin-api.md 对应）
@@ -63,7 +63,7 @@ frontend/
    │  ├─ dialogs.ts                  确认框、一次性密钥框、新建模板对话框、复制
    │  ├─ assets.ts                   图片素材（服务端素材库，按需下载成 blob URL）
    │  └─ drag.ts                     从面板拖到画布的内容
-   ├─ composables/                   组件用的组合函数：useTextEdit（画布上直接编辑文本）、useCanvasDrop（拖放到画布）
+   ├─ composables/                   组件用的组合函数：useTextEdit（画布上直接编辑文本）、useCanvasDrop（拖放到画布）、useAvailableLayouts（隔离过期异步结果）
    ├─ pages/                         管理后台的页面（每页一个文件）
    ├─ components/                    设计器：工具栏、左侧面板、画布、属性面板、状态栏
    │  ├─ admin/                      顶栏、模板树、弹窗、新建模板、缩略图、接口调试面板
@@ -101,3 +101,5 @@ npm run build     # 类型检查（vue-tsc）+ 打包
 - 拼版画布的格子画的是服务端缩略图（一张位图），24 个格子一帧约 0.5 ms，和模板有多少元素无关。对齐、分布直接用 `editor/arrange.ts`（它接受任意矩形），吸附用 `editor/snapping.ts`，撤销用 `editor/history.ts`。
 - 不引用 `frontend/` 以外的文件（后端检查程序会拦）。
 - 注释（AGENTS.md R5）：每个模块级的函数、常量、接口和类型（含属性）、store 的状态、组件的 props 和 emits 都写多行 JSDoc，函数写 `@param`、`@returns`；`npm run check` 用 `tests/docs.ts` 核对。`src/` 下的文件不超过 500 行，同样由 `npm run check` 核对。
+
+页面边界回归见 [tests/README.browser-boundaries.md](tests/README.browser-boundaries.md)。模板或尺寸变化后，旧的版式请求成功、失败及组件卸载都不得覆盖当前结果；Node 回归覆盖这三类竞态。设计器保留 1100px 门槛，窄屏提示和模板详情可真实滚动，管理表格在自身可聚焦区域内横向滚动。新整合候选需要重新跑浏览器验证，历史截图不代表本版本通过。
