@@ -48,7 +48,7 @@ Select-String -Path docs/tasks/T-*.md -Pattern '^(状态|负责人)：'
 
 | [T-031](T-031-functional-integration.md) | 最新代码上的隔离功能与页面修复整合 | 后端 + 前端 | 一期验收 | 固定 0456cb4 | Logs、Persistence、页面、检查程序 |
 | [T-032](T-032-layout-integration.md) | 页面与功能修复整合、缩放折叠及干净克隆回归 | 后端 + 前端 + 调用端 | 一期开发 | T-025、隔离候选 091c4e1 | Logs、Persistence、页面、浏览器回归 |
-| [T-029](T-029-segmented-review.md) | 分段按钮页面补丁独立审阅 | 前端 | 一期开发 | T-028 | style.css、浏览器回归 |
+| [T-029](T-029-segmented-review.md) | 分段按钮页面补丁独立审阅 | 前端 | 一期开发 | T-032 | style.css、浏览器回归 |
 | [T-030](T-030-page-compatibility.md) | 固定最新版本的页面与恢复兼容整合 | 后端 + 前端 | 一期开发 | T-025–T-028、1b5ec3a | 页面、Logs、Persistence、回归 |
 
 “主要目录”是相对于对应部分（`frontend/`、`backend/`、`client/`）的路径；后端的 Rendering、Server 指 `backend/src/LabelService.Rendering`、`backend/src/LabelService.Server`（T-023 起 Server 改名为 `LabelService.Api`，原来的模板存储、鉴权、日志等拆到 Domain、Application、Infrastructure，见 ADR 0010；已完成任务的“主要目录”保留当时的写法）。跨两个部分的任务（T-014、T-016、T-018、T-020）建议按部分拆成子任务分别认领；T-018 是契约变更，后端和调用端的契约副本要在同一个提交里改齐。
