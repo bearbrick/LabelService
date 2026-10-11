@@ -1,6 +1,7 @@
 using LabelService.Application.Identity;
 using LabelService.Application.Logs;
 using LabelService.Application.Resources;
+using LabelService.Application.SystemSettings;
 using LabelService.Domain.ApiClients;
 using LabelService.Domain.Businesses;
 using LabelService.Domain.Identity;
@@ -8,6 +9,7 @@ using LabelService.Domain.Layouts;
 using LabelService.Domain.Logs;
 using LabelService.Domain.Resources;
 using LabelService.Domain.Shared;
+using LabelService.Domain.SystemSettings;
 using LabelService.Domain.Templates;
 using LabelService.Infrastructure.Hosting;
 using LabelService.Infrastructure.Logging;
@@ -67,6 +69,7 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddSingleton(LoadFonts);
         services.AddSingleton(LoadAssets);
         services.AddSingleton<IAssetFileStore, AssetFileStore>();
+        services.AddSingleton<IBrandingFileStore, BrandingFileStore>();
         return services;
     }
 
@@ -86,6 +89,7 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddScoped<ISheetLayoutRepository, SheetLayoutRepository>();
         services.AddScoped<ICanvasPresetRepository, CanvasPresetRepository>();
         services.AddScoped<IAssetRepository, AssetRepository>();
+        services.AddScoped<ISystemSettingRepository, SystemSettingRepository>();
         services.AddSingleton<IRenderLogRepository, RenderLogRepository>();
         services.AddSingleton<IOperationLogRepository, OperationLogRepository>();
     }

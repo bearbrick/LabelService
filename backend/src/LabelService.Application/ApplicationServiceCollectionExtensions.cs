@@ -10,6 +10,7 @@ using LabelService.Application.Logs;
 using LabelService.Application.OpenApi;
 using LabelService.Application.Rendering;
 using LabelService.Application.Resources;
+using LabelService.Application.SystemSettings;
 using LabelService.Application.Templates;
 using LabelService.Rendering;
 using Microsoft.Extensions.Configuration;
@@ -79,6 +80,7 @@ public static class ApplicationServiceCollectionExtensions
         services.AddScoped<ILogAppService, LogAppService>();
         services.AddScoped<IDashboardAppService, DashboardAppService>();
         services.AddScoped<IApiTestAppService, ApiTestAppService>();
+        services.AddScoped<ISystemInfoAppService, SystemInfoAppService>();
         return services;
     }
 }
