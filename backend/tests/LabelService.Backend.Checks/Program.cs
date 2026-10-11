@@ -60,6 +60,7 @@ internal static class Program
         await HostingChecks.RunAsync(backendRoot, Check);
         await MetricsChecks.RunAsync(backendRoot, Check);
         ArchitectureChecks.Run(backendRoot, repositoryRoot, Check);
+        RepositorySourceChecks.Run(repositoryRoot, Check);
         DocumentationChecks.Run(backendRoot, repositoryRoot, Check);
         Console.WriteLine($"后端检查全部通过：{passed} 项");
         return 0;
