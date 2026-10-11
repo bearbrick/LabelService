@@ -21,19 +21,28 @@ internal interface IElementPainter
     }
 
     /// <summary>
-    /// 计算元素的排版结果。数据导致无法渲染时抛 <see cref="LabelRenderException"/>。
+    /// 计算元素的排版结果。
     /// </summary>
+    /// <param name="element">元素。</param>
+    /// <param name="context">这张标签的渲染上下文。</param>
+    /// <returns>排版结果，交给 <see cref="Draw"/>。</returns>
+    /// <exception cref="LabelRenderException">数据导致无法渲染（如条码内容不合法）。</exception>
     ElementLayout Layout(LabelElement element, RenderContext context);
 
     /// <summary>
     /// 在未旋转的坐标系里画出元素，旋转由调用方处理。
     /// </summary>
+    /// <param name="canvas">画布（单位是打印点）。</param>
+    /// <param name="layout">这个绘制器的 <see cref="Layout"/> 返回的结果。</param>
+    /// <param name="context">这张标签的渲染上下文。</param>
     void Draw(SKCanvas canvas, ElementLayout layout, RenderContext context);
 }
 
 /// <summary>
 /// 排版结果的基类。绘制器需要传更多数据（文本行、条码矩阵）时继承它。
 /// </summary>
+/// <param name="element">对应的元素。</param>
+/// <param name="bounds">元素未旋转时的框（打印点）。</param>
 internal class ElementLayout(LabelElement element, SKRect bounds)
 {
     /// <summary>

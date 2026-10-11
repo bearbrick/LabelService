@@ -5,6 +5,9 @@ namespace LabelService.Rendering.Elements;
 /// </summary>
 internal static class ElementPainters
 {
+    /// <summary>
+    /// 元素 type → 绘制器。
+    /// </summary>
     private static readonly Dictionary<string, IElementPainter> Painters = new IElementPainter[]
     {
         new LinePainter(),
@@ -19,7 +22,8 @@ internal static class ElementPainters
     /// <summary>
     /// 按元素 type 查找绘制器。
     /// </summary>
-    /// <returns>没实现时返回 null。</returns>
+    /// <param name="elementType">元素 type，如 text、barcode。</param>
+    /// <returns>绘制器；没实现时返回 null。</returns>
     public static IElementPainter? Find(string elementType) =>
         Painters.TryGetValue(elementType, out var painter) ? painter : null;
 

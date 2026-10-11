@@ -18,6 +18,9 @@ namespace LabelService.Rendering.Assets;
 /// </remarks>
 public static partial class SvgSanitizer
 {
+    /// <summary>
+    /// 整个删掉的元素：会执行脚本、嵌入外部内容、带样式表或动画的。
+    /// </summary>
     private static readonly HashSet<string> RemovedElements = new(StringComparer.OrdinalIgnoreCase)
     {
         "script", "foreignObject", "iframe", "object", "embed", "audio", "video", "style",
@@ -25,8 +28,12 @@ public static partial class SvgSanitizer
     };
 
     /// <summary>
-    /// 清洗 SVG 文本。不是合法的 SVG 时抛 <see cref="XmlException"/> 或 <see cref="InvalidDataException"/>。
+    /// 清洗 SVG 文本。
     /// </summary>
+    /// <param name="svg">SVG 文本。</param>
+    /// <returns>清洗后的 SVG 文本（不带格式化空白）。</returns>
+    /// <exception cref="XmlException">不是合法的 XML，或带 DTD。</exception>
+    /// <exception cref="InvalidDataException">根元素不是 svg。</exception>
     public static string Sanitize(string svg)
     {
         var settings = new XmlReaderSettings { DtdProcessing = DtdProcessing.Prohibit, XmlResolver = null, MaxCharactersInDocument = 4 * 1024 * 1024 };
@@ -62,6 +69,11 @@ public static partial class SvgSanitizer
         return root.ToString(SaveOptions.DisableFormatting);
     }
 
+    /// <summary>
+    /// 属性是否安全：不是事件属性；href 只引用文档内元素或内嵌图片；url(...) 只引用文档内元素。
+    /// </summary>
+    /// <param name="attribute">属性。</param>
+    /// <returns>安全、可以保留时为 true。</returns>
     private static bool IsSafe(XAttribute attribute)
     {
         if (attribute.IsNamespaceDeclaration)
@@ -85,6 +97,10 @@ public static partial class SvgSanitizer
         return UrlReference().Matches(value).All(match => match.Groups["target"].Value.TrimStart('\'', '"', ' ').StartsWith('#'));
     }
 
+    /// <summary>
+    /// 属性值里的 url(...) 引用。
+    /// </summary>
+    /// <returns>编译好的正则。</returns>
     [GeneratedRegex(@"url\s*\((?<target>[^)]*)\)", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     private static partial Regex UrlReference();
 }

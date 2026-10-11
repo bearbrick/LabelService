@@ -14,6 +14,9 @@ namespace LabelService.Rendering.Validation;
 /// </remarks>
 public static class FieldValidator
 {
+    /// <summary>
+    /// 认的不带时区的日期写法（ISO 8601 及常见的空格分隔写法）。
+    /// </summary>
     private static readonly string[] DateFormats =
     [
         "yyyy-MM-dd",
@@ -24,6 +27,9 @@ public static class FieldValidator
         "yyyy-MM-dd HH:mm:ss",
     ];
 
+    /// <summary>
+    /// 认的带时区的日期写法（Z 或 +08:00）。
+    /// </summary>
     private static readonly string[] DateOffsetFormats =
     [
         "yyyy-MM-ddTHH:mmK",
@@ -63,6 +69,15 @@ public static class FieldValidator
         return new FieldValidationResult(values, errors);
     }
 
+    /// <summary>
+    /// 校验一个字段：取值（条目 → 公共字段 → 默认值），没值时检查必填，有值时转换类型。
+    /// </summary>
+    /// <param name="field">字段定义。</param>
+    /// <param name="common">批量请求的公共字段。</param>
+    /// <param name="data">这张标签的字段。</param>
+    /// <param name="index">批量条目序号。</param>
+    /// <param name="values">转换后的值，往里写。</param>
+    /// <param name="errors">错误，往里追加。</param>
     private static void ValidateField(
         FieldDefinition field,
         IReadOnlyDictionary<string, JsonElement>? common,
@@ -93,9 +108,20 @@ public static class FieldValidator
         values[field.Key] = value;
     }
 
+    /// <summary>
+    /// 从数据里取一个字段的值；空值当作没传。
+    /// </summary>
+    /// <param name="key">字段 key。</param>
+    /// <param name="source">数据；可以为 null。</param>
+    /// <returns>值；没传或是空值时为 null。</returns>
     private static JsonElement? Pick(string key, IReadOnlyDictionary<string, JsonElement>? source) =>
         source is not null && source.TryGetValue(key, out var value) ? NotEmpty(value) : null;
 
+    /// <summary>
+    /// null、未定义、空字符串和全空白字符串都当作没传。
+    /// </summary>
+    /// <param name="value">值。</param>
+    /// <returns>有内容时原样返回，否则为 null。</returns>
     private static JsonElement? NotEmpty(JsonElement? value)
     {
         if (value is not { } element)
@@ -111,6 +137,13 @@ public static class FieldValidator
         };
     }
 
+    /// <summary>
+    /// 按字段类型转换：字符串（数字、布尔也接受，转成文本）、数字（也接受数字字符串）、日期、图片。
+    /// </summary>
+    /// <param name="field">字段定义。</param>
+    /// <param name="raw">调用方传的值。</param>
+    /// <param name="value">转换后的值。</param>
+    /// <returns>转换失败时的错误码和说明；成功时为 null。</returns>
     private static (string Code, string Message)? Convert(FieldDefinition field, JsonElement raw, out object? value)
     {
         value = null;
@@ -177,6 +210,12 @@ public static class FieldValidator
         }
     }
 
+    /// <summary>
+    /// 解析日期：先按不带时区的写法，再按带时区的写法。
+    /// </summary>
+    /// <param name="text">日期文本。</param>
+    /// <param name="date">解析出的日期（带时区的取调用方写的钟面时间）。</param>
+    /// <returns>解析成功时为 true。</returns>
     private static bool TryParseDate(string text, out DateTime date)
     {
         text = text.Trim();
@@ -195,6 +234,12 @@ public static class FieldValidator
         return false;
     }
 
+    /// <summary>
+    /// 解码图片字段：base64（可以带 data: 前缀），不超过 1 MB，文件头必须是 PNG 或 JPG。
+    /// </summary>
+    /// <param name="text">字段值。</param>
+    /// <param name="bytes">解码出的图片字节。</param>
+    /// <returns>是合法的 PNG 或 JPG 时为 true。</returns>
     private static bool TryDecodeImage(string text, out byte[] bytes)
     {
         bytes = [];
@@ -213,6 +258,7 @@ public static class FieldValidator
             return false;
         }
 
+        // 按文件头判断格式，不信调用方声明的类型。
         var span = buffer.AsSpan(0, written);
         var isPng = span.StartsWith((ReadOnlySpan<byte>)[0x89, 0x50, 0x4E, 0x47]);
         var isJpeg = span.StartsWith((ReadOnlySpan<byte>)[0xFF, 0xD8, 0xFF]);
@@ -225,6 +271,14 @@ public static class FieldValidator
         return true;
     }
 
+    /// <summary>
+    /// 一条字段错误；批量时说明前面加“第 n 条”。
+    /// </summary>
+    /// <param name="index">批量条目序号；单张为 null。</param>
+    /// <param name="field">字段 key。</param>
+    /// <param name="code">错误码。</param>
+    /// <param name="message">说明。</param>
+    /// <returns>错误明细。</returns>
     private static ErrorDetail Error(int? index, string field, string code, string message) => new()
     {
         Index = index,

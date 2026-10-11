@@ -10,6 +10,9 @@ namespace LabelService.Rendering.Output;
 /// 画布坐标一律是打印点：位图格式按点直接分配像素；PDF 实现需要把画布缩放成 72/dpi，让绘制器无感知。
 /// 每种格式一个文件，写完后在 <see cref="OutputDocuments"/> 登记。
 /// </remarks>
+/// <param name="widthDots">标签宽度（打印点）。</param>
+/// <param name="heightDots">标签高度（打印点）。</param>
+/// <param name="dpi">分辨率。</param>
 internal abstract class OutputDocument(int widthDots, int heightDots, int dpi) : IDisposable
 {
     /// <summary>
@@ -36,18 +39,21 @@ internal abstract class OutputDocument(int widthDots, int heightDots, int dpi) :
     }
 
     /// <summary>
-    /// 开始一张标签，返回已清成白底的画布。
+    /// 开始一张标签。
     /// </summary>
+    /// <returns>已清成白底的画布，单位是打印点；由文档负责释放。</returns>
     public abstract SKCanvas BeginLabel();
 
     /// <summary>
     /// 结束当前标签。份数由格式自行实现（PDF 重复页、ZPL 用 ^PQ）。
     /// </summary>
+    /// <param name="copies">份数，至少 1。</param>
     public abstract void EndLabel(int copies);
 
     /// <summary>
     /// 把整个文档写到流里。
     /// </summary>
+    /// <param name="output">输出流。</param>
     public abstract void WriteTo(Stream output);
 
     /// <inheritdoc />

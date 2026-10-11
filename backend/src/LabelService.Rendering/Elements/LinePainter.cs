@@ -8,10 +8,13 @@ namespace LabelService.Rendering.Elements;
 /// </summary>
 internal sealed class LinePainter : IElementPainter
 {
+    /// <inheritdoc />
     public string ElementType => ElementTypes.Line;
 
+    /// <inheritdoc />
     public ElementLayout Layout(LabelElement element, RenderContext context) => new(element, context.Box(element));
 
+    /// <inheritdoc />
     public void Draw(SKCanvas canvas, ElementLayout layout, RenderContext context)
     {
         var element = (LineElement)layout.Element;
@@ -22,6 +25,7 @@ internal sealed class LinePainter : IElementPainter
         }
 
         using var paint = StrokePaint.Create(stroke, context.Dots(stroke.Width), context);
+        // 横线、竖线时框的高或宽为 0，同一个 DrawLine 就够了。
         var box = layout.Bounds;
         canvas.DrawLine(box.Left, box.Top, box.Right, box.Bottom, paint);
     }
@@ -35,6 +39,10 @@ internal static class StrokePaint
     /// <summary>
     /// 按线型创建画笔；虚线间隔从 mm 换算成打印点。
     /// </summary>
+    /// <param name="stroke">线型：颜色、虚线。</param>
+    /// <param name="widthDots">线宽（打印点）。</param>
+    /// <param name="context">渲染上下文（黑白输出时不抗锯齿）。</param>
+    /// <returns>新画笔，用完释放。</returns>
     public static SKPaint Create(StrokeStyle stroke, float widthDots, RenderContext context)
     {
         var paint = new SKPaint

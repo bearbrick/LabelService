@@ -20,7 +20,14 @@ namespace LabelService.Rendering;
 /// </remarks>
 public sealed class LabelRenderer : ILabelRenderer
 {
+    /// <summary>
+    /// 字体注册表。
+    /// </summary>
     private readonly FontRegistry fonts;
+
+    /// <summary>
+    /// 素材库。
+    /// </summary>
     private readonly AssetLibrary assets;
 
     /// <summary>
@@ -34,6 +41,7 @@ public sealed class LabelRenderer : ILabelRenderer
     /// <summary>
     /// 使用指定字体、不带素材的渲染引擎。
     /// </summary>
+    /// <param name="fonts">字体注册表。</param>
     public LabelRenderer(FontRegistry fonts)
         : this(fonts, AssetLibrary.Empty)
     {
@@ -42,6 +50,8 @@ public sealed class LabelRenderer : ILabelRenderer
     /// <summary>
     /// 使用指定字体和素材的渲染引擎。字体和素材都在启动时加载，渲染期间只读。
     /// </summary>
+    /// <param name="fonts">字体注册表。</param>
+    /// <param name="assets">素材库。</param>
     public LabelRenderer(FontRegistry fonts, AssetLibrary assets)
     {
         ArgumentNullException.ThrowIfNull(fonts);
@@ -62,6 +72,7 @@ public sealed class LabelRenderer : ILabelRenderer
             return SheetRenderer.Render(job, fonts, assets);
         }
 
+        // 拼版另走 SheetRenderer；下面是一张标签一页（或一个 ^XA）的普通渲染。
         var template = job.Template;
         var timings = job.Timings;
         var warnings = new WarningList();
@@ -75,6 +86,7 @@ public sealed class LabelRenderer : ILabelRenderer
         var labelCount = 0;
         for (var index = 0; index < job.Labels.Count; index++)
         {
+            // 每张标签：排版（layout 阶段）→ 绘制（draw 阶段）→ 结束这张（encode 阶段），各自计时。
             var label = job.Labels[index];
             var start = Stopwatch.GetTimestamp();
             var context = new RenderContext(job.Dpi, mono, label.Values, fields, fonts, assets, warnings);
@@ -119,6 +131,13 @@ public sealed class LabelRenderer : ILabelRenderer
         };
     }
 
+    /// <summary>
+    /// 排版一张标签的全部元素（按元素顺序，后面的画在上面）。
+    /// </summary>
+    /// <param name="template">模板。</param>
+    /// <param name="context">这张标签的渲染上下文。</param>
+    /// <returns>每个要画的元素的绘制器和排版结果。</returns>
+    /// <exception cref="LabelRenderException">某个元素的数据无法渲染。</exception>
     private static List<(IElementPainter Painter, ElementLayout Layout)> Layout(LabelTemplate template, RenderContext context)
     {
         var layouts = new List<(IElementPainter, ElementLayout)>(template.Elements.Count);
@@ -134,13 +153,19 @@ public sealed class LabelRenderer : ILabelRenderer
     }
 
     /// <summary>
-    /// 元素的绘制器；隐藏的元素和尚未实现的元素类型返回 null（跳过），实现进度见 docs/tasks/README.md。
+    /// 元素的绘制器；隐藏的元素和没有绘制器的元素类型返回 null（跳过）。
     /// </summary>
+    /// <param name="element">元素。</param>
+    /// <returns>绘制器，或 null。</returns>
     internal static IElementPainter? PainterFor(LabelElement element) => element.Hidden ? null : ElementPainters.Find(element.Type);
 
     /// <summary>
     /// 画一个已排版的元素，统一处理旋转。单张和拼版共用。
     /// </summary>
+    /// <param name="canvas">画布（单位是打印点）。</param>
+    /// <param name="painter">绘制器。</param>
+    /// <param name="layout">排版结果。</param>
+    /// <param name="context">渲染上下文。</param>
     internal static void Draw(SKCanvas canvas, IElementPainter painter, ElementLayout layout, RenderContext context)
     {
         var rotation = (float)layout.Rotation;

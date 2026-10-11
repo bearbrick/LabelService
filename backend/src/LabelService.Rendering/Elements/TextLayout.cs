@@ -15,7 +15,7 @@ namespace LabelService.Rendering.Elements;
 /// <item>内容里的换行符在三种模式下都换行（和设计器一致）。</item>
 /// <item>行高 = 字号 × lineHeight；字间距加在相邻两个字之间；每行的字在行高内垂直居中（字体的 ascent、descent 居中，和浏览器的 middle 基线一致）。</item>
 /// </list>
-/// 先按参考字号测一次字宽，换算到不同字号只做乘法，所以 shrink 的二分查找不需要重复测量。
+/// 先按参考字号测一次字宽，换算到不同字号只做乘法，所以 shrink 的二分查找不需要重复测量。分行规则在 <see cref="LineBreaking"/>。
 /// </remarks>
 internal static class TextLayout
 {
@@ -38,8 +38,10 @@ internal static class TextLayout
     /// <param name="width">框宽（打印点）。</param>
     /// <param name="height">框高（打印点）。</param>
     /// <param name="dpi">分辨率，用来把 pt、mm 换算成打印点。</param>
+    /// <returns>实际字号、行高、各行字形的位置，以及是否有内容被裁掉。</returns>
     public static TextBlock Arrange(string text, TextStyle? style, FontFace face, float width, float height, int dpi)
     {
+        // 按参考字号测一次字宽，之后不同字号只做乘法。
         style ??= new TextStyle();
         var runes = Runes(text);
         var codepoints = runes.Select(rune => rune.Value).ToArray();
@@ -53,16 +55,17 @@ internal static class TextLayout
         var fit = style.Fit ?? TextFit.None;
         var fitTolerance = (float)LabelUnits.MmToDots(0.001, dpi);
         var clipTolerance = (float)LabelUnits.MmToDots(0.05, dpi);
-        var text0 = new Measured(runes, advances, spacing);
+        var measured = new MeasuredText(runes, advances, spacing);
 
-        List<Span> LinesAt(float size) => fit == TextFit.Wrap ? Wrap(text0, size, width) : Paragraphs(text0);
+        List<TextSpan> LinesAt(float size) => fit == TextFit.Wrap ? LineBreaking.Wrap(measured, size, width) : LineBreaking.Paragraphs(measured);
         bool Fits(float size)
         {
             var lines = LinesAt(size);
-            return lines.Max(line => text0.Width(line, size)) <= width + fitTolerance
+            return lines.Max(line => measured.Width(line, size)) <= width + fitTolerance
                 && lines.Count * size * lineHeight <= height + fitTolerance;
         }
 
+        // shrink：原字号放不下时，在 [最小字号, 原字号] 之间二分查找能放下的最大字号；最小字号也放不下就用最小字号（超出部分裁掉）。
         var size = Dots(fontSizePt, dpi);
         if (fit == TextFit.Shrink && runes.Length > 0 && !Fits(size))
         {
@@ -89,6 +92,7 @@ internal static class TextLayout
             size = low;
         }
 
+        // 垂直对齐：整块文字在框里靠上、居中或靠下；每行的字在行高内按 ascent、descent 居中。
         var spans = runes.Length == 0 ? [] : LinesAt(size);
         var lineBox = size * lineHeight;
         var total = spans.Count * lineBox;
@@ -103,8 +107,9 @@ internal static class TextLayout
         var widest = 0f;
         for (var index = 0; index < spans.Count; index++)
         {
+            // 水平对齐：按这一行的宽度算左端，再逐字累加横坐标。
             var span = spans[index];
-            var lineWidth = text0.Width(span, size);
+            var lineWidth = measured.Width(span, size);
             widest = Math.Max(widest, lineWidth);
             var left = (style.Align ?? TextAlign.Left) switch
             {
@@ -124,6 +129,7 @@ internal static class TextLayout
             lines.Add(new TextLine(glyphs.AsSpan(span.Start, span.Length).ToArray(), x, left, lineWidth, lineTop, lineTop + baselineOffset));
         }
 
+        // 超出框 0.05mm 以上才算被裁掉（浮点误差不算），由绘制器给 TEXT_CLIPPED 警告。
         var clipped = widest > width + clipTolerance || total > height + clipTolerance;
         return new TextBlock(size, lineBox, lines, clipped);
     }
@@ -131,6 +137,8 @@ internal static class TextLayout
     /// <summary>
     /// 把文本切成 Unicode 字符（代理对算一个字）。回车统一成换行，制表符当空格，其他控制字符去掉。
     /// </summary>
+    /// <param name="text">文本。</param>
+    /// <returns>字符数组。</returns>
     private static Rune[] Runes(string text)
     {
         var list = new List<Rune>(text.Length);
@@ -152,185 +160,12 @@ internal static class TextLayout
     }
 
     /// <summary>
-    /// 不自动换行：按换行符分行。
+    /// 磅（pt）换算成打印点。
     /// </summary>
-    private static List<Span> Paragraphs(Measured text)
-    {
-        var lines = new List<Span>();
-        var start = 0;
-        for (var i = 0; i <= text.Runes.Length; i++)
-        {
-            if (i == text.Runes.Length || text.Runes[i].Value == '\n')
-            {
-                lines.Add(text.TrimEnd(start, i));
-                start = i + 1;
-            }
-        }
-
-        return lines;
-    }
-
-    /// <summary>
-    /// 自动换行：每段按框宽贪心断行，在最后一个允许断开的位置断开；没有可断的位置时按字符断开。
-    /// </summary>
-    private static List<Span> Wrap(Measured text, float size, float width)
-    {
-        var lines = new List<Span>();
-        foreach (var paragraph in Paragraphs(text))
-        {
-            var end = ParagraphEnd(text, paragraph.Start);
-            if (paragraph.Length == 0)
-            {
-                lines.Add(paragraph);
-                continue;
-            }
-
-            var i = paragraph.Start;
-            var first = true;
-            while (i < end)
-            {
-                if (!first)
-                {
-                    while (i < end && IsSpace(text.Runes[i]))
-                    {
-                        i++;
-                    }
-
-                    if (i >= end)
-                    {
-                        break;
-                    }
-                }
-
-                first = false;
-                var start = i;
-                var used = 0f;
-                var count = 0;
-                var lastBreak = -1;
-                var j = i;
-                while (j < end)
-                {
-                    var add = (count > 0 ? text.Spacing : 0) + text.Advances[j] * size;
-                    if (count > 0 && used + add > width && !IsSpace(text.Runes[j]))
-                    {
-                        break;
-                    }
-
-                    used += add;
-                    count++;
-                    j++;
-                    if (j < end && CanBreakBefore(text.Runes, j))
-                    {
-                        lastBreak = j;
-                    }
-                }
-
-                var stop = j >= end ? end : lastBreak > start ? lastBreak : j;
-                lines.Add(text.TrimEnd(start, stop));
-                i = stop;
-            }
-        }
-
-        return lines;
-    }
-
-    private static int ParagraphEnd(Measured text, int start)
-    {
-        var end = start;
-        while (end < text.Runes.Length && text.Runes[end].Value != '\n')
-        {
-            end++;
-        }
-
-        return end;
-    }
-
-    /// <summary>
-    /// 能不能在 <paramref name="index"/> 之前断行：空格之后、连字符之后、中日韩文字前后可以断；
-    /// 结束标点不放行首，开始标点不放行尾。
-    /// </summary>
-    private static bool CanBreakBefore(Rune[] runes, int index)
-    {
-        var previous = runes[index - 1];
-        var current = runes[index];
-        if (IsSpace(current))
-        {
-            return false;
-        }
-
-        if (IsSpace(previous))
-        {
-            return true;
-        }
-
-        if (NoLineStart.Contains(current.Value) || NoLineEnd.Contains(previous.Value))
-        {
-            return false;
-        }
-
-        return previous.Value == '-' || IsCjk(previous) || IsCjk(current);
-    }
-
-    private static bool IsSpace(Rune rune) => rune.Value is ' ' or '　';
-
-    private static bool IsCjk(Rune rune) => rune.Value switch
-    {
-        >= 0x2E80 and <= 0x9FFF => true,     // 部首、标点、假名、汉字
-        >= 0xAC00 and <= 0xD7AF => true,     // 韩文
-        >= 0xF900 and <= 0xFAFF => true,     // 兼容汉字
-        >= 0xFE30 and <= 0xFE4F => true,     // 竖排标点
-        >= 0xFF00 and <= 0xFFEF => true,     // 全角字符
-        >= 0x20000 and <= 0x3FFFF => true,   // 扩展汉字
-        _ => false,
-    };
-
-    private static readonly HashSet<int> NoLineStart =
-        "，。、；：？！）】》」』〉〕｝,.;:?!)]}%…—～·”’".Select(ch => (int)ch).ToHashSet();
-
-    private static readonly HashSet<int> NoLineEnd = "（【《「『〈〔｛([{“‘".Select(ch => (int)ch).ToHashSet();
-
+    /// <param name="points">磅数。</param>
+    /// <param name="dpi">分辨率。</param>
+    /// <returns>打印点。</returns>
     private static float Dots(double points, int dpi) => (float)LabelUnits.PointsToDots(points, dpi);
-
-    /// <summary>
-    /// 一段文本按参考字号测好的字宽。
-    /// </summary>
-    private sealed class Measured(Rune[] runes, float[] advances, float spacing)
-    {
-        public Rune[] Runes { get; } = runes;
-
-        public float[] Advances { get; } = advances;
-
-        public float Spacing { get; } = spacing;
-
-        public float Width(Span span, float size)
-        {
-            if (span.Length == 0)
-            {
-                return 0;
-            }
-
-            var sum = 0f;
-            for (var i = span.Start; i < span.Start + span.Length; i++)
-            {
-                sum += Advances[i];
-            }
-
-            return sum * size + Spacing * (span.Length - 1);
-        }
-
-        /// <summary>去掉行尾空格，空格不参与宽度和对齐。</summary>
-        public Span TrimEnd(int start, int end)
-        {
-            while (end > start && IsSpace(Runes[end - 1]))
-            {
-                end--;
-            }
-
-            return new Span(start, end - start);
-        }
-    }
-
-    private readonly record struct Span(int Start, int Length);
 }
 
 /// <summary>

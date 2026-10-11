@@ -19,13 +19,44 @@ namespace LabelService.Rendering.Output;
 /// </remarks>
 internal sealed class PdfOutputDocument : OutputDocument
 {
+    /// <summary>
+    /// PDF 写在内存里，最后一次性写给输出流。
+    /// </summary>
     private readonly MemoryStream buffer = new();
+
+    /// <summary>
+    /// Skia 的 PDF 文档。
+    /// </summary>
     private readonly SKDocument document;
+
+    /// <summary>
+    /// 页面宽度（pt）。
+    /// </summary>
     private readonly float pageWidth;
+
+    /// <summary>
+    /// 页面高度（pt）。
+    /// </summary>
     private readonly float pageHeight;
+
+    /// <summary>
+    /// 正在录制的标签画面；没有正在绘制的标签时为 null。
+    /// </summary>
     private SKPictureRecorder? recorder;
+
+    /// <summary>
+    /// 文档是否已经结束（结束后才能写出）。
+    /// </summary>
     private bool closed;
 
+    /// <summary>
+    /// 创建 PDF 文档：页面尺寸按模板的 mm 尺寸换算成 pt。
+    /// </summary>
+    /// <param name="widthDots">标签宽度（打印点）。</param>
+    /// <param name="heightDots">标签高度（打印点）。</param>
+    /// <param name="dpi">分辨率（也用作 Skia 栅格化非矢量内容的 DPI）。</param>
+    /// <param name="page">模板画布。</param>
+    /// <exception cref="InvalidOperationException">Skia 无法创建 PDF。</exception>
     public PdfOutputDocument(int widthDots, int heightDots, int dpi, LabelPage page)
         : base(widthDots, heightDots, dpi)
     {
@@ -40,8 +71,10 @@ internal sealed class PdfOutputDocument : OutputDocument
         document = SKDocument.CreatePdf(buffer, metadata) ?? throw new InvalidOperationException("无法创建 PDF 文档");
     }
 
+    /// <inheritdoc />
     public override LabelFormat Format => LabelFormat.Pdf;
 
+    /// <inheritdoc />
     public override SKCanvas BeginLabel()
     {
         if (recorder is not null)
@@ -55,6 +88,7 @@ internal sealed class PdfOutputDocument : OutputDocument
         return canvas;
     }
 
+    /// <inheritdoc />
     public override void EndLabel(int copies)
     {
         if (recorder is null)
@@ -65,6 +99,7 @@ internal sealed class PdfOutputDocument : OutputDocument
         using var picture = recorder.EndRecording();
         recorder.Dispose();
         recorder = null;
+        // 录好的画面按份数逐页回放，页面画布缩放 72/dpi，把打印点换成 pt。
         var scale = (float)(LabelUnits.PointsPerInch / Dpi);
         for (var copy = 0; copy < copies; copy++)
         {
@@ -75,6 +110,7 @@ internal sealed class PdfOutputDocument : OutputDocument
         }
     }
 
+    /// <inheritdoc />
     public override void WriteTo(Stream output)
     {
         if (!closed)
@@ -87,6 +123,7 @@ internal sealed class PdfOutputDocument : OutputDocument
         buffer.CopyTo(output);
     }
 
+    /// <inheritdoc />
     public override void Dispose()
     {
         recorder?.Dispose();

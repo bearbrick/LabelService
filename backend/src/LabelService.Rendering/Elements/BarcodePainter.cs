@@ -24,13 +24,19 @@ internal sealed class BarcodePainter : IElementPainter
     /// </summary>
     public const double DefaultCaptionSize = 8;
 
+    /// <summary>
+    /// 每个线程一支画笔（黑色、不抗锯齿），不在每次请求时创建。
+    /// </summary>
     [ThreadStatic]
     private static SKPaint? threadPaint;
 
+    /// <inheritdoc />
     public string ElementType => ElementTypes.Barcode;
 
+    /// <inheritdoc />
     public ElementLayout Layout(LabelElement element, RenderContext context)
     {
+        // 模块宽度取整数个打印点：框宽去掉两侧空白区，除以模块数向下取整。条码扫不扫得出来就靠这一步。
         var barcode = (BarcodeElement)element;
         var symbol = LinearSymbols.Encode(barcode.Symbology, context.Bind(barcode.Value), element.Id);
         var box = context.Box(element);
@@ -47,6 +53,7 @@ internal sealed class BarcodePainter : IElementPainter
                 element.Id);
         }
 
+        // 人眼可读文字占“字号 × 1.2”的高度；条的上下边和左端都对齐到整点。
         var style = barcode.TextStyle ?? new TextStyle();
         var captionPoints = style.FontSize is > 0 ? style.FontSize.Value : DefaultCaptionSize;
         var captionSize = (float)LabelUnits.PointsToDots(captionPoints, context.Dpi);
@@ -74,8 +81,10 @@ internal sealed class BarcodePainter : IElementPainter
         return new BarcodeLayout(element, box, symbol, dots, bars, caption);
     }
 
+    /// <inheritdoc />
     public void Draw(SKCanvas canvas, ElementLayout layout, RenderContext context)
     {
+        // 连续的深色模块合成一个矩形画，条边落在整点上。
         var barcode = (BarcodeLayout)layout;
         var paint = threadPaint ??= new SKPaint { Style = SKPaintStyle.Fill, IsAntialias = false, Color = SKColors.Black };
         var symbol = barcode.Symbol;
@@ -109,6 +118,15 @@ internal sealed class BarcodePainter : IElementPainter
     /// <summary>
     /// 人眼可读文字：在条码正下方（或正上方）居中；比条码宽时以条码为中心向两边展开，最宽到元素框宽，超出框的部分裁掉。
     /// </summary>
+    /// <param name="elementId">元素 ID（警告里用）。</param>
+    /// <param name="text">要显示的文字（码制规定的人眼可读形式）。</param>
+    /// <param name="style">文字样式。</param>
+    /// <param name="points">字号（pt）。</param>
+    /// <param name="box">元素框。</param>
+    /// <param name="bars">条的区域。</param>
+    /// <param name="top">文字是否在条码上方。</param>
+    /// <param name="context">渲染上下文。</param>
+    /// <returns>文字的位置、字体、排版结果和颜色。</returns>
     private static Caption LayoutCaption(string elementId, string text, TextStyle style, double points, SKRect box, SKRectI bars, bool top, RenderContext context)
     {
         var size = (float)LabelUnits.PointsToDots(points, context.Dpi);
@@ -122,6 +140,7 @@ internal sealed class BarcodePainter : IElementPainter
             Fit = TextFit.None,
             LineHeight = 1,
         };
+        // 先按不限宽度测出文字本来多宽，再决定实际宽度和位置。
         var natural = TextLayout.Arrange(text, captionStyle, face, float.MaxValue / 4, size, context.Dpi).Lines.Max(line => line.Width);
         var width = Math.Max(bars.Width, Math.Min(box.Width, natural));
         var x = bars.Width >= width ? bars.Left : bars.Left + (bars.Width - width) / 2;
@@ -135,27 +154,54 @@ internal sealed class BarcodePainter : IElementPainter
         return new Caption(new SKPoint(x, y), face, block, RenderContext.Color(style.Color, SKColors.Black));
     }
 
+    /// <summary>
+    /// 人眼可读文字的排版结果。
+    /// </summary>
+    /// <param name="Origin">排版框的左上角（打印点）。</param>
+    /// <param name="Face">字体。</param>
+    /// <param name="Block">排版结果。</param>
+    /// <param name="Color">文字颜色。</param>
     private sealed record Caption(SKPoint Origin, FontFace Face, TextBlock Block, SKColor Color);
 
     /// <summary>
     /// 一维码的排版结果。
     /// </summary>
+    /// <param name="element">元素。</param>
+    /// <param name="bounds">元素框（打印点）。</param>
+    /// <param name="symbol">编码结果。</param>
+    /// <param name="moduleDots">每个模块的宽度（打印点，整数）。</param>
+    /// <param name="bars">条的区域（整点）。</param>
+    /// <param name="caption">人眼可读文字；不显示时为 null。</param>
     private sealed class BarcodeLayout(LabelElement element, SKRect bounds, EncodedSymbol symbol, int moduleDots, SKRectI bars, Caption? caption)
         : ElementLayout(element, bounds)
     {
+        /// <summary>
+        /// 编码结果。
+        /// </summary>
         public EncodedSymbol Symbol { get; } = symbol;
 
+        /// <summary>
+        /// 每个模块的宽度（打印点）。
+        /// </summary>
         public int ModuleDots { get; } = moduleDots;
 
+        /// <summary>
+        /// 条的区域（整点）。
+        /// </summary>
         public SKRectI Bars { get; } = bars;
 
+        /// <summary>
+        /// 人眼可读文字；不显示时为 null。
+        /// </summary>
         public Caption? Caption { get; } = caption;
 
         /// <summary>
         /// 对齐到最近的直角。
         /// </summary>
+        /// <inheritdoc />
         public override double Rotation => ((Math.Round(Element.Rotation / 90) * 90 % 360) + 360) % 360;
 
+        /// <inheritdoc />
         public override SKPoint Pivot => SymbolGeometry.Pivot(Bounds, Rotation);
     }
 }

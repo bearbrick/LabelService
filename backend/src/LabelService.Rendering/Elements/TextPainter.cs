@@ -19,8 +19,10 @@ internal sealed class TextPainter : IElementPainter
     [ThreadStatic]
     private static SKPaint? threadPaint;
 
+    /// <inheritdoc />
     public string ElementType => ElementTypes.Text;
 
+    /// <inheritdoc />
     public ElementLayout Layout(LabelElement element, RenderContext context)
     {
         var text = (TextElement)element;
@@ -36,9 +38,11 @@ internal sealed class TextPainter : IElementPainter
         return new TextElementLayout(element, box, face, block, RenderContext.Color(style.Color, SKColors.Black), style.Underline == true);
     }
 
+    /// <inheritdoc />
     public void Draw(SKCanvas canvas, ElementLayout layout, RenderContext context)
     {
         var text = (TextElementLayout)layout;
+        // 超出元素框的部分裁掉（排版时已经给过 TEXT_CLIPPED 警告）。
         canvas.Save();
         canvas.ClipRect(layout.Bounds);
         DrawBlock(canvas, new SKPoint(layout.Bounds.Left, layout.Bounds.Top), text.Face, text.Block, text.Color, text.Underline, context.Mono);
@@ -48,6 +52,13 @@ internal sealed class TextPainter : IElementPainter
     /// <summary>
     /// 画一段排好的文本。坐标原点是 <paramref name="origin"/>（排版时的框左上角），不裁切；条码下面的文字也用它。
     /// </summary>
+    /// <param name="canvas">画布（单位是打印点）。</param>
+    /// <param name="origin">排版时的框左上角。</param>
+    /// <param name="face">字体。</param>
+    /// <param name="block">排版结果。</param>
+    /// <param name="color">文字颜色。</param>
+    /// <param name="underline">是否画下划线。</param>
+    /// <param name="mono">是否黑白输出（不抗锯齿）。</param>
     internal static void DrawBlock(SKCanvas canvas, SKPoint origin, FontFace face, TextBlock block, SKColor color, bool underline, bool mono)
     {
         if (block.Lines.Count == 0)
@@ -62,6 +73,7 @@ internal sealed class TextPainter : IElementPainter
         var scale = size / FontFace.ReferenceSize;
         var font = face.Font(mono);
 
+        // SKFont 是参考字号的，把画布缩放到实际字号；字形坐标相应除以缩放比。所有行合成一个 text blob 一次画完。
         canvas.Save();
         canvas.Translate(origin.X, origin.Y);
         using (var builder = new SKTextBlobBuilder())
@@ -87,6 +99,7 @@ internal sealed class TextPainter : IElementPainter
             }
         }
 
+        // 下划线：行中线往下半个字号，粗细为字号的 1/15，和设计器一致。
         if (underline)
         {
             var thickness = size / 15;
@@ -103,15 +116,33 @@ internal sealed class TextPainter : IElementPainter
     /// <summary>
     /// 文本的排版结果。
     /// </summary>
+    /// <param name="element">元素。</param>
+    /// <param name="bounds">元素框（打印点）。</param>
+    /// <param name="face">字体。</param>
+    /// <param name="block">排版结果。</param>
+    /// <param name="color">文字颜色。</param>
+    /// <param name="underline">是否画下划线。</param>
     private sealed class TextElementLayout(LabelElement element, SKRect bounds, FontFace face, TextBlock block, SKColor color, bool underline)
         : ElementLayout(element, bounds)
     {
+        /// <summary>
+        /// 字体。
+        /// </summary>
         public FontFace Face { get; } = face;
 
+        /// <summary>
+        /// 排版结果。
+        /// </summary>
         public TextBlock Block { get; } = block;
 
+        /// <summary>
+        /// 文字颜色。
+        /// </summary>
         public SKColor Color { get; } = color;
 
+        /// <summary>
+        /// 是否画下划线。
+        /// </summary>
         public bool Underline { get; } = underline;
     }
 }

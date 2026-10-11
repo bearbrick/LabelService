@@ -26,11 +26,21 @@ namespace LabelService.Rendering.Sheets;
 /// </remarks>
 internal static class SheetRenderer
 {
+    /// <summary>
+    /// 空的字段值：给固定元素排版用（固定元素不引用字段）。
+    /// </summary>
     private static readonly IReadOnlyDictionary<string, object?> NoValues = new Dictionary<string, object?>();
 
     /// <summary>
     /// 渲染拼版任务。版式、起始格子、格子尺寸和模板尺寸一致，都由接口层校验过。
     /// </summary>
+    /// <param name="job">渲染任务（带版式）。</param>
+    /// <param name="fonts">字体注册表。</param>
+    /// <param name="assets">素材库。</param>
+    /// <returns>PDF，或 PNG（多页时 ZIP）、张数、页数和各阶段耗时。</returns>
+    /// <exception cref="ArgumentException">没有版式、起始格子越界（程序缺陷）。</exception>
+    /// <exception cref="InvalidOperationException">格式不是 PDF、PNG（程序缺陷）。</exception>
+    /// <exception cref="LabelRenderException">某条数据无法渲染。</exception>
     public static RenderResult Render(RenderJob job, FontRegistry fonts, AssetLibrary assets)
     {
         var layout = job.Layout ?? throw new ArgumentException("没有版式。", nameof(job));
@@ -51,6 +61,7 @@ internal static class SheetRenderer
         var fields = template.Fields.ToDictionary(field => field.Key, StringComparer.Ordinal);
         var label = new SKSizeI(Dots(template.Page.Width, dpi), Dots(template.Page.Height, dpi));
         var total = job.Labels.Sum(item => item.Copies);
+        // 从起始格子开始一共要占多少格，向上取整就是页数。
         var pageCount = (job.StartSlot - 1 + total + layout.Slots.Count - 1) / layout.Slots.Count;
 
         var start = Stopwatch.GetTimestamp();
@@ -77,6 +88,7 @@ internal static class SheetRenderer
             }
 
             start = timings.Mark(TimingStages.Layout, start);
+            // 每一份占一个格子；转到下一页的第一个格子时先把上一页收尾（画裁切线、编码）。
             for (var copy = 0; copy < item.Copies; copy++, position++)
             {
                 var slot = position % layout.Slots.Count;
@@ -121,9 +133,21 @@ internal static class SheetRenderer
     /// <summary>
     /// 格子在纸上的左上角（打印点，含打印偏移，取整）。
     /// </summary>
+    /// <param name="layout">版式。</param>
+    /// <param name="slot">格子。</param>
+    /// <param name="dpi">分辨率。</param>
+    /// <returns>格子左上角，整数打印点。</returns>
     internal static SKPointI SlotOrigin(SheetLayout layout, SheetSlot slot, int dpi) =>
         new(Dots(slot.X + layout.Offset.X, dpi), Dots(slot.Y + layout.Offset.Y, dpi));
 
+    /// <summary>
+    /// 创建模板的绘制计划；固定元素出错时算在第一条上。
+    /// </summary>
+    /// <param name="job">渲染任务。</param>
+    /// <param name="context">没有字段值的上下文。</param>
+    /// <param name="label">标签尺寸（打印点）。</param>
+    /// <returns>绘制计划。</returns>
+    /// <exception cref="LabelRenderException">固定元素无法排版。</exception>
     private static LabelPlan CreatePlan(RenderJob job, RenderContext context, SKSizeI label)
     {
         try
@@ -137,6 +161,17 @@ internal static class SheetRenderer
         }
     }
 
+    /// <summary>
+    /// 在一个格子里画一张标签：平移、旋转到格子的位置，裁到标签大小，按绘制计划画。
+    /// </summary>
+    /// <param name="canvas">整页的画布。</param>
+    /// <param name="layout">版式。</param>
+    /// <param name="slot">格子。</param>
+    /// <param name="label">标签尺寸（打印点）。</param>
+    /// <param name="dpi">分辨率。</param>
+    /// <param name="plan">绘制计划。</param>
+    /// <param name="dynamic">这张标签的数据段排版结果。</param>
+    /// <param name="context">这张标签的渲染上下文。</param>
     private static void DrawSlot(
         SKCanvas canvas,
         SheetLayout layout,
@@ -173,6 +208,19 @@ internal static class SheetRenderer
         canvas.Restore();
     }
 
+    /// <summary>
+    /// 一页收尾：给放了标签的格子画裁切线（版式要求时），结束这一页。
+    /// </summary>
+    /// <param name="document">输出文档。</param>
+    /// <param name="canvas">这一页的画布。</param>
+    /// <param name="layout">版式。</param>
+    /// <param name="filled">这一页放了标签的格子序号，用完清空。</param>
+    /// <param name="label">标签尺寸（打印点）。</param>
+    /// <param name="dpi">分辨率。</param>
+    /// <param name="cutLine">裁切线的画笔。</param>
+    /// <param name="timings">分阶段计时。</param>
+    /// <param name="start">当前阶段开始的时间戳。</param>
+    /// <returns>下一个阶段开始的时间戳。</returns>
     private static long FinishPage(SheetDocument document, SKCanvas canvas, SheetLayout layout, List<int> filled, SKSizeI label, int dpi, SKPaint cutLine, RenderTimings timings, long start)
     {
         if (layout.CutLines)
@@ -192,6 +240,11 @@ internal static class SheetRenderer
         return timings.Mark(TimingStages.Encode, start);
     }
 
+    /// <summary>
+    /// 裁切线的画笔：0.1 mm 的灰色细线，不抗锯齿。
+    /// </summary>
+    /// <param name="dpi">分辨率。</param>
+    /// <returns>新画笔，用完释放。</returns>
     private static SKPaint CutLinePaint(int dpi) => new()
     {
         Color = new SKColor(0x66, 0x66, 0x66),
@@ -200,19 +253,51 @@ internal static class SheetRenderer
         IsAntialias = false,
     };
 
+    /// <summary>
+    /// 毫米换算成整数打印点（四舍五入）。
+    /// </summary>
+    /// <param name="mm">毫米。</param>
+    /// <param name="dpi">分辨率。</param>
+    /// <returns>打印点。</returns>
     private static int Dots(double mm, int dpi) => (int)Math.Round(LabelUnits.MmToDots(mm, dpi));
 
     /// <summary>
-    /// 输出：PDF 一个文档、每页一张纸；PNG 每页一个文档，最后一页以上打包 ZIP。
+    /// 输出：PDF 一个文档、每页一张纸；PNG 每页一个文档，超过一页时打包 ZIP。
     /// </summary>
+    /// <param name="job">渲染任务（格式、DPI、是否黑白）。</param>
+    /// <param name="layout">版式（纸张尺寸）。</param>
+    /// <param name="templateCode">模板编码（ZIP 里的文件名用）。</param>
     private sealed class SheetDocument(RenderJob job, SheetLayout layout, string templateCode) : IDisposable
     {
+        /// <summary>
+        /// 纸张宽度（打印点）。
+        /// </summary>
         private readonly int width = Dots(layout.Paper.Width, job.Dpi);
+
+        /// <summary>
+        /// 纸张高度（打印点）。
+        /// </summary>
         private readonly int height = Dots(layout.Paper.Height, job.Dpi);
+
+        /// <summary>
+        /// 已编码好的 PNG 页。
+        /// </summary>
         private readonly List<byte[]> pngPages = [];
+
+        /// <summary>
+        /// PDF 文档（整个任务一个）；PNG 时为 null。
+        /// </summary>
         private OutputDocument? pdf;
+
+        /// <summary>
+        /// 当前这一页的 PNG 文档；PDF 时为 null。
+        /// </summary>
         private OutputDocument? png;
 
+        /// <summary>
+        /// 开始新的一页。
+        /// </summary>
+        /// <returns>白底的整页画布。</returns>
         public SKCanvas BeginPage()
         {
             if (job.Format == LabelFormat.Pdf)
@@ -225,6 +310,9 @@ internal static class SheetRenderer
             return png.BeginLabel();
         }
 
+        /// <summary>
+        /// 结束这一页：PDF 加一页；PNG 编码好存起来。
+        /// </summary>
         public void EndPage()
         {
             if (pdf is not null)
@@ -241,6 +329,10 @@ internal static class SheetRenderer
             png = null;
         }
 
+        /// <summary>
+        /// 全部页结束后取出文件。
+        /// </summary>
+        /// <returns>文件内容，以及是不是 ZIP（多页 PNG）。</returns>
         public (ReadOnlyMemory<byte> Content, bool IsZip) Finish()
         {
             var output = new MemoryStream();
@@ -270,6 +362,7 @@ internal static class SheetRenderer
             return (output.GetBuffer().AsMemory(0, (int)output.Length), true);
         }
 
+        /// <inheritdoc />
         public void Dispose()
         {
             pdf?.Dispose();
