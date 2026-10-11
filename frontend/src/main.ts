@@ -4,6 +4,7 @@ import * as store from './stores/designer.ts'
 import './style.css'
 import './admin.css'
 import './system.css'
+import './layout-recovery.css'
 
 createApp(App).mount('#app')
 

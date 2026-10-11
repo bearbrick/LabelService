@@ -145,8 +145,9 @@ async function remove(p: Preset): Promise<void> {
         </div>
       </div>
       <div class="table-box">
-        <div class="tw">
-          <table class="dt">
+        <div class="tw" tabindex="0" role="region" aria-label="画布预设表格">
+          <table class="dt presets-table">
+            <colgroup><col style="width: 240px" /><col style="width: 90px" /><col style="width: 170px" /><col style="width: 80px" /><col style="width: 120px" /><col style="width: 90px" /><col style="width: 100px" /></colgroup>
             <thead>
               <tr><th>名称</th><th>类型</th><th>宽 × 高</th><th>方向</th><th>同尺寸模板</th><th>状态</th><th class="actions">操作</th></tr>
             </thead>

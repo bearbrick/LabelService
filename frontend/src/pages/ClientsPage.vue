@@ -180,8 +180,9 @@ async function reset(c: ApiClient): Promise<void> {
         <button class="btn primary" type="button" @click="edit(null)"><AppIcon name="plus" small />新建调用方</button>
       </div>
       <div class="table-box">
-        <div class="tw">
-          <table class="dt">
+        <div class="tw" tabindex="0" role="region" aria-label="调用方表格">
+          <table class="dt clients-table">
+            <colgroup><col style="width: 220px" /><col style="width: 120px" /><col style="width: 160px" /><col style="width: 240px" /><col style="width: 120px" /><col style="width: 100px" /><col style="width: 60px" /><col style="width: 160px" /></colgroup>
             <thead>
               <tr><th>调用方</th><th>AppId</th><th>API Key</th><th>可调用的业务</th><th>IP 白名单</th><th>更新</th><th>启用</th><th class="actions">操作</th></tr>
             </thead>
