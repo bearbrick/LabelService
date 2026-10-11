@@ -13,7 +13,13 @@ namespace LabelService.Demo.Mock;
 /// </summary>
 internal static class MockDocuments
 {
-    /// <summary>PNG：一张标签。</summary>
+    /// <summary>
+    /// PNG：一张标签。
+    /// </summary>
+    /// <param name="template">模板。</param>
+    /// <param name="dpi">分辨率。</param>
+    /// <param name="data">字段值。</param>
+    /// <returns>PNG 文件内容。</returns>
     public static byte[] Png(MockTemplate template, int dpi, Dictionary<string, string> data)
     {
         using var bitmap = Draw(template, dpi, data);
@@ -22,7 +28,13 @@ internal static class MockDocuments
         return stream.ToArray();
     }
 
-    /// <summary>ZPL：每张标签一段 ^XA … ^XZ，份数用 ^PQ。位图不压缩（真实服务端会压缩）。</summary>
+    /// <summary>
+    /// ZPL：每张标签一段 ^XA … ^XZ，份数用 ^PQ。位图不压缩（真实服务端会压缩）。
+    /// </summary>
+    /// <param name="template">模板。</param>
+    /// <param name="dpi">分辨率。</param>
+    /// <param name="labels">每张标签的字段值和份数。</param>
+    /// <returns>ZPL 文本的 UTF-8 字节。</returns>
     public static byte[] Zpl(MockTemplate template, int dpi, IEnumerable<(Dictionary<string, string> Data, int Copies)> labels)
     {
         var zpl = new StringBuilder();
@@ -63,7 +75,12 @@ internal static class MockDocuments
         return Encoding.UTF8.GetBytes(zpl.ToString());
     }
 
-    /// <summary>PDF：每份一页，页面尺寸等于标签尺寸，内容是 150 dpi 的 JPEG。</summary>
+    /// <summary>
+    /// PDF：每份一页，页面尺寸等于标签尺寸，内容是 150 dpi 的 JPEG。
+    /// </summary>
+    /// <param name="template">模板。</param>
+    /// <param name="labels">每张标签的字段值和份数。</param>
+    /// <returns>PDF 文件内容。</returns>
     public static byte[] Pdf(MockTemplate template, IEnumerable<(Dictionary<string, string> Data, int Copies)> labels)
     {
         var pages = new List<byte[]>();
@@ -126,6 +143,10 @@ internal static class MockDocuments
     /// <summary>
     /// 画一张示意标签：外框、模板名、字段值、按第一个“编号”类字段生成的示意条码、模拟服务水印。
     /// </summary>
+    /// <param name="template">模板。</param>
+    /// <param name="dpi">分辨率。</param>
+    /// <param name="data">字段值。</param>
+    /// <returns>位图，由调用方释放。</returns>
     private static Bitmap Draw(MockTemplate template, int dpi, Dictionary<string, string> data)
     {
         var dotsPerMm = dpi / 25.4f;

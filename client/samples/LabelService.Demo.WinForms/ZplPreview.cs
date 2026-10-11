@@ -15,12 +15,22 @@ namespace LabelService.Demo;
 /// </remarks>
 internal static class ZplPreview
 {
+    /// <summary>
+    /// 一张标签：^XA 到 ^XZ 之间的内容。
+    /// </summary>
     private static readonly Regex Label = new Regex(@"\^XA(?<body>.*?)\^XZ", RegexOptions.Singleline);
+
+    /// <summary>
+    /// ^GFA 图形指令：总字节数、每行字节数和数据。
+    /// </summary>
     private static readonly Regex Graphic = new Regex(@"\^GFA,(?<total>\d+),\d+,(?<row>\d+),(?<data>[^\^]*)", RegexOptions.Singleline);
 
     /// <summary>
     /// 解析出每张标签的位图（最多 <paramref name="max"/> 张）。认不出的标签跳过。
     /// </summary>
+    /// <param name="zpl">ZPL 文本，可以有多张（每张一个 ^XA…^XZ）。</param>
+    /// <param name="max">最多解析几张。</param>
+    /// <returns>黑白位图，由调用方释放。</returns>
     public static List<Bitmap> Render(string zpl, int max)
     {
         var result = new List<Bitmap>();
@@ -50,6 +60,10 @@ internal static class ZplPreview
     /// <summary>
     /// 解压 ^GFA 的 ASCII 数据，返回每行的字节。
     /// </summary>
+    /// <param name="data">^GFA 的数据部分。</param>
+    /// <param name="bytesPerRow">每行字节数。</param>
+    /// <param name="height">行数，解够了就停。</param>
+    /// <returns>每行的字节，1 位是黑点。</returns>
     internal static List<byte[]> Decode(string data, int bytesPerRow, int height)
     {
         var rows = new List<byte[]>(height);
@@ -119,6 +133,13 @@ internal static class ZplPreview
         return rows;
     }
 
+    /// <summary>
+    /// 把每行的字节画成黑白位图（直接写像素内存，比逐点 SetPixel 快得多）。
+    /// </summary>
+    /// <param name="rows">每行的字节。</param>
+    /// <param name="width">宽度，像素。</param>
+    /// <param name="bytesPerRow">每行字节数。</param>
+    /// <returns>位图。</returns>
     private static Bitmap ToBitmap(List<byte[]> rows, int width, int bytesPerRow)
     {
         var bitmap = new Bitmap(Math.Max(1, width), Math.Max(1, rows.Count), PixelFormat.Format32bppRgb);
@@ -138,6 +159,12 @@ internal static class ZplPreview
         return bitmap;
     }
 
+    /// <summary>
+    /// 取 ZPL 指令后面的数字，如 ^PW 后的宽度。
+    /// </summary>
+    /// <param name="text">一张标签的 ZPL。</param>
+    /// <param name="command">指令，如 ^PW。</param>
+    /// <returns>数字；没有这个指令时为 null。</returns>
     private static int? Number(string text, string command)
     {
         var match = Regex.Match(text, Regex.Escape(command) + @"(\d+)");

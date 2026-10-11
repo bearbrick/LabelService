@@ -12,12 +12,34 @@ namespace LabelService.Demo;
 /// </summary>
 internal sealed partial class MainForm
 {
+    /// <summary>
+    /// 内置模拟服务（不连服务器也能演示）。
+    /// </summary>
     private readonly MockLabelServiceHandler mock = new MockLabelServiceHandler();
+
+    /// <summary>
+    /// 当前的客户端；设置变了才重建。
+    /// </summary>
     private LabelServiceClient? client;
+
+    /// <summary>
+    /// 建当前客户端时的设置组合，用来判断设置有没有变。
+    /// </summary>
     private string clientKey = "";
+
+    /// <summary>
+    /// 最近读取的字段定义；换模板编码后清空。
+    /// </summary>
     private TemplateSchema? schema;
+
+    /// <summary>
+    /// 是否有调用正在进行（进行中不接受新的调用）。
+    /// </summary>
     private bool busy;
 
+    /// <summary>
+    /// 绑定控件事件：按钮调用 SDK，设置变化时刷新调用代码和状态栏。
+    /// </summary>
     private void WireEvents()
     {
         showKey.Click += (_, _) =>
@@ -69,6 +91,7 @@ internal sealed partial class MainForm
     /// <summary>
     /// 按当前设置取客户端：设置没变就复用同一个实例（SDK 要求应用内单例），变了才新建。
     /// </summary>
+    /// <returns>客户端。</returns>
     private LabelServiceClient Client()
     {
         var key = $"{useMock.Checked}|{baseAddress.Text}|{apiKey.Text}|{timeout.Value}|{retries.Value}";
@@ -91,6 +114,10 @@ internal sealed partial class MainForm
         return client;
     }
 
+    /// <summary>
+    /// 测试连接：读一次当前模板的字段定义；模板不存在时也说明连接和 Key 是好的。
+    /// </summary>
+    /// <returns>测试结束时完成。</returns>
     private async Task TestConnectionAsync()
     {
         await RunAsync("测试连接", async () =>
@@ -107,6 +134,10 @@ internal sealed partial class MainForm
         });
     }
 
+    /// <summary>
+    /// 读取字段定义填进表格：已经填过的值保留，没填的用样例值；猜一个递增字段。
+    /// </summary>
+    /// <returns>读取结束时完成。</returns>
     private async Task ReadSchemaAsync()
     {
         await RunAsync("读取字段", async () =>
@@ -132,6 +163,10 @@ internal sealed partial class MainForm
         });
     }
 
+    /// <summary>
+    /// 按表格里的值生成单张并显示结果。
+    /// </summary>
+    /// <returns>生成结束时完成。</returns>
     private async Task RenderSingleAsync()
     {
         if (!await EnsureSchemaAsync())
@@ -151,6 +186,10 @@ internal sealed partial class MainForm
         });
     }
 
+    /// <summary>
+    /// 批量生成：递增字段以外的值作为公共字段，每条只改递增字段；PNG 打包 ZIP，PDF、ZPL 合并成一个文件。
+    /// </summary>
+    /// <returns>生成结束时完成。</returns>
     private async Task RenderBatchAsync()
     {
         if (!await EnsureSchemaAsync())
@@ -189,6 +228,9 @@ internal sealed partial class MainForm
     /// <summary>
     /// 统一处理按钮状态、状态栏和错误：SDK 抛的 LabelServiceException 和本地校验的 ArgumentException 都显示到“响应信息”。
     /// </summary>
+    /// <param name="operation">操作名，显示在状态栏。</param>
+    /// <param name="action">要执行的调用。</param>
+    /// <returns>调用结束（成功或失败）时完成。</returns>
     private async Task RunAsync(string operation, Func<Task> action)
     {
         if (busy)
@@ -234,6 +276,10 @@ internal sealed partial class MainForm
         }
     }
 
+    /// <summary>
+    /// 还没读过当前模板的字段定义时先读一次。
+    /// </summary>
+    /// <returns>有字段定义时为 true。</returns>
     private async Task<bool> EnsureSchemaAsync()
     {
         if (schema is null || !string.Equals(schema.TemplateCode, TemplateCodeText, StringComparison.OrdinalIgnoreCase))
@@ -244,6 +290,10 @@ internal sealed partial class MainForm
         return schema is not null;
     }
 
+    /// <summary>
+    /// 把一次调用记到调用日志：慢调用标黄，失败标红，重试过的写明次数。
+    /// </summary>
+    /// <param name="e">SDK 的调用记录。</param>
     private void AddLog(CallCompletedEventArgs e)
     {
         var slow = e.Operation == "Render" && e.ServerDuration?.TotalMilliseconds > 100;
@@ -275,6 +325,10 @@ internal sealed partial class MainForm
         logTab.Text = $"调用日志 ({logList.Items.Count})";
     }
 
+    /// <summary>
+    /// 表格里填了值的字段（先结束正在编辑的单元格）。
+    /// </summary>
+    /// <returns>字段 key、类型和去掉首尾空白的值。</returns>
     private List<(string Key, string Type, string Value)> FieldValues()
     {
         fields.EndEdit();
@@ -287,6 +341,9 @@ internal sealed partial class MainForm
     /// <summary>
     /// 表格里的文本按字段类型转换：number 转数字，date 转 DateTime，image 当作文件路径读成字节（SDK 转 base64）。
     /// </summary>
+    /// <param name="type">字段类型。</param>
+    /// <param name="value">表格里的文本。</param>
+    /// <returns>转换后的值；转换不了时原样返回文本。</returns>
     private static object Convert(string type, string value)
     {
         switch (type)
@@ -302,7 +359,9 @@ internal sealed partial class MainForm
         }
     }
 
-    /// <summary>必填字段的值为空时标红。</summary>
+    /// <summary>
+    /// 必填字段的值为空时标红。
+    /// </summary>
     private void MarkRequired()
     {
         foreach (DataGridViewRow row in fields.Rows)
@@ -312,8 +371,14 @@ internal sealed partial class MainForm
         }
     }
 
+    /// <summary>
+    /// 状态栏显示当前连的服务。
+    /// </summary>
     private void UpdateEndpoint() => endpoint.Text = useMock.Checked ? "内置模拟服务" : baseAddress.Text;
 
+    /// <summary>
+    /// 按左边的当前设置重新生成调用代码。
+    /// </summary>
     private void UpdateCode()
     {
         var settings = new CodeGenerator.Settings
@@ -336,11 +401,26 @@ internal sealed partial class MainForm
         codeText.Select(0, 0);
     }
 
+    /// <summary>
+    /// 取表格单元格的文本。
+    /// </summary>
+    /// <param name="row">行。</param>
+    /// <param name="column">列名。</param>
+    /// <returns>文本；不是文本或为空时为空字符串。</returns>
     private static string Cell(DataGridViewRow row, string column) => row.Cells[column].Value as string ?? "";
 
+    /// <summary>
+    /// 填的模板编码（去掉首尾空白）。
+    /// </summary>
     private string TemplateCodeText => templateCode.Text.Trim();
 
+    /// <summary>
+    /// 选中的输出格式。
+    /// </summary>
     private LabelFormat SelectedFormat => pdf.Checked ? LabelFormat.Pdf : zpl.Checked ? LabelFormat.Zpl : LabelFormat.Png;
 
+    /// <summary>
+    /// 选中的分辨率；模板默认时为 null。
+    /// </summary>
     private int? SelectedDpi => dpi.SelectedIndex > 0 ? int.Parse((string)dpi.SelectedItem!, CultureInfo.InvariantCulture) : null;
 }
