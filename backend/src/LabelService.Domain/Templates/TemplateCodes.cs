@@ -26,9 +26,17 @@ public static partial class TemplateCodes
     /// <returns>合法时为 true。</returns>
     public static bool IsValidFieldKey(string? key) => key is not null && FieldKeyPattern().IsMatch(key);
 
+    /// <summary>
+    /// 模板编码的正则：字母开头，字母、数字、下划线、连字符，最长 64 个字符。
+    /// </summary>
+    /// <returns>编译好的正则。</returns>
     [GeneratedRegex("^[A-Za-z][A-Za-z0-9_-]{0,63}$", RegexOptions.CultureInvariant)]
     private static partial Regex CodePattern();
 
+    /// <summary>
+    /// 字段 key 的正则：字母开头，字母、数字、下划线（绑定 <c>{{key}}</c> 里能写的字符）。
+    /// </summary>
+    /// <returns>编译好的正则。</returns>
     [GeneratedRegex("^[A-Za-z][A-Za-z0-9_]*$", RegexOptions.CultureInvariant)]
     private static partial Regex FieldKeyPattern();
 }

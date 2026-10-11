@@ -1,10 +1,10 @@
-// 单张接口压测（T-015、设计书第 9 节“50 并发时 P95 ≤ 100 ms、错误率为 0”）。在 backend/tests/load 目录运行：
+// 单张接口压测（设计书第 9 节“50 并发时 P95 ≤ 100 ms、错误率为 0”）。在 backend/tests/load 目录运行：
 //   k6 run single.js                                   验收：50 个并发持续发 60 秒（constant-vus），P95 ≤ 100 ms、错误率 0
 //   k6 run -e MODE=rate -e RATE=150 single.js          按固定速率发（最多 50 个并发），找 P95 还在 100 ms 以内的最高速率
 // 其他参数：BASE_URL、API_KEY、VUS、DURATION、FORMAT（png/pdf/zpl）、REQUEST（请求体文件）、
 //   REPEAT=1（每次发完全相同的请求；默认每次换箱号，条码、二维码的编码缓存命中不了，接近真实打印）、
 //   BUDGET（P95 门槛毫秒，默认 100；k6 不在服务器本机、要按“局域网调用方实测 ≤ 150 ms”验时用 -e HTTP_BUDGET=150）。
-// 服务端耗时：响应头 Server-Timing 的 total 只到写响应头为止（T-021）；到写完最后一个字节的分位数用 log-report.cs 从调用日志算。
+// 服务端耗时：响应头 Server-Timing 的 total 只到写响应头为止；到写完最后一个字节的分位数用 log-report.cs 从调用日志算。
 import http from 'k6/http';
 import { check } from 'k6';
 import { Rate, Trend } from 'k6/metrics';

@@ -21,6 +21,10 @@ namespace LabelService.Infrastructure.Hosting;
 /// 时间按服务器本地时区；错过的备份（服务停着）不补做，下次到点再做。
 /// </para>
 /// </remarks>
+/// <param name="options">配置节 LabelService:Backup。</param>
+/// <param name="data">数据库和数据目录。</param>
+/// <param name="clock">时间来源（检查程序可以换成假时钟）。</param>
+/// <param name="logger">日志。</param>
 public sealed class BackupService(IOptions<BackupOptions> options, IOptions<DataOptions> data, TimeProvider clock, ILogger<BackupService> logger) : BackgroundService
 {
     /// <summary>
@@ -74,8 +78,11 @@ public sealed class BackupService(IOptions<BackupOptions> options, IOptions<Data
     }
 
     /// <summary>
-    /// 立即做一份快照并清理多余的旧快照，返回快照目录。
+    /// 立即做一份快照并清理多余的旧快照。
     /// </summary>
+    /// <param name="cancellationToken">取消令牌（服务停止）。</param>
+    /// <returns>这份快照的目录。</returns>
+    /// <exception cref="InvalidOperationException">数据库不是 SQLite。</exception>
     public async Task<string> RunAsync(CancellationToken cancellationToken = default)
     {
         if (!data.Value.IsSqlite)

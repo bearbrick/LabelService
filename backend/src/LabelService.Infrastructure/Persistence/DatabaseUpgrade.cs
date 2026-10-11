@@ -24,6 +24,8 @@ public static class DatabaseUpgrade
     /// <param name="directory">数据目录。</param>
     /// <param name="clock">时间，写业务分组的创建时间。</param>
     /// <param name="logger">日志。</param>
+    /// <returns>升级完成（或不需要升级）时完成。</returns>
+    /// <exception cref="InvalidOperationException">升级失败，已恢复到升级前的备份。</exception>
     public static async Task UpgradeMainAsync(Func<Task<LabelDbContext>> create, string directory, TimeProvider clock, ILogger logger)
     {
         IReadOnlyList<string> applied;
@@ -60,6 +62,11 @@ public static class DatabaseUpgrade
     /// <summary>
     /// 升级日志库 label-log.db：只执行迁移，同样先备份、失败恢复。
     /// </summary>
+    /// <param name="create">创建 DbContext。</param>
+    /// <param name="directory">数据目录。</param>
+    /// <param name="logger">日志。</param>
+    /// <returns>升级完成（或不需要升级）时完成。</returns>
+    /// <exception cref="InvalidOperationException">升级失败，已恢复到升级前的备份。</exception>
     public static async Task UpgradeLogAsync(Func<Task<LogDbContext>> create, string directory, ILogger logger)
     {
         IReadOnlyList<string> applied;
@@ -108,6 +115,14 @@ public static class DatabaseUpgrade
     /// <summary>
     /// 新库（还没执行过迁移）直接升级；已有数据的库先备份，失败时恢复备份并抛出 <see cref="InvalidOperationException"/>。
     /// </summary>
+    /// <param name="database">库文件的完整路径。</param>
+    /// <param name="directory">数据目录（备份放在它下面的 backups/）。</param>
+    /// <param name="applied">已执行的迁移。</param>
+    /// <param name="pending">待执行的迁移（写日志用）。</param>
+    /// <param name="logger">日志。</param>
+    /// <param name="upgrade">真正的升级动作：执行迁移和数据换算。</param>
+    /// <returns>升级完成时完成。</returns>
+    /// <exception cref="InvalidOperationException">升级失败，已恢复到升级前的备份。</exception>
     private static async Task GuardAsync(string database, string directory, IReadOnlyList<string> applied, IReadOnlyList<string> pending, ILogger logger, Func<Task> upgrade)
     {
         if (applied.Count == 0 || !File.Exists(database))
@@ -141,6 +156,8 @@ public static class DatabaseUpgrade
     /// <summary>
     /// 用备份覆盖库文件，删掉残留的 -wal、-shm（备份是完整的 WAL 模式库，不需要它们）。
     /// </summary>
+    /// <param name="backup">备份文件。</param>
+    /// <param name="database">要恢复的库文件。</param>
     internal static void Restore(string backup, string database)
     {
         foreach (var suffix in new[] { "-wal", "-shm" })

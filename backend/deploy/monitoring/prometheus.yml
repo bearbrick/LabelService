@@ -1,4 +1,4 @@
-# 抓取标签服务指标的 Prometheus 配置样例（T-010）。把 targets 改成服务地址；/metrics 只在内网开放。
+# 抓取标签服务指标的 Prometheus 配置样例。把 targets 改成服务地址；/metrics 只在内网开放。
 global:
   scrape_interval: 15s
   evaluation_interval: 15s

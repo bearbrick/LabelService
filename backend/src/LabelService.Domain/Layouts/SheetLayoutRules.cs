@@ -149,6 +149,10 @@ public static partial class SheetLayoutRules
     /// <returns>在范围里时为 true。</returns>
     private static bool InRange(double value, double max) => double.IsFinite(value) && value > 0 && value <= max;
 
+    /// <summary>
+    /// 版式编码的正则：字母开头，字母、数字、下划线、连字符，最长 64 个字符（和模板编码同一规则）。
+    /// </summary>
+    /// <returns>编译好的正则。</returns>
     [GeneratedRegex("^[A-Za-z][A-Za-z0-9_-]{0,63}$", RegexOptions.CultureInvariant)]
     private static partial Regex CodePattern();
 }
