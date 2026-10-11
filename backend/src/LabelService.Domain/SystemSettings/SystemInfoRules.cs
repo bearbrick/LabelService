@@ -34,6 +34,16 @@ public static class SystemInfoRules
     public const string Support = "system.support";
 
     /// <summary>
+    /// 登录页左栏的大标题（宣传标语），可以换行。
+    /// </summary>
+    public const string LoginTitle = "login.title";
+
+    /// <summary>
+    /// 登录页左栏大标题下面的说明，可以换行。
+    /// </summary>
+    public const string LoginIntro = "login.intro";
+
+    /// <summary>
     /// 公司 Logo 的文件名（数据目录 branding/ 下）；空表示没上传，界面显示占位。不在 <see cref="Fields"/> 里，由上传和恢复默认维护。
     /// </summary>
     public const string CompanyLogo = "company.logo";
@@ -51,10 +61,12 @@ public static class SystemInfoRules
         new(CompanyName, "所属公司", "", 60, false),
         new(Copyright, "版权信息", "", 120, false),
         new(Support, "技术支持", "", 60, false),
+        new(LoginTitle, "登录页标语", "标签和唛头在网页上设计，\n业务系统一个接口生成", 40, false, true),
+        new(LoginIntro, "登录页说明", "拖拽设计模板，定义数据字段，发布后 MES、WMS、ERP 用模板编码加数据调用，拿回 PDF、PNG 或 ZPL 文件。", 200, false, true),
     ];
 
     /// <summary>
-    /// 整理并校验一项的值：去掉首尾空白，换行等控制字符换成空格（这些值都显示在一行里）。
+    /// 整理并校验一项的值：去掉首尾空白；可以换行的项保留换行（统一成 \n），其余项的换行等控制字符换成空格（显示在一行里）。
     /// </summary>
     /// <param name="field">设置项。</param>
     /// <param name="value">用户填的值；null 当作空。</param>
@@ -62,10 +74,11 @@ public static class SystemInfoRules
     /// <exception cref="UserFriendlyException">必填项为空，或超过长度上限。</exception>
     public static string Normalize(SystemInfoField field, string? value)
     {
-        var builder = new StringBuilder((value ?? "").Length);
-        foreach (var ch in value ?? "")
+        var source = (value ?? "").Replace("\r\n", "\n", StringComparison.Ordinal);
+        var builder = new StringBuilder(source.Length);
+        foreach (var ch in source)
         {
-            builder.Append(char.IsControl(ch) ? ' ' : ch);
+            builder.Append(ch == '\n' && field.Multiline ? '\n' : char.IsControl(ch) ? ' ' : ch);
         }
 
         var text = builder.ToString().Trim();
@@ -86,4 +99,5 @@ public static class SystemInfoRules
 /// <param name="Default">没保存过时的默认值。</param>
 /// <param name="MaxLength">最长多少字。</param>
 /// <param name="Required">是否必填。</param>
-public sealed record SystemInfoField(string Key, string Label, string Default, int MaxLength, bool Required);
+/// <param name="Multiline">是否可以换行（登录页的标语和说明）。</param>
+public sealed record SystemInfoField(string Key, string Label, string Default, int MaxLength, bool Required, bool Multiline = false);
