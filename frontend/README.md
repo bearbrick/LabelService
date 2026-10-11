@@ -104,3 +104,5 @@ npm run build     # 类型检查（vue-tsc）+ 打包
 - 注释（AGENTS.md R5）：每个模块级的函数、常量、接口和类型（含属性）、store 的状态、组件的 props 和 emits 都写多行 JSDoc，函数写 `@param`、`@returns`；`npm run check` 用 `tests/docs.ts` 核对。`src/` 下的文件不超过 500 行，同样由 `npm run check` 核对。
 
 页面边界回归见 [tests/README.browser-boundaries.md](tests/README.browser-boundaries.md)。模板或尺寸变化后，旧的版式请求成功、失败及组件卸载都不得覆盖当前结果；Node 回归覆盖这三类竞态。设计器保留 1100px 门槛，窄屏提示和模板详情可真实滚动，管理表格在自身可聚焦区域内横向滚动。新整合候选需要重新跑浏览器验证，历史截图不代表本版本通过。
+
+缩放与折叠行为回归见 [tests/README.layout-behavior.md](tests/README.layout-behavior.md)，直接加载真实 Vue/Konva 实现，覆盖监听清理、手动状态保持及 1100/1101px 边界。T-025 与功能恢复整合的确切版本、真实浏览器缩放证据和未验收项见 [整合报告](../docs/reviews/T-028-layout-integration.md)。
