@@ -134,6 +134,8 @@ internal static class DatabaseProviderChecks
             {
                 ["LabelService:Data:Provider"] = provider.ToString(),
                 ["LabelService:Data:ConnectionString"] = withDatabase,
+                // 同时覆盖日志连接，防止环境或配置中的另一条连接指向非测试库。
+                ["LabelService:Data:LogConnectionString"] = withDatabase,
             });
             using var http = factory.CreateClient();
             try

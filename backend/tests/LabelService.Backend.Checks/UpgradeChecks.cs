@@ -26,7 +26,7 @@ namespace LabelService.Backend.Checks;
 /// 旧库升级：一期早期的库（迁移到 AddApiClients）升级到业务分组授权时，模板分类、调用方授权按 <see cref="LegacyUpgrade"/> 换算，
 /// 授权不扩大也不缩小；升级前自动备份，迁移中途失败（故障注入）能恢复到升级前，重试成功。
 /// </summary>
-internal static class UpgradeChecks
+internal static partial class UpgradeChecks
 {
     /// <summary>
     /// 旧库里的三个调用方：名称、Key 原文、允许的模板编码（MES 是 *，ERP 里有一个库里不存在的 GONE）。
@@ -47,6 +47,7 @@ internal static class UpgradeChecks
     public static async Task RunAsync(string backendRoot, Action<string, bool> check)
     {
         CheckPlan(check);
+        await CheckInitializationAsync(check);
         await CheckFaultInjectionAsync(backendRoot, check);
         await CheckServerAsync(backendRoot, check);
     }
@@ -85,7 +86,7 @@ internal static class UpgradeChecks
         try
         {
             await CreateLegacyAsync(backendRoot, directory);
-            var fault = new FaultAfterPragma();
+            var fault = new FaultAfterCommand("PRAGMA foreign_keys = 0");
             Exception? failure = null;
             try
             {
@@ -282,7 +283,8 @@ internal static class UpgradeChecks
     /// <summary>
     /// PRAGMA foreign_keys = 0 执行成功后，下一条命令抛异常（模拟迁移中途进程出错）。
     /// </summary>
-    private sealed class FaultAfterPragma : DbCommandInterceptor
+    /// <param name="text">执行后触发下一条命令故障的 SQL 片段。</param>
+    private sealed class FaultAfterCommand(string text) : DbCommandInterceptor
     {
         /// <summary>
         /// 是否已经看到 PRAGMA foreign_keys = 0（之后的下一条命令要出错）。
@@ -331,7 +333,7 @@ internal static class UpgradeChecks
         /// <param name="command">刚执行完的命令。</param>
         private void Arm(DbCommand command)
         {
-            if (command.CommandText.Contains("PRAGMA foreign_keys = 0", StringComparison.OrdinalIgnoreCase))
+            if (command.CommandText.Contains(text, StringComparison.OrdinalIgnoreCase))
             {
                 armed = true;
             }
