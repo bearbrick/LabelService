@@ -149,6 +149,7 @@ public static class FieldValidator
         value = null;
         switch (field.Type)
         {
+            // 字符串：数字和布尔值按原文接受（调用方常把编号传成数字），再检查最大长度。
             case FieldType.String:
                 var text = raw.ValueKind switch
                 {
@@ -171,6 +172,7 @@ public static class FieldValidator
                 value = text;
                 return null;
 
+            // 数字：JSON 数字或能解析成 decimal 的字符串，按不变区域性解析。
             case FieldType.Number:
                 if (raw.ValueKind == JsonValueKind.Number && raw.TryGetDecimal(out var number))
                 {
@@ -187,6 +189,7 @@ public static class FieldValidator
 
                 return (ErrorCodes.FieldTypeInvalid, $"字段 {field.Key} 应为数字");
 
+            // 日期：ISO 8601 日期或日期时间字符串，按调用方写的钟面时间，不换算时区。
             case FieldType.Date:
                 if (raw.ValueKind == JsonValueKind.String && TryParseDate(raw.GetString()!, out var date))
                 {
@@ -196,6 +199,7 @@ public static class FieldValidator
 
                 return (ErrorCodes.FieldTypeInvalid, $"字段 {field.Key} 应为 ISO 8601 日期，如 2026-10-08");
 
+            // 图片：PNG 或 JPG 的 base64（可带 data: 前缀），解码后不超过 1 MB。
             case FieldType.Image:
                 if (raw.ValueKind == JsonValueKind.String && TryDecodeImage(raw.GetString()!, out var bytes))
                 {

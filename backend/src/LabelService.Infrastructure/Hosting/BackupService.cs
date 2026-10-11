@@ -90,6 +90,7 @@ public sealed class BackupService(IOptions<BackupOptions> options, IOptions<Data
             throw new InvalidOperationException("内置备份只支持 SQLite");
         }
 
+        // 每次备份一个以本地时间命名的目录：用 VACUUM INTO 拍主库（和日志库）的一致快照，再复制上传的素材文件。
         var source = data.Value.ResolveDirectory();
         var stamp = TimeZoneInfo.ConvertTime(clock.GetUtcNow(), TimeZoneInfo.Local).ToString(StampFormat, CultureInfo.InvariantCulture);
         var target = Path.Combine(Directory, stamp);
@@ -110,6 +111,7 @@ public sealed class BackupService(IOptions<BackupOptions> options, IOptions<Data
             }
         }
 
+        // 只保留最近的几份。
         Prune();
         logger.LogInformation("已备份到 {Target}", target);
         return target;

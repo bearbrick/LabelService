@@ -184,6 +184,7 @@ internal static class CmapSubtables
     /// <returns>format 12 子表数据。</returns>
     private static byte[] Format12(Dictionary<int, int> mapping)
     {
+        // 把连续的码位、且字形编号也连续的映射合并成一组（format 12 的 SequentialMapGroup）。
         var groups = new List<(int Start, int End, int Glyph)>();
         foreach (var code in mapping.Keys.Order())
         {
@@ -201,6 +202,7 @@ internal static class CmapSubtables
             }
         }
 
+        // 表头 16 字节（格式号 12、长度、组数），后面每组 12 字节：起始码位、结束码位、起始字形。
         var data = new byte[16 + groups.Count * 12];
         BinaryPrimitives.WriteUInt16BigEndian(data, 12);
         BinaryPrimitives.WriteUInt32BigEndian(data.AsSpan(4), (uint)data.Length);

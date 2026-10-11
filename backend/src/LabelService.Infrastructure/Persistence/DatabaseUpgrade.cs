@@ -36,6 +36,7 @@ public static class DatabaseUpgrade
             pending = (await db.Database.GetPendingMigrationsAsync()).ToList();
         }
 
+        // 没有待执行的迁移时什么也不做（不拍快照）。
         if (pending.Count == 0)
         {
             return;
@@ -44,6 +45,7 @@ public static class DatabaseUpgrade
         await GuardAsync(Path.Combine(directory, DataOptions.DatabaseFileName), directory, applied, pending, logger, async () =>
         {
             await using var db = await create();
+            // 从没有业务分组的旧版本升级时，先读出旧的模板分类和调用方授权，迁移后换算成业务分组。
             LegacySnapshot? legacy = null;
             if (applied.Count > 0 && pending.Contains(LegacyUpgrade.AdminMigration))
             {

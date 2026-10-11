@@ -200,12 +200,14 @@ internal static partial class LinearSymbols
     /// <exception cref="LabelRenderException">格式不对、数据为空或长度不对。</exception>
     private static string Gs1(string content, Func<string, LabelRenderException> invalid)
     {
+        // 内容必须完全由“(AI)数据”拼成，不能有多余的字符。
         var matches = Gs1Segment().Matches(content);
         if (matches.Count == 0 || string.Concat(matches.Select(match => match.Value)) != content)
         {
             throw invalid("要写成 (应用标识符)数据 的形式，如 (01)06901234567892(10)ABC");
         }
 
+        // 开头放 FNC1 表示 GS1-128；定长的 AI 核对长度，变长的 AI 后面（最后一段除外）加 FNC1 作分隔。
         var builder = new StringBuilder().Append(Fnc1);
         for (var i = 0; i < matches.Count; i++)
         {

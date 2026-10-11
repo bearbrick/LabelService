@@ -36,6 +36,7 @@ public static partial class SvgSanitizer
     /// <exception cref="InvalidDataException">根元素不是 svg。</exception>
     public static string Sanitize(string svg)
     {
+        // 禁止 DTD 和外部实体，限制大小，防止 XXE 和实体膨胀。
         var settings = new XmlReaderSettings { DtdProcessing = DtdProcessing.Prohibit, XmlResolver = null, MaxCharactersInDocument = 4 * 1024 * 1024 };
         using var reader = XmlReader.Create(new StringReader(svg), settings);
         var document = XDocument.Load(reader, LoadOptions.None);
@@ -44,6 +45,7 @@ public static partial class SvgSanitizer
             throw new InvalidDataException("根元素不是 svg");
         }
 
+        // 去掉脚本、外部对象等元素，以及事件属性和指向外部的链接，只留绘图需要的部分。
         foreach (var element in root.DescendantsAndSelf().ToList())
         {
             if (RemovedElements.Contains(element.Name.LocalName))
@@ -61,6 +63,7 @@ public static partial class SvgSanitizer
             }
         }
 
+        // 处理指令（如 xml-stylesheet）也去掉。
         foreach (var node in root.DescendantNodes().OfType<XProcessingInstruction>().ToList())
         {
             node.Remove();

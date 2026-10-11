@@ -126,6 +126,7 @@ internal static class LegacyUpgrade
     /// <returns>写入完成时完成。</returns>
     public static async Task ApplyAsync(LabelDbContext db, LegacyPlan plan, DateTime now, ILogger logger)
     {
+        // 在一个事务里完成：按旧的模板分类建业务分组并把模板归进去，再把调用方的模板授权换成分组授权。
         await using var transaction = await db.Database.BeginTransactionAsync();
         var ids = new Dictionary<string, int>(StringComparer.Ordinal);
         foreach (var business in plan.Businesses)
@@ -145,6 +146,7 @@ internal static class LegacyUpgrade
                 .ExecuteUpdateAsync(update => update.SetProperty(client => client.AllBusinesses, grant.AllBusinesses).SetProperty(client => client.BusinessIds, businessIds));
         }
 
+        // 换算结果写进日志，管理员可以核对；原来授权的模板在库里不存在的单独警告。
         await transaction.CommitAsync();
         logger.LogWarning(
             "旧库升级：按模板分类和调用方授权建了 {Count} 个业务分组（{Businesses}）；调用方授权：{Grants}",

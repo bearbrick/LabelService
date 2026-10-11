@@ -17,6 +17,7 @@ internal static class TemplateEndpoints
     /// <param name="api">/api/admin 路由组。</param>
     public static void Map(RouteGroupBuilder api)
     {
+        // 列表、新建、发布前检查、打开、缩略图、删除。
         api.MapGet("/templates", (ITemplateAppService service, CancellationToken cancellationToken) => service.ListAsync(cancellationToken))
             .RequireAdmin(PermissionNames.TemplateView);
         api.MapPost("/templates", (CreateTemplateDto body, ITemplateAppService service) => service.CreateAsync(body))
@@ -32,6 +33,7 @@ internal static class TemplateEndpoints
             await service.DeleteAsync(code);
             return Results.NoContent();
         }).RequireAdmin(PermissionNames.TemplateDelete);
+        // 草稿：保存、放弃。
         api.MapPut("/templates/{code}/draft", (string code, LabelTemplate body, ITemplateAppService service) => service.SaveDraftAsync(code, body))
             .RequireAdmin(PermissionNames.TemplateEdit);
         api.MapDelete("/templates/{code}/draft", async (string code, ITemplateAppService service) =>
@@ -39,6 +41,7 @@ internal static class TemplateEndpoints
             await service.DiscardDraftAsync(code);
             return Results.NoContent();
         }).RequireAdmin(PermissionNames.TemplateEdit);
+        // 发布、版本、回滚、换分组。
         api.MapPost("/templates/{code}/publish", (string code, PublishTemplateDto? body, ITemplateAppService service) => service.PublishAsync(code, body))
             .RequireAdmin(PermissionNames.TemplatePublish);
         api.MapGet("/templates/{code}/versions", (string code, ITemplateAppService service) => service.ListVersionsAsync(code))
