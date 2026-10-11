@@ -11,7 +11,7 @@
 | 文件夹 | 内容 | 技术 | 入口 |
 | --- | --- | --- | --- |
 | [frontend/](frontend/README.md) | 网页设计器、管理后台 | Vue 3 + TypeScript + Vite + Konva | `package.json` |
-| [backend/](backend/README.md) | 契约、渲染引擎、服务端 | .NET 10、ASP.NET Core、SkiaSharp、SQLite | `LabelService.Backend.slnx` |
+| [backend/](backend/README.md) | 契约、渲染引擎、服务端（领域、应用、基础设施、接口四层） | .NET 10、ASP.NET Core、SkiaSharp、EF Core（SQLite / SQL Server / PostgreSQL） | `LabelService.Backend.slnx` |
 | [client/](client/README.md) | 调用端：SDK、WinForms 演示程序 | .NET（SDK 兼容 .NET Framework 4.6.2） | `LabelService.Client.slnx` |
 
 ```
@@ -44,6 +44,7 @@ LabelService/
 | WinForms 演示程序 | 最小可用版本 |
 | 网页设计器 | 已完成，待验收（T-013、T-014）：绘制交互；模板从服务端打开，草稿自动保存到服务端，发布、回滚 |
 | 监控、预热、部署 | 预热、就绪检查、并发排队、每日备份、Docker 和 Windows 服务部署说明已完成，待验收（T-017，见 backend/deploy/README.md）；`/metrics` 输出 Prometheus 指标，告警规则和 Grafana 仪表盘见 backend/deploy/monitoring（T-010，待验收） |
+| 后端分层、多数据库 | 已完成，待验收（T-023，ADR 0010）：领域、应用、基础设施、接口四层，应用服务和 Dto 统一命名；数据库可以选 SQLite（默认）、SQL Server、PostgreSQL |
 
 ## 路线图
 
@@ -189,7 +190,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\verify.ps1
 启动后端服务（`http://localhost:5080`，开发环境自带测试 Key `lbl_test_local_dev`），另开一个终端生成一张箱标：
 
 ```powershell
-dotnet run --project backend/src/LabelService.Server
+dotnet run --project backend/src/LabelService.Api
 curl.exe -o box.png -H "X-Api-Key: lbl_test_local_dev" -H "Content-Type: application/json" --data-binary "@backend/samples/requests/box-label.render.json" http://localhost:5080/api/v1/render
 ```
 

@@ -19,7 +19,11 @@ internal static class HealthEndpoints
     /// <summary>
     /// 就绪检查的说明是中文，输出时不转义成 \uXXXX，方便直接看。
     /// </summary>
-    private static readonly JsonSerializerOptions ReportJson = new() { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
+    private static readonly JsonSerializerOptions ReportJson = new()
+    {
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+    };
 
     /// <summary>
     /// 注册健康检查：预热完成才算就绪。
@@ -57,13 +61,17 @@ internal static class HealthEndpoints
     private static Task WriteReport(HttpContext http, HealthReport report)
     {
         http.Response.ContentType = "application/json; charset=utf-8";
-        return http.Response.WriteAsync(JsonSerializer.Serialize(new
-        {
-            status = report.Status.ToString(),
-            checks = report.Entries.ToDictionary(entry => entry.Key, entry => entry.Value.Description),
-        }, ReportJson));
+        var body = new ReadinessReport(report.Status.ToString(), report.Entries.ToDictionary(entry => entry.Key, entry => entry.Value.Description));
+        return http.Response.WriteAsync(JsonSerializer.Serialize(body, ReportJson));
     }
 }
+
+/// <summary>
+/// 就绪检查的响应体。
+/// </summary>
+/// <param name="Status">总状态：Healthy、Unhealthy。</param>
+/// <param name="Checks">每项检查的说明，如 warmup → “预热完成：2 个模板，429 ms”。</param>
+internal sealed record ReadinessReport(string Status, IReadOnlyDictionary<string, string?> Checks);
 
 /// <summary>
 /// 就绪检查：启动预热（<see cref="WarmupService"/>）完成才算就绪。
