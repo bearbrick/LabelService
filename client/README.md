@@ -24,6 +24,7 @@ client/
 dotnet build client/LabelService.Client.slnx
 dotnet format client/LabelService.Client.slnx --verify-no-changes --no-restore
 dotnet run --project client/tests/LabelService.Client.Checks
+dotnet run --project client/tests/LabelService.Client.Checks -- docs   # 只检查注释，列出全部缺漏
 
 # 对正在运行的服务跑端到端检查（先启动后端服务）
 $env:LABEL_SERVICE_URL = "http://localhost:5080/"; dotnet run --project client/tests/LabelService.Client.Checks
@@ -95,3 +96,4 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\client\build\pack.ps1 -Ver
 - SDK 必须能编译到 net462：不用 record、init、required 等新语法，不加 Newtonsoft.Json 或日志框架依赖（检查程序会拦）。
 - 错误码 `LabelErrorCodes` 和 HTTP 头 `Internal/Protocol.cs` 是后端契约的副本，后端检查程序会核对一致。
 - 公开 API 变化要同步设计书第 10 节，遵守语义化版本。
+- 注释（AGENTS.md R5）：SDK、演示程序、检查程序的每个类型和成员都写完整的 XML 注释，检查程序核对（演示程序按 net10.0-windows 的编译结果核对，要先编译解决方案；没有 Windows 桌面运行时的环境跳过演示程序）。

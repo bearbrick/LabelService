@@ -119,12 +119,13 @@
 | 路径 | 职责 |
 | --- | --- |
 | `src/model/` | 模板 JSON 的 TypeScript 镜像、单位换算、元素默认值、绑定预览、模板检查、调用样例、显示格式、图表几何（纯逻辑） |
-| `src/editor/` | 画布引擎：Konva 舞台、元素绘制、吸附、对齐、撤销、条码编码 |
-| `src/api/` | 管理接口客户端：带登录令牌的请求封装、和 `docs/admin-api.md` 对应的类型和函数 |
-| `src/stores/` | 设计器状态和全部编辑操作；登录状态和权限、hash 路由、共用列表、模板工作区（打开、自动保存草稿、发布、版本）、素材 |
+| `src/editor/` | 画布引擎：视口（`stageViewport.ts`）和编辑（`stage.ts`）、元素绘制（`draw.ts`、`drawText.ts`、`drawCodes.ts`）、吸附、对齐、撤销、条码编码 |
+| `src/api/` | 管理接口客户端：带登录令牌的请求封装、和 `docs/admin-api.md` 对应的类型和函数（按业务分文件，`admin.ts` 统一转导出） |
+| `src/stores/` | 设计器状态和全部编辑操作（入口 `designer.ts`，按状态、撤销和保存、模板、元素、字段分文件）；登录状态和权限、hash 路由、共用列表、模板工作区（打开、自动保存草稿、发布、版本）、素材 |
+| `src/composables/` | 组件用的组合函数：画布上直接编辑文本、拖放到画布 |
 | `src/pages/`、`src/components/admin/`、`src/components/workspace/` | 管理后台：登录、工作台、模板库、模板工作区（设计、数据源、接口调试、版本记录）、业务分组、画布预设、素材、调用方、日志、用户、角色、个人设置 |
 | `src/components/` | 设计器：工具栏、左侧面板、画布、属性面板、状态栏 |
-| `tests/checks.ts` | 检查程序，Node 直接运行 |
+| `tests/checks.ts`、`tests/docs.ts` | 检查程序，Node 直接运行；`docs.ts` 核对注释规范 |
 | `src/samples/` | 示例模板副本（和后端一致，检查程序核对） |
 
 ## 扩展点

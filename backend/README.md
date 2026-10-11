@@ -46,6 +46,9 @@ dotnet run --project backend/src/LabelService.Api
 # 生成一张箱标
 curl.exe -o box.png -H "X-Api-Key: lbl_test_local_dev" -H "Content-Type: application/json" --data-binary "@backend/samples/requests/box-label.render.json" http://localhost:5080/api/v1/render
 
+# 只检查注释（列出全部缺漏，不在第一处停下）
+dotnet run --project backend/tests/LabelService.Backend.Checks -- docs
+
 # 渲染基准（必须 Release）
 dotnet run -c Release --project backend/tests/LabelService.Benchmarks -- --filter "*"
 dotnet run -c Release --project backend/tests/LabelService.Benchmarks -- --gate     # 基准门禁，见 docs/performance.md
@@ -60,6 +63,7 @@ dotnet run -c Release --project backend/tests/LabelService.Benchmarks -- --gate 
 - 单实例部署（ADR 0003）。部署、备份与恢复见 `deploy/README.md`（ADR 0008）。
 - 文本渲染需要字体：先按 `assets/fonts/README.md` 把思源黑体（或同款的 Noto Sans SC）放进 `assets/fonts/`，否则文本检查不通过、中文显示成方框。
 - 后端检查程序会按文本读取 `client/` 和 `frontend/` 的源码，核对错误码、HTTP 头、元素类型、示例模板是否一致。改了契约，三个部分要一起改。
+- 注释（AGENTS.md R5）：产品代码、检查程序、基准程序的每个类型和成员（包括私有的）都写完整的 XML 注释，检查程序用反射加 XML 文档逐个核对（`DocumentationChecks`）；`[GeneratedRegex]` 的声明按文本核对。`tests/` 下的项目也输出 XML 文档（`tests/Directory.Build.props`），基准程序按 Debug 编译结果核对，要先编译解决方案。
 
 ## 数据库
 
