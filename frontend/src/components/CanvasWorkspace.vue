@@ -1,51 +1,91 @@
 <script setup lang="ts">
 /**
  * 画布区域：标尺、Konva 画布、从左侧拖入元素和字段、双击直接编辑文本（输入 {{ 弹出字段补全）。
+ * 直接编辑文本在 composables/useTextEdit.ts，拖放在 composables/useCanvasDrop.ts，这里负责画布、标尺和生命周期。
  */
-import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
-import { elementBounds } from '../editor/geometry.ts'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useCanvasDrop } from '../composables/useCanvasDrop.ts'
+import { useTextEdit } from '../composables/useTextEdit.ts'
 import { paintRuler } from '../editor/rulers.ts'
 import { snapshotPage } from '../editor/snapshot.ts'
 import { DesignerStage } from '../editor/stage.ts'
-import { defaultTextStyle } from '../model/elements.ts'
-import { cssFontFamily, SERVER_FONT_FAMILIES } from '../model/fonts.ts'
-import type { FieldDefinition, LabelElement } from '../model/template.ts'
-import { MM_PER_PT } from '../model/units.ts'
-import { assetSource, assetVersion, uploadAsset } from '../stores/assets.ts'
-import { addElement, commit, designer, registerCanvas, select, setMetric, toast } from '../stores/designer.ts'
-import { drag, endDrag } from '../stores/drag.ts'
+import { SERVER_FONT_FAMILIES } from '../model/fonts.ts'
+import { assetSource, assetVersion } from '../stores/assets.ts'
+import { commit, designer, registerCanvas, select, setMetric, toast } from '../stores/designer.ts'
+import { endDrag } from '../stores/drag.ts'
 
+/**
+ * 画布的外层容器（尺寸、焦点、拖放）。
+ */
 const wrap = ref<HTMLDivElement>()
+
+/**
+ * Konva 的容器。
+ */
 const host = ref<HTMLDivElement>()
+
+/**
+ * 上方的横向标尺。
+ */
 const rulerTop = ref<HTMLCanvasElement>()
+
+/**
+ * 左侧的竖向标尺。
+ */
 const rulerLeft = ref<HTMLCanvasElement>()
+
+/**
+ * 直接编辑文本的输入框。
+ */
 const editor = ref<HTMLTextAreaElement>()
+
+/**
+ * 字体加载完一批就加一，让画布按新字体重画。
+ */
 const fontVersion = ref(0)
+
+/**
+ * 设计画布；挂载后创建，卸载时销毁。
+ */
 let stage: DesignerStage | null = null
+
+/**
+ * 监听容器尺寸变化。
+ */
 let resizeObserver: ResizeObserver | null = null
+
+/**
+ * 已经安排的标尺重画（requestAnimationFrame 的编号）；0 表示没有。
+ */
 let rulerFrame = 0
 
-const edit = reactive({
-  id: null as string | null,
-  value: '',
-  style: {} as Record<string, string>,
-  suggestions: [] as FieldDefinition[],
-  index: 0,
-  match: null as { start: number; end: number } | null,
-})
+/**
+ * 直接编辑文本的状态和事件处理。
+ */
+const { edit, suggestStyle, positionEditor, startEdit, onEditInput, pickSuggestion, onEditKey, onEditBlur } = useTextEdit(() => stage, editor, wrap)
 
+/**
+ * 拖放的事件处理。
+ */
+const { onDragOver, onDragLeave, onDrop, clearDrop } = useCanvasDrop(() => stage, wrap)
+
+/**
+ * 画布上方的提示：拖放时的说明，或空模板时的引导。
+ */
 const tip = computed(() => designer.ui.tip || (designer.template.elements.length ? '' : '从左侧拖入元素开始设计，或点击元素快速添加'))
-const suggestStyle = computed(() => ({ left: edit.style.left, top: `${parseFloat(edit.style.top ?? '0') + parseFloat(edit.style.height ?? '0') + 4}px` }))
 
-function find(id: string): LabelElement | undefined {
-  return designer.template.elements.find((element) => element.id === id)
-}
-
+/**
+ * 影响全部元素绘制的上下文签名：显示方式、DPI、字段、字体、素材、异步资源。变了就全部重画。
+ * @returns 签名文本。
+ */
 function contextSignature(): string {
   const page = designer.template.page
   return `${designer.ui.mode}|${page.dpi ?? 300}|${JSON.stringify(designer.template.fields)}|${fontVersion.value}|${assetVersion.value}|${designer.renderVersion}`
 }
 
+/**
+ * 在下一帧重画两条标尺（同一帧里多次调用只画一次），颜色取当前主题的 CSS 变量。
+ */
 function paintRulers(): void {
   if (rulerFrame) return
   rulerFrame = requestAnimationFrame(() => {
@@ -74,214 +114,6 @@ function paintRulers(): void {
     paintRuler(rulerTop.value, true, view, colors)
     paintRuler(rulerLeft.value, false, view, colors)
   })
-}
-
-/* ---------------- 直接编辑文本 ---------------- */
-
-function positionEditor(): void {
-  const element = edit.id ? find(edit.id) : undefined
-  if (!element || element.type !== 'text' || !stage) return
-  const style = { ...defaultTextStyle(), ...element.style }
-  const scale = stage.scale
-  const fontSize = style.fontSize * MM_PER_PT * scale
-  const point = stage.toScreen(element.x, element.y)
-  edit.style = {
-    left: `${point.x}px`,
-    top: `${point.y}px`,
-    width: `${Math.max(element.width * scale, 60)}px`,
-    height: `${Math.max(element.height * scale, fontSize * 1.5)}px`,
-    fontSize: `${fontSize}px`,
-    fontFamily: cssFontFamily(style.fontFamily),
-    fontWeight: style.bold ? '700' : '400',
-    fontStyle: style.italic ? 'italic' : 'normal',
-    lineHeight: String(style.lineHeight),
-    textAlign: style.align,
-    letterSpacing: `${(style.letterSpacing ?? 0) * scale}px`,
-    transform: `rotate(${element.rotation ?? 0}deg)`,
-  }
-}
-
-function startEdit(id: string): void {
-  const element = find(id)
-  if (!element || element.type !== 'text' || element.locked || !stage) return
-  select([id])
-  edit.id = id
-  edit.value = element.content
-  edit.suggestions = []
-  positionEditor()
-  stage.setEditing(id)
-  nextTick(() => {
-    editor.value?.focus()
-    editor.value?.select()
-  })
-}
-
-function finishEdit(save: boolean): void {
-  if (!edit.id) return
-  const element = find(edit.id)
-  edit.id = null
-  edit.suggestions = []
-  if (element?.type === 'text' && save && edit.value !== element.content) {
-    element.content = edit.value
-    commit()
-  }
-
-  stage?.setEditing(null)
-  wrap.value?.focus({ preventScroll: true })
-}
-
-function onEditInput(): void {
-  const textarea = editor.value
-  if (!textarea) return
-  const before = textarea.value.slice(0, textarea.selectionStart)
-  const match = /\{\{\s*([A-Za-z_]\w*)?$/.exec(before)
-  if (!match) {
-    edit.suggestions = []
-    return
-  }
-
-  const query = (match[1] ?? '').toLowerCase()
-  edit.suggestions = designer.template.fields
-    .filter((field) => field.key.toLowerCase().startsWith(query) || (field.name ?? '').includes(match[1] ?? ''))
-    .slice(0, 8)
-  edit.index = 0
-  edit.match = { start: match.index, end: textarea.selectionStart }
-}
-
-function pickSuggestion(field: FieldDefinition): void {
-  const match = edit.match
-  if (!match) return
-  const insert = `{{${field.key}}}`
-  edit.value = edit.value.slice(0, match.start) + insert + edit.value.slice(match.end)
-  edit.suggestions = []
-  nextTick(() => {
-    const position = match.start + insert.length
-    editor.value?.focus()
-    editor.value?.setSelectionRange(position, position)
-  })
-}
-
-function onEditKey(event: KeyboardEvent): void {
-  event.stopPropagation()
-  if (edit.suggestions.length) {
-    const count = edit.suggestions.length
-    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-      event.preventDefault()
-      edit.index = (edit.index + (event.key === 'ArrowDown' ? 1 : count - 1)) % count
-      return
-    }
-
-    if (event.key === 'Enter' || event.key === 'Tab') {
-      event.preventDefault()
-      pickSuggestion(edit.suggestions[edit.index])
-      return
-    }
-
-    if (event.key === 'Escape') {
-      event.preventDefault()
-      edit.suggestions = []
-      return
-    }
-  }
-
-  if (event.key === 'Escape') {
-    event.preventDefault()
-    finishEdit(false)
-  } else if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
-    event.preventDefault()
-    finishEdit(true)
-  }
-}
-
-function onEditBlur(): void {
-  setTimeout(() => {
-    if (edit.id && document.activeElement !== editor.value) finishEdit(true)
-  }, 0)
-}
-
-/* ---------------- 从左侧拖入 ---------------- */
-
-function bindable(element: LabelElement | undefined, field: FieldDefinition | undefined): element is LabelElement {
-  if (!element || !field || element.locked) return false
-  if (element.type === 'barcode' || element.type === 'qrcode') return field.type !== 'image'
-  return element.type === 'image' && field.type === 'image'
-}
-
-function onDragOver(event: DragEvent): void {
-  const payload = drag.payload
-  const files = !!event.dataTransfer?.types.includes('Files')
-  if (!stage || (!payload && !files)) return
-  event.preventDefault()
-  if (event.dataTransfer) event.dataTransfer.dropEffect = 'copy'
-  designer.ui.dropActive = true
-  stage.highlight(null)
-  if (payload?.kind === 'field') {
-    const field = designer.template.fields.find((item) => item.key === payload.key)
-    const id = stage.elementAt(event)
-    const target = id ? find(id) : undefined
-    if (bindable(target, field)) {
-      stage.highlight(elementBounds(target))
-      designer.ui.tip = `松开把 ${payload.key} 绑定到“${target.name}”`
-    } else {
-      designer.ui.tip = `松开生成“${field?.name || payload.key}：{{${payload.key}}}”文本`
-    }
-  } else {
-    designer.ui.tip = files ? '松开上传图片并放到这里' : '松开放置元素'
-  }
-}
-
-function clearDrop(): void {
-  designer.ui.dropActive = false
-  designer.ui.tip = ''
-  stage?.highlight(null)
-}
-
-function onDragLeave(event: DragEvent): void {
-  if (!wrap.value?.contains(event.relatedTarget as Node | null)) clearDrop()
-}
-
-async function onDrop(event: DragEvent): Promise<void> {
-  event.preventDefault()
-  if (!stage) return
-  const point = stage.pointerMm(event) ?? undefined
-  const payload = drag.payload
-  const target = payload?.kind === 'field' ? stage.elementAt(event) : null
-  endDrag()
-  clearDrop()
-  const file = event.dataTransfer?.files?.[0]
-  if (!payload && file) {
-    try {
-      const asset = await uploadAsset(file)
-      addElement('image', { src: `asset:${asset.key}`, name: asset.name }, point)
-    } catch (error) {
-      toast((error as Error).message, true)
-    }
-
-    return
-  }
-
-  if (!payload) return
-  if (payload.kind === 'element') addElement(payload.type, {}, point)
-  else if (payload.kind === 'icon') addElement('icon', { icon: payload.icon, name: payload.name }, point)
-  else if (payload.kind === 'asset') addElement('image', { src: `asset:${payload.id}`, name: payload.name }, point)
-  else dropField(payload.key, target ? find(target) : undefined, point)
-}
-
-function dropField(key: string, target: LabelElement | undefined, point?: { x: number; y: number }): void {
-  const field = designer.template.fields.find((item) => item.key === key)
-  if (!field) return
-  if (bindable(target, field)) {
-    if (target.type === 'image') target.src = `{{${key}}}`
-    else if (target.type === 'barcode' || target.type === 'qrcode') target.value = `{{${key}}}`
-    select([target.id])
-    commit()
-    toast(`已把 ${key} 绑定到“${target.name}”`)
-  } else if (field.type === 'image') {
-    addElement('image', { src: `{{${key}}}`, name: field.name || key, width: 20, height: 20 }, point)
-  } else {
-    const label = field.name || key
-    addElement('text', { content: `${label}：{{${key}}}`, name: label, width: 40, height: 5, style: { ...defaultTextStyle(), fontSize: 9, fit: 'shrink' } }, point)
-  }
 }
 
 /* ---------------- 生命周期 ---------------- */
@@ -351,10 +183,16 @@ onBeforeUnmount(() => {
   stage = null
 })
 
+/**
+ * 一批字体加载完：画布按新字体重画（服务端字体下载完之前用的是本机字体）。
+ */
 function onFontsLoaded(): void {
   fontVersion.value++
 }
 
+/**
+ * 拖动在别处结束或取消时，清掉拖放状态和提示。
+ */
 function onGlobalDragEnd(): void {
   endDrag()
   clearDrop()

@@ -10,11 +10,26 @@ import { addField, commit, designer, removeField, renameField, report, toast } f
 import { confirmBox, copyText } from '../../stores/dialogs.ts'
 import AppIcon from '../AppIcon.vue'
 
+/**
+ * 字段类型的选项。
+ */
 const FIELD_TYPES: FieldType[] = ['string', 'number', 'date', 'image']
+/**
+ * 每行 key 的错误（行号 → 原因）。
+ */
 const keyErrors = reactive<Record<number, string>>({})
+/**
+ * 按字段生成的调用样例（单张生成的请求体）。
+ */
 const requestJson = computed(() => JSON.stringify(sampleRequest(designer.template), null, 2))
+/**
+ * 模板的字段（表格直接编辑它们）。
+ */
 const fields = computed(() => designer.template.fields)
 
+/**
+ * 加一行字段，key 取第一个没用过的 fieldN。
+ */
 function addRow(): void {
   let index = fields.value.length + 1
   while (fields.value.some((field) => field.key === `field${index}`)) index++
@@ -22,11 +37,21 @@ function addRow(): void {
   if (error) toast(error, true)
 }
 
+/**
+ * 一键添加绑定里引用了但还没定义的字段（字符串类型）。
+ * @param key 字段 key。
+ */
 function addMissing(key: string): void {
   const error = addField(key, 'string')
   if (error) toast(error, true)
 }
 
+/**
+ * 改字段 key（引用它的元素一起改）；不合法或重复时恢复原值并显示原因。
+ * @param field 字段。
+ * @param index 行号。
+ * @param event 输入框的 change 事件。
+ */
 function onKeyChange(field: FieldDefinition, index: number, event: Event): void {
   const input = event.target as HTMLInputElement
   const error = renameField(field, input.value)
@@ -34,12 +59,20 @@ function onKeyChange(field: FieldDefinition, index: number, event: Event): void 
   if (error) input.value = field.key
 }
 
+/**
+ * 默认值、样例值在输入框里的文本。
+ * @param value 值。
+ * @returns 文本；没有值时为空字符串。
+ */
 function text(value: unknown): string {
   return value === undefined || value === null ? '' : String(value)
 }
 
 /**
  * 默认值、样例值按类型保存：number 存数字，其他存字符串，空字符串表示没有。
+ * @param field 字段。
+ * @param prop 改默认值还是样例值。
+ * @param value 输入的文本。
  */
 function setValue(field: FieldDefinition, prop: 'default' | 'sample', value: string): void {
   if (value === '') delete field[prop]
@@ -47,16 +80,30 @@ function setValue(field: FieldDefinition, prop: 'default' | 'sample', value: str
   commit()
 }
 
+/**
+ * 改字段类型：图片、字符串没有格式，图片的样例值清掉（类型不再匹配）。
+ * @param field 字段。
+ */
 function onTypeChange(field: FieldDefinition): void {
   if (field.type === 'image' || field.type === 'string') delete field.format
   if (field.type === 'image') delete field.sample
   commit()
 }
 
+/**
+ * 格式输入框的提示。
+ * @param type 字段类型。
+ * @returns 提示文字。
+ */
 function formatHint(type: FieldType): string {
   return type === 'number' ? '如 0.00' : type === 'date' ? '如 yyyy-MM-dd' : '—'
 }
 
+/**
+ * 删除字段；还被元素引用时先确认。
+ * @param field 字段。
+ * @returns 操作结束时完成。
+ */
 async function remove(field: FieldDefinition): Promise<void> {
   const used = !report.value.unusedFields.includes(field.key)
   if (used && !(await confirmBox('删除字段', `字段 ${field.key} 还被元素引用，删除后这些绑定会显示为未定义，发布前要处理。确定删除？`, '删除', true))) return

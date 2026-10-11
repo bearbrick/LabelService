@@ -6,7 +6,13 @@ import * as adminApi from '../api/admin.ts'
 import type { Me } from '../api/admin.ts'
 import { handleUnauthorized, hasToken, setToken } from '../api/http.ts'
 
+/**
+ * 登录状态。
+ */
 export const session = reactive({
+  /**
+   * 当前用户；没登录时为 null。
+   */
   me: null as Me | null,
   /**
    * 启动时检查完已保存的令牌后为 true。
@@ -23,6 +29,9 @@ handleUnauthorized(() => {
   clear()
 })
 
+/**
+ * 清掉令牌和当前用户（回到登录页）。
+ */
 function clear(): void {
   setToken(null)
   session.me = null
@@ -41,6 +50,13 @@ export async function restoreSession(): Promise<void> {
   }
 }
 
+/**
+ * 登录并保存令牌。
+ * @param account 账号。
+ * @param password 密码。
+ * @param remember 7 天内自动登录。
+ * @returns 登录成功时结束；失败时抛出接口的错误。
+ */
 export async function signIn(account: string, password: string, remember: boolean): Promise<void> {
   const result = await adminApi.login(account, password, remember)
   setToken(result.token, remember)
@@ -48,6 +64,10 @@ export async function signIn(account: string, password: string, remember: boolea
   session.me = result.me
 }
 
+/**
+ * 退出登录（令牌已失效也照样退出）。
+ * @returns 退出完成时结束。
+ */
 export async function signOut(): Promise<void> {
   try {
     await adminApi.logout()
@@ -67,6 +87,8 @@ export async function refreshMe(): Promise<void> {
 
 /**
  * 当前用户有没有某个权限点。必须先改密码时一律没有。
+ * @param permission 权限点，如 tpl.edit。
+ * @returns 有这个权限时为 true。
  */
 export function can(permission: string): boolean {
   return !!session.me && !session.me.mustChangePassword && session.me.permissions.includes(permission)
@@ -74,6 +96,8 @@ export function can(permission: string): boolean {
 
 /**
  * 业务分组在不在当前用户的范围里。
+ * @param businessId 业务分组 ID；没有分组时为 null。
+ * @returns 在范围里时为 true（全部业务范围的用户总是 true）。
  */
 export function inScope(businessId: number | null | undefined): boolean {
   const me = session.me

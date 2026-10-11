@@ -23,11 +23,39 @@ import SheetCanvas from './SheetCanvas.vue'
 import SheetProps from './SheetProps.vue'
 import SheetSidebar from './SheetSidebar.vue'
 
-const props = defineProps<{ readOnly: boolean }>()
-const emit = defineEmits<{ save: [] }>()
+/**
+ * 组件参数。
+ */
+const props = defineProps<{
+  /**
+   * 只读（没有 res.manage 权限）：不响应编辑快捷键。
+   */
+  readOnly: boolean
+}>()
+/**
+ * 组件事件。
+ */
+const emit = defineEmits<{
+  /**
+   * 要保存（Ctrl+S 或保存按钮）。
+   */
+  save: []
+}>()
+/**
+ * 画布组件（工具栏的缩放按钮调它）。
+ */
 const canvas = ref<InstanceType<typeof SheetCanvas> | null>(null)
+/**
+ * 选中的格子数。
+ * @returns 个数。
+ */
 const count = () => sheet.selection.length
 
+/**
+ * 拼版设计器的快捷键：Ctrl+S 保存；撤销重做、全选、复制、R 旋转、删除、Esc 取消选择；方向键微调（Shift 时 1 mm）。
+ * 在输入框里打字或只读时只响应 Ctrl+S。
+ * @param event 键盘事件。
+ */
 function onKeyDown(event: KeyboardEvent): void {
   const target = event.target as HTMLElement | null
   const typing = !!target && (['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName) || target.isContentEditable)

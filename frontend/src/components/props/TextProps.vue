@@ -1,4 +1,7 @@
 <script setup lang="ts">
+/**
+ * 文本元素的属性：内容（可插入字段）、字体、字号、粗斜体和下划线、颜色、对齐、放不下时的处理、行高、字间距。
+ */
 import { computed } from 'vue'
 import { defaultTextStyle } from '../../model/elements.ts'
 import { FONT_OPTIONS } from '../../model/fonts.ts'
@@ -8,26 +11,52 @@ import AppIcon from '../AppIcon.vue'
 import ColorField from './ColorField.vue'
 import FieldPicker from './FieldPicker.vue'
 
-const props = defineProps<{ element: TextElement }>()
+/**
+ * 组件参数。
+ */
+const props = defineProps<{
+  /**
+   * 文本元素。
+   */
+  element: TextElement
+}>()
 // 元素在新建和打开时已补全默认值（normalizeElement），这里的兜底只为类型安全。
+/**
+ * 文字样式（直接改它，改完记录撤销）。
+ */
 const style = computed(() => props.element.style ?? defaultTextStyle())
 
+/**
+ * 水平对齐的按钮。
+ */
 const H_ALIGNS: ReadonlyArray<{ value: TextAlign; icon: string; label: string }> = [
   { value: 'left', icon: 'alignTextL', label: '左对齐' },
   { value: 'center', icon: 'alignTextC', label: '居中' },
   { value: 'right', icon: 'alignTextR', label: '右对齐' },
 ]
+/**
+ * 垂直对齐的按钮。
+ */
 const V_ALIGNS: ReadonlyArray<{ value: VerticalAlign; icon: string; label: string }> = [
   { value: 'top', icon: 'vTop', label: '顶部' },
   { value: 'middle', icon: 'vMid', label: '居中' },
   { value: 'bottom', icon: 'vBot', label: '底部' },
 ]
 
+/**
+ * 改一项文字样式并记录撤销。
+ * @param key 样式属性。
+ * @param value 新值。
+ */
 function set<K extends keyof TextStyle>(key: K, value: TextStyle[K]): void {
   style.value[key] = value
   commit()
 }
 
+/**
+ * 在文本末尾插入字段绑定。
+ * @param key 字段 key。
+ */
 function insert(key: string): void {
   props.element.content += `{{${key}}}`
   commit()

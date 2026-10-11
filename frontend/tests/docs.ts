@@ -36,7 +36,7 @@ interface SourceUnit {
  * @returns 每处问题一条说明（文件:行 名称 问题）；没有问题时为空。
  */
 export function checkDocs(root: string): string[] {
-  const units = [...sourceFiles(join(root, 'src')), ...sourceFiles(join(root, 'tests'))].map((path) => toUnit(root, path))
+  const units = [...sourceFiles(join(root, 'src')), ...sourceFiles(join(root, 'tests'))].flatMap((path) => toUnits(root, path))
   const byName = new Map(units.map((unit) => [unit.fileName, unit]))
   const options: ts.CompilerOptions = { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext, moduleResolution: ts.ModuleResolutionKind.Bundler, strict: true, allowImportingTsExtensions: true, noEmit: true, resolveJsonModule: true, skipLibCheck: true }
   const host = ts.createCompilerHost(options)
@@ -118,7 +118,7 @@ class FileInspector {
           this.require(statement, name)
         }
 
-        if (initializer) this.expression(initializer)
+        if (initializer) this.expression(initializer, name)
       }
     } else if (ts.isInterfaceDeclaration(statement)) {
       this.require(statement, statement.name.text)
@@ -140,16 +140,17 @@ class FileInspector {
   /**
    * 在初始化表达式里找要检查的成员：reactive({...}) 的每个状态，defineProps、defineEmits 的类型参数。
    * @param expression 表达式。
+   * @param owner 赋给的变量名（报错时显示，如 designer.template）；没有时用函数名。
    */
-  private expression(expression: ts.Expression): void {
+  private expression(expression: ts.Expression, owner?: string): void {
     if (!ts.isCallExpression(expression)) return
     const callee = expression.expression.getText(this.source)
     if (callee === 'reactive' && expression.arguments[0] && ts.isObjectLiteralExpression(expression.arguments[0])) {
-      this.objectState(expression.arguments[0], 'reactive')
+      this.objectState(expression.arguments[0], owner ?? 'reactive')
     } else if (callee === 'defineProps' || callee === 'defineEmits') {
       for (const type of expression.typeArguments ?? []) this.typeMembers(type, callee)
     } else if (callee === 'withDefaults' && expression.arguments[0]) {
-      this.expression(expression.arguments[0])
+      this.expression(expression.arguments[0], owner)
     }
   }
 
@@ -237,7 +238,7 @@ class FileInspector {
   }
 
   /**
-   * 函数有没有返回值：返回类型不是 void、undefined、never，也不是 Promise<void>。构造函数和 set 访问器没有。
+   * 函数有没有返回值：返回类型不是 void、undefined、null、never，也不是 Promise<void>（只是赋值的箭头函数不算有返回值）。构造函数和 set 访问器没有。
    * @param fn 函数。
    * @returns 有返回值时为 true。
    */
@@ -248,19 +249,20 @@ class FileInspector {
     let type = this.checker.getReturnTypeOfSignature(signature)
     const symbol = type.getSymbol()
     if (symbol?.name === 'Promise') type = this.checker.getTypeArguments(type as ts.TypeReference)[0] ?? type
-    const empty = ts.TypeFlags.Void | ts.TypeFlags.Undefined | ts.TypeFlags.Never
+    const empty = ts.TypeFlags.Void | ts.TypeFlags.Undefined | ts.TypeFlags.Null | ts.TypeFlags.Never
     return !(type.flags & empty)
   }
 
   /**
-   * 要求节点前面有 JSDoc：说明不为空，写成多行。文件最开头的 JSDoc 是整个文件的说明，不算第一个声明的注释。
+   * 要求节点前面有 JSDoc：说明不为空，写成多行。文件最开头、和下面的声明隔着空行的 JSDoc 是整个文件的说明，不算这个声明的注释。
    * @param node 节点。
    * @param name 报错时显示的名称。
    * @returns 节点的 JSDoc；没有时为 null（已记下问题）。
    */
   private require(node: ts.Node, name: string): ts.JSDoc | null {
     const header = this.source.text.search(/\S/)
-    const docs = (node as { jsDoc?: ts.JSDoc[] }).jsDoc?.filter((item) => item.getStart(this.source) !== header)
+    const isHeader = (item: ts.JSDoc) => item.getStart(this.source) === header && /\n[ \t]*\r?\n/.test(this.source.text.slice(item.end, node.getStart(this.source)))
+    const docs = (node as { jsDoc?: ts.JSDoc[] }).jsDoc?.filter((item) => !isHeader(item))
     const doc = docs?.[docs.length - 1]
     if (!doc) {
       this.report(node, name, '没有注释')
@@ -296,19 +298,19 @@ function skipAssertions(expression: ts.Expression): ts.Expression {
 }
 
 /**
- * 读一个文件，.vue 文件只取 <script> 里的代码，并记下它从第几行开始。
+ * 读一个文件。.vue 文件的每个 <script> 块（普通的和 setup 的）各算一个源文件，并记下它从第几行开始。
  * @param root frontend 目录。
  * @param path 文件的完整路径。
  * @returns 要检查的源文件。
  */
-function toUnit(root: string, path: string): SourceUnit {
+function toUnits(root: string, path: string): SourceUnit[] {
   const text = readFileSync(path, 'utf8')
   const display = relative(root, path).replaceAll('\\', '/')
-  if (!path.endsWith('.vue')) return { fileName: normalize(path), display, code: text, lineOffset: 0 }
-  const match = /<script\b[^>]*>([\s\S]*?)<\/script>/.exec(text)
-  if (!match) return { fileName: normalize(path + '.ts'), display, code: '', lineOffset: 0 }
-  const start = match.index + match[0].indexOf('>') + 1
-  return { fileName: normalize(path + '.ts'), display, code: match[1], lineOffset: text.slice(0, start).split('\n').length - 1 }
+  if (!path.endsWith('.vue')) return [{ fileName: normalize(path), display, code: text, lineOffset: 0 }]
+  return [...text.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/g)].map((match, index) => {
+    const start = (match.index ?? 0) + match[0].indexOf('>') + 1
+    return { fileName: normalize(`${path}.${index}.ts`), display, code: match[1], lineOffset: text.slice(0, start).split('\n').length - 1 }
+  })
 }
 
 /**

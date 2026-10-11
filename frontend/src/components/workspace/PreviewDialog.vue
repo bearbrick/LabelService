@@ -13,32 +13,101 @@ import { route } from '../../stores/router.ts'
 import AppIcon from '../AppIcon.vue'
 import ModalDialog from '../admin/ModalDialog.vue'
 
+/**
+ * 画布和服务端位置偏差的上限，mm（验收标准）。
+ */
 const LIMIT_MM = 0.2
-const emit = defineEmits<{ close: [] }>()
+/**
+ * 组件事件。
+ */
+const emit = defineEmits<{
+  /**
+   * 关闭对话框。
+   */
+  close: []
+}>()
+/**
+ * 对话框状态。
+ */
 const state = reactive({
+  /**
+   * 预览的分辨率（默认用模板的）。
+   */
   dpi: designer.template.page.dpi ?? 300,
+  /**
+   * 黑白输出。
+   */
   mono: false,
+  /**
+   * 正在渲染。
+   */
   busy: false,
+  /**
+   * 预览图的 blob URL。
+   */
   url: '',
+  /**
+   * 预览图的宽度，像素。
+   */
   width: 0,
+  /**
+   * 预览图的高度，像素。
+   */
   height: 0,
+  /**
+   * 耗时说明（服务端各阶段之和、往返）。
+   */
   ms: '',
+  /**
+   * 渲染警告（如字体降级）。
+   */
   warnings: [] as string[],
+  /**
+   * 渲染或对比失败的原因。
+   */
   error: '',
+  /**
+   * 叠加显示的画布快照（data URL）；没对比时为空。
+   */
   overlay: '',
+  /**
+   * 每个元素的位置偏差，大的在前。
+   */
   offsets: [] as ElementOffset[],
 })
 // 画布按模板 DPI 对齐条码模块，只有同样的 DPI 才能逐点对比。
+/**
+ * 模板的分辨率（画布按它对齐条码模块）。
+ */
 const templateDpi = computed(() => designer.template.page.dpi ?? 300)
+/**
+ * 能不能和画布对比：在设计页打开，且按模板的 DPI 预览。
+ */
 const canCompare = computed(() => route.view === 'designer' && state.dpi === templateDpi.value)
+/**
+ * 不能对比时的原因。
+ */
 const compareHint = computed(() => (route.view !== 'designer' ? '在设计页打开预览才能对比' : canCompare.value ? '' : `按模板的 ${templateDpi.value} dpi 预览才能对比`))
+/**
+ * 偏差最大的元素（只算两边都有内容的）。
+ */
 const worst = computed(() => state.offsets.find((item) => Number.isFinite(item.maxMm)))
+/**
+ * 偏差超过上限的元素。
+ */
 const failed = computed(() => state.offsets.filter((item) => item.maxMm > LIMIT_MM))
+/**
+ * 预览图的显示宽度：实际大小，最宽 760 像素。
+ */
 const cssWidth = computed(() => Math.min(760, (designer.template.page.width * 96) / 25.4))
 
 onMounted(render)
 onBeforeUnmount(() => URL.revokeObjectURL(state.url))
 
+/**
+ * 请服务端渲染当前模板，显示图片、耗时和警告。
+ * @returns 渲染结束时完成（失败时显示原因，不抛）。
+ */
 async function render(): Promise<void> {
   state.busy = true
   state.error = ''
@@ -63,6 +132,11 @@ async function render(): Promise<void> {
   }
 }
 
+/**
+ * 加载图片并等它解码完。
+ * @param url 图片地址。
+ * @returns 图片。
+ */
 function decode(url: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const image = new Image()
@@ -72,6 +146,13 @@ function decode(url: string): Promise<HTMLImageElement> {
   })
 }
 
+/**
+ * 把图片画到白底画布上取像素。
+ * @param source 图片或画布。
+ * @param width 宽度，像素。
+ * @param height 高度，像素。
+ * @returns 像素数据。
+ */
 function pixelsOf(source: CanvasImageSource, width: number, height: number): Pixels {
   const canvas = document.createElement('canvas')
   canvas.width = width
@@ -85,6 +166,7 @@ function pixelsOf(source: CanvasImageSource, width: number, height: number): Pix
 
 /**
  * 画布按服务端图片的像素尺寸导出，逐个元素量墨迹边界的差。画布要用样例值显示才可比。
+ * @returns 对比结束时完成。
  */
 async function compare(): Promise<void> {
   if (designer.ui.mode !== 'sample') designer.ui.mode = 'sample'
@@ -103,6 +185,11 @@ async function compare(): Promise<void> {
   state.overlay = snapshot.toDataURL('image/png')
 }
 
+/**
+ * 偏差的显示文字。
+ * @param item 一个元素的偏差。
+ * @returns 如 0.12 mm；只有一边有内容时说明。
+ */
 function offsetText(item: ElementOffset): string {
   return Number.isFinite(item.maxMm) ? `${item.maxMm.toFixed(2)} mm` : '一边没有内容'
 }

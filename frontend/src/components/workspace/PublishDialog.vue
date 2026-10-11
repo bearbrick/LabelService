@@ -10,9 +10,43 @@ import { checkBeforePublish, publish, workspace } from '../../stores/workspace.t
 import AppIcon from '../AppIcon.vue'
 import ModalDialog from '../admin/ModalDialog.vue'
 
-const emit = defineEmits<{ close: [] }>()
+/**
+ * 组件事件。
+ */
+const emit = defineEmits<{
+  /**
+   * 关闭对话框（取消或发布成功）。
+   */
+  close: []
+}>()
+/**
+ * 服务端的检查结果；还没检查完时为 null。
+ */
 const check = ref<PublishCheck | null>(null)
-const state = reactive({ note: '', checking: true, busy: false, error: '' })
+/**
+ * 对话框状态。
+ */
+const state = reactive({
+  /**
+   * 发布说明。
+   */
+  note: '',
+  /**
+   * 正在检查。
+   */
+  checking: true,
+  /**
+   * 正在发布。
+   */
+  busy: false,
+  /**
+   * 检查或发布失败的原因。
+   */
+  error: '',
+})
+/**
+ * 发布后的版本号。
+ */
 const next = (workspace.detail?.latestVersion ?? 0) + 1
 
 onMounted(async () => {
@@ -25,6 +59,10 @@ onMounted(async () => {
   }
 })
 
+/**
+ * 发布，成功后提示并关闭。
+ * @returns 发布结束时完成（失败时显示原因，不抛）。
+ */
 async function submit(): Promise<void> {
   state.busy = true
   state.error = ''

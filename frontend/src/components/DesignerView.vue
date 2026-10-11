@@ -32,6 +32,11 @@ import PropertyPanel from './PropertyPanel.vue'
 import ShortcutsDialog from './ShortcutsDialog.vue'
 import StatusBar from './StatusBar.vue'
 
+/**
+ * 设计器的全部快捷键（见快捷键说明对话框）：Ctrl+S 保存；在输入框里打字时只响应 Ctrl+S；
+ * 其余按表格逐条匹配，第一条匹配的执行；方向键微调选中的元素（Shift 时 1 mm）。
+ * @param event 键盘事件。
+ */
 function onKeyDown(event: KeyboardEvent): void {
   if (designer.ui.shortcutsOpen) {
     if (event.key === 'Escape') designer.ui.shortcutsOpen = false
@@ -83,10 +88,17 @@ function onKeyDown(event: KeyboardEvent): void {
   }
 }
 
+/**
+ * 松开空格时结束平移模式。
+ * @param event 键盘事件。
+ */
 function onKeyUp(event: KeyboardEvent): void {
   if (event.key === ' ') designer.ui.spaceDown = false
 }
 
+/**
+ * 窗口失去焦点时结束平移模式（收不到松开空格的事件）。
+ */
 function onBlur(): void {
   designer.ui.spaceDown = false
 }

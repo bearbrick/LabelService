@@ -11,10 +11,29 @@ import { can } from '../../stores/session.ts'
 import { canEdit, restoreVersion, workspace } from '../../stores/workspace.ts'
 import AppIcon from '../AppIcon.vue'
 
-const emit = defineEmits<{ publish: [] }>()
+/**
+ * 组件事件。
+ */
+const emit = defineEmits<{
+  /**
+   * 要发布草稿（打开发布对话框）。
+   */
+  publish: []
+}>()
+/**
+ * 打开的模板的概要。
+ */
 const detail = computed(() => workspace.detail!)
+/**
+ * 草稿和最新发布版本不一样（有草稿或有还没保存的修改）。
+ */
 const changed = computed(() => detail.value.hasDraft || designer.dirty)
 
+/**
+ * 把历史版本复制到草稿（确认后）。
+ * @param version 版本号。
+ * @returns 操作结束时完成（失败时提示，不抛）。
+ */
 async function restore(version: number): Promise<void> {
   const ok = await confirmBox('复制到草稿', `把 v${version} 的内容复制成草稿，当前草稿会被覆盖。发布后接口才使用它。`, '复制到草稿')
   if (!ok) return

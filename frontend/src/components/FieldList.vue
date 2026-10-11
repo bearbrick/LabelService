@@ -10,11 +10,39 @@ import { addField, commit, commitSoon, designer, insertFieldIntoSelection, remov
 import { endDrag, startDrag } from '../stores/drag.ts'
 import AppIcon from './AppIcon.vue'
 
+/**
+ * 字段类型的选项。
+ */
 const FIELD_TYPES: FieldType[] = ['string', 'number', 'date', 'image']
-const quick = reactive({ key: '', type: 'string' as FieldType, error: '' })
+/**
+ * 快速添加字段的输入。
+ */
+const quick = reactive({
+  /**
+   * 新字段的 key。
+   */
+  key: '',
+  /**
+   * 新字段的类型。
+   */
+  type: 'string' as FieldType,
+  /**
+   * 添加失败的原因（key 不合法或重复）。
+   */
+  error: '',
+})
+/**
+ * 展开编辑的字段 key。
+ */
 const openKey = ref<string | null>(null)
+/**
+ * 被元素引用的字段 key。
+ */
 const used = computed(() => usedKeys(designer.template.elements))
 
+/**
+ * 快速添加字段：成功后展开它、清空输入框；失败时显示原因。
+ */
 function quickAdd(): void {
   quick.error = addField(quick.key, quick.type) ?? ''
   if (!quick.error) {
@@ -23,17 +51,28 @@ function quickAdd(): void {
   }
 }
 
+/**
+ * 一键添加绑定里引用了但还没定义的字段（字符串类型）。
+ * @param key 字段 key。
+ */
 function addMissing(key: string): void {
   const error = addField(key, 'string')
   if (error) toast(error, true)
 }
 
+/**
+ * 样例值在输入框里的文本。
+ * @param field 字段。
+ * @returns 样例值的文本；没有样例时为空字符串。
+ */
 function sampleText(field: FieldDefinition): string {
   return field.sample === undefined || field.sample === null ? '' : String(field.sample)
 }
 
 /**
  * 样例值按字段类型保存：number 存数字，其他存字符串，空字符串表示没有样例。
+ * @param field 字段。
+ * @param text 输入的样例值。
  */
 function setSample(field: FieldDefinition, text: string): void {
   if (text === '') delete field.sample
@@ -41,6 +80,11 @@ function setSample(field: FieldDefinition, text: string): void {
   commitSoon()
 }
 
+/**
+ * 图片字段选样例图片：不超过 1 MB，读成 data URL 存为样例值。
+ * @param field 图片字段。
+ * @param event 文件输入框的 change 事件。
+ */
 function onImageSample(field: FieldDefinition, event: Event): void {
   const input = event.target as HTMLInputElement
   const file = input.files?.[0]
@@ -59,6 +103,10 @@ function onImageSample(field: FieldDefinition, event: Event): void {
   reader.readAsDataURL(file)
 }
 
+/**
+ * 删除字段；还被元素引用时先确认。
+ * @param field 字段。
+ */
 function remove(field: FieldDefinition): void {
   if (used.value.has(field.key) && !confirm(`字段 ${field.key} 还被元素引用，删除后这些绑定会显示为未定义。确定删除？`)) return
   removeField(field)

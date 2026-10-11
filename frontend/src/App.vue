@@ -34,6 +34,9 @@ import { route } from './stores/router.ts'
 import type { Page } from './stores/router.ts'
 import { can, restoreSession, session } from './stores/session.ts'
 
+/**
+ * 每个页面对应的组件和需要的权限点（没有权限时显示无权限提示）。
+ */
 const PAGES: Record<Page, { component: Component; permission?: string }> = {
   dashboard: { component: DashboardPage },
   templates: { component: TemplatesPage, permission: 'tpl.view' },
@@ -51,9 +54,21 @@ const PAGES: Record<Page, { component: Component; permission?: string }> = {
   profile: { component: ProfilePage },
 }
 
+/**
+ * 窄屏时左侧模板树是否展开。
+ */
 const navOpen = ref(false)
+/**
+ * 首次登录或重置密码后必须先改密码（只显示个人设置页）。
+ */
 const mustChange = computed(() => !!session.me?.mustChangePassword)
+/**
+ * 当前要显示的页面。
+ */
 const current = computed(() => (mustChange.value ? PAGES.profile : PAGES[route.page]))
+/**
+ * 当前用户有没有权限看当前页面。
+ */
 const allowed = computed(() => !current.value.permission || can(current.value.permission))
 
 watch(
@@ -69,6 +84,10 @@ watch(
   },
 )
 
+/**
+ * 关闭或刷新页面时，有未保存的草稿就先保存，并让浏览器提示确认离开。
+ * @param event 页面卸载前的事件。
+ */
 function onBeforeUnload(event: BeforeUnloadEvent): void {
   if (!designer.dirty) return
   void saveDraft()

@@ -9,16 +9,38 @@ import type { LineElement, RectElement, StrokeStyle } from '../../model/template
 import { commit, setLineDirection } from '../../stores/designer.ts'
 import ColorField from './ColorField.vue'
 
-const props = defineProps<{ element: LineElement | RectElement }>()
+/**
+ * 组件参数。
+ */
+const props = defineProps<{
+  /**
+   * 线或矩形元素。
+   */
+  element: LineElement | RectElement
+}>()
+/**
+ * 是矩形时是它，否则为 null（圆角、填充只对矩形）。
+ */
 const rect = computed(() => (props.element.type === 'rect' ? props.element : null))
 // 元素在新建和打开时已补全默认值（normalizeElement），这里的兜底只为类型安全。
+/**
+ * 线型（线的线条、矩形的边框）。
+ */
 const stroke = computed<StrokeStyle>(() => props.element.stroke ?? { width: STROKE_DEFAULT_WIDTH, color: '#000000' })
 
+/**
+ * 切换虚线（默认实段 1 mm、空段 0.6 mm）。
+ * @param on 是否虚线。
+ */
 function setDash(on: boolean): void {
   stroke.value.dash = on ? [...DEFAULT_DASH] : undefined
   commit()
 }
 
+/**
+ * 切换矩形填充（打开时填黑色）。
+ * @param on 是否填充。
+ */
 function setFill(on: boolean): void {
   if (rect.value) rect.value.fill = on ? '#000000' : undefined
   commit()

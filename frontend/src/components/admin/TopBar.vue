@@ -10,38 +10,81 @@ import type { Page } from '../../stores/router.ts'
 import { can, session, signOut } from '../../stores/session.ts'
 import AppIcon from '../AppIcon.vue'
 
-defineEmits<{ toggleNav: [] }>()
+defineEmits<{
+  /**
+   * 窄屏时展开或收起左侧模板树。
+   */
+  toggleNav: []
+}>()
 
+/**
+ * 顶栏的下拉菜单：业务、资源、接口、日志、权限管理、用户。
+ */
 type MenuKey = 'biz' | 'res' | 'api' | 'log' | 'sys' | 'user'
+/**
+ * 展开的下拉菜单；都收起时为 null。
+ */
 const menu = ref<MenuKey | null>(null)
+/**
+ * 当前用户（顶栏只在登录后显示）。
+ */
 const me = computed(() => session.me!)
+/**
+ * 模板库正在看的业务分组；看全部或不在模板库时为 null。
+ */
 const currentBiz = computed(() => (route.page === 'templates' && route.biz !== 'all' ? businessOf(route.biz) : null))
+/**
+ * 用户菜单里显示的业务范围。
+ */
 const scopeText = computed(() => (me.value.allBusinesses ? '全部业务' : me.value.businessIds.map((id) => businessOf(id).name).join('、') || '无'))
 
+/**
+ * 展开或收起一个下拉菜单（同时收起别的）。
+ * @param key 菜单。
+ */
 function toggle(key: MenuKey): void {
   menu.value = menu.value === key ? null : key
 }
 
+/**
+ * 收起菜单并打开页面。
+ * @param page 页面。
+ * @param section 页面内的小节。
+ */
 function open(page: Page, section = ''): void {
   menu.value = null
   go(page, section)
 }
 
+/**
+ * 收起菜单并打开模板库的某个业务分组。
+ * @param biz 分组 ID；all 是全部。
+ */
 function openBiz(biz: number | 'all'): void {
   menu.value = null
   goBiz(biz)
 }
 
+/**
+ * 收起菜单并显示快捷键说明。
+ */
 function showShortcuts(): void {
   menu.value = null
   designer.ui.shortcutsOpen = true
 }
 
+/**
+ * 收起菜单并退出登录。
+ * @returns 退出完成时结束。
+ */
 async function logout(): Promise<void> {
   menu.value = null
   await signOut()
 }
 
+/**
+ * 点页面其他地方时收起菜单。
+ */
 const close = () => (menu.value = null)
 onMounted(() => document.addEventListener('click', close))
 onBeforeUnmount(() => document.removeEventListener('click', close))

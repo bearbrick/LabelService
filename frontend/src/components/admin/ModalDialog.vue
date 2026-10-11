@@ -5,9 +5,37 @@
 import { onBeforeUnmount, onMounted } from 'vue'
 import AppIcon from '../AppIcon.vue'
 
-const props = defineProps<{ title: string; wide?: boolean; width?: string }>()
-const emit = defineEmits<{ close: [] }>()
+/**
+ * 组件参数。
+ */
+const props = defineProps<{
+  /**
+   * 标题。
+   */
+  title: string
+  /**
+   * 宽版（表单较多时）。
+   */
+  wide?: boolean
+  /**
+   * 指定宽度（CSS 写法，如 720px），优先于 wide。
+   */
+  width?: string
+}>()
+/**
+ * 组件事件。
+ */
+const emit = defineEmits<{
+  /**
+   * 要关闭（点遮罩、关闭按钮或按 Esc）。
+   */
+  close: []
+}>()
 
+/**
+ * 按 Esc 关闭（捕获阶段处理，不让设计器的快捷键收到）。
+ * @param event 键盘事件。
+ */
 function onKey(event: KeyboardEvent): void {
   if (event.key !== 'Escape') return
   event.stopPropagation()

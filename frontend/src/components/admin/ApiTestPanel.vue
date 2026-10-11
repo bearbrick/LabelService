@@ -13,31 +13,96 @@ import type { LabelTemplate } from '../../model/template.ts'
 import { copyText } from '../../stores/dialogs.ts'
 import AppIcon from '../AppIcon.vue'
 
-const props = defineProps<{ code: string }>()
+/**
+ * 组件参数。
+ */
+const props = defineProps<{
+  /**
+   * 模板编码。
+   */
+  code: string
+}>()
 
+/**
+ * 一次调用的结果。
+ */
 interface Result {
+  /**
+   * 是否成功。
+   */
   ok: boolean
+  /**
+   * 状态，如 200 OK、400 FIELD_REQUIRED。
+   */
   status: string
+  /**
+   * 耗时说明。
+   */
   ms: string
+  /**
+   * 文件大小；失败时为空。
+   */
   size: string
+  /**
+   * 要展示的响应头（名称和值）。
+   */
   headers: [string, string][]
+  /**
+   * PNG、PDF 的 blob URL；ZPL 和失败时为空。
+   */
   url: string
+  /**
+   * 结果类型（决定怎么显示）。
+   */
   kind: 'png' | 'pdf' | 'zpl' | 'error'
+  /**
+   * ZPL 文本或错误说明。
+   */
   text: string
 }
 
+/**
+ * 面板状态。
+ */
 const state = reactive({
+  /**
+   * 已发布的版本。
+   */
   versions: [] as VersionInfo[],
+  /**
+   * 最新发布版本的模板（生成请求体用）；没发布过时为 null。
+   */
   template: null as LabelTemplate | null,
+  /**
+   * 请求体（JSON 文本，可以编辑）。
+   */
   body: '',
+  /**
+   * 请求体不合法或读取失败的原因。
+   */
   error: '',
+  /**
+   * 正在调用。
+   */
   busy: false,
+  /**
+   * 正在读取版本。
+   */
   loading: false,
+  /**
+   * 最近一次调用的结果。
+   */
   result: null as Result | null,
 })
 
+/**
+ * 结果里展示的响应头。
+ */
 const SHOWN_HEADERS = ['content-type', 'x-template-version', 'x-label-count', 'server-timing', 'x-label-warnings']
 
+/**
+ * 解析后的请求体；不是 JSON 对象时为 null。
+ */
 const parsed = computed<Record<string, unknown> | null>(() => {
   try {
     const value = JSON.parse(state.body) as unknown
@@ -47,6 +112,9 @@ const parsed = computed<Record<string, unknown> | null>(() => {
   }
 })
 
+/**
+ * 同样请求的 curl 命令（Key 用占位符）。
+ */
 const curl = computed(() => {
   const body = parsed.value ? JSON.stringify(parsed.value) : state.body
   return `curl -X POST "${location.origin}/api/v1/render" \\\n  -H "X-Api-Key: <你的 API Key>" \\\n  -H "Content-Type: application/json" \\\n  --data-binary '${body.replace(/'/g, "'\\''")}' \\\n  -o label.${String(parsed.value?.format ?? 'pdf')}`
@@ -55,6 +123,10 @@ const curl = computed(() => {
 watch(() => props.code, load, { immediate: true })
 onBeforeUnmount(clearResult)
 
+/**
+ * 读取已发布版本和最新版本的模板，生成默认请求体。
+ * @returns 读取结束时完成。
+ */
 async function load(): Promise<void> {
   clearResult()
   state.loading = true
@@ -72,11 +144,19 @@ async function load(): Promise<void> {
   }
 }
 
+/**
+ * 按模板字段重新生成请求体（保留当前选的格式）。
+ */
 function reset(): void {
   const template = state.template ?? { code: props.code, fields: [] }
   state.body = JSON.stringify(sampleRequest(template, String(parsed.value?.format ?? 'pdf')), null, 2)
 }
 
+/**
+ * 改请求体的一个属性（如 format、dpi）。
+ * @param key 属性名。
+ * @param value 新值；undefined 表示删除。
+ */
 function setField(key: string, value: unknown): void {
   const body = parsed.value
   if (!body) {
@@ -101,11 +181,18 @@ function breakRequired(): void {
   state.body = JSON.stringify(body, null, 2)
 }
 
+/**
+ * 清掉上次的结果，释放文件的 blob URL。
+ */
 function clearResult(): void {
   if (state.result?.url) URL.revokeObjectURL(state.result.url)
   state.result = null
 }
 
+/**
+ * 调用接口并显示结果：成功时显示文件、响应头和耗时，失败时显示错误码和逐条问题。
+ * @returns 调用结束时完成。
+ */
 async function send(): Promise<void> {
   if (!parsed.value) {
     state.error = '请求体不是合法的 JSON 对象'
