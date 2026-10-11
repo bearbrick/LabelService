@@ -57,6 +57,24 @@ public sealed record AssetFileDto(byte[] Content, string ContentType, DateTime L
 /// <summary>
 /// 服务端已加载的字体。
 /// </summary>
-/// <param name="Families">字体家族名，按名称排序。</param>
+/// <param name="Families">字体家族名（字体文件里的名字），按名称排序。</param>
 /// <param name="Files">字体文件名。</param>
-public sealed record FontListDto(IReadOnlyList<string> Families, IReadOnlyList<string> Files);
+/// <param name="Items">每个字体文件的详情。</param>
+/// <param name="TemplateFamilies">模板里可以写的字体名（设计器的字体下拉框）：思源黑体、思源宋体用 SourceHanSansSC 等，其余用家族名。</param>
+/// <param name="HasDefaultFamily">有没有默认字体（思源黑体）；没有时没指定字体的文字用系统自带字体，中文可能显示成方框。</param>
+public sealed record FontListDto(
+    IReadOnlyList<string> Families,
+    IReadOnlyList<string> Files,
+    IReadOnlyList<FontFileDto> Items,
+    IReadOnlyList<string> TemplateFamilies,
+    bool HasDefaultFamily);
+
+/// <summary>
+/// 一个字体文件。
+/// </summary>
+/// <param name="FileName">文件名，删除时用它。</param>
+/// <param name="Families">文件里的字体家族名。</param>
+/// <param name="Size">文件大小，字节。</param>
+/// <param name="LastModified">文件修改时间（UTC），上传的字体就是上传时间。</param>
+/// <param name="Uploaded">是否在管理后台上传的（可以删除）；false 是部署目录里的字体（只读）。</param>
+public sealed record FontFileDto(string FileName, IReadOnlyList<string> Families, long Size, DateTime LastModified, bool Uploaded);

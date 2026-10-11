@@ -4,9 +4,10 @@
  */
 import { computed } from 'vue'
 import { defaultTextStyle } from '../../model/elements.ts'
-import { FONT_OPTIONS } from '../../model/fonts.ts'
+import { fontOptions } from '../../model/fonts.ts'
 import type { TextAlign, TextElement, TextStyle, VerticalAlign } from '../../model/template.ts'
 import { commit } from '../../stores/designer.ts'
+import { serverFamilies } from '../../stores/fonts.ts'
 import AppIcon from '../AppIcon.vue'
 import ColorField from './ColorField.vue'
 import FieldPicker from './FieldPicker.vue'
@@ -25,6 +26,11 @@ const props = defineProps<{
  * 文字样式（直接改它，改完记录撤销）。
  */
 const style = computed(() => props.element.style ?? defaultTextStyle())
+
+/**
+ * 字体下拉框的选项：内置的两种和服务端上传的字体；模板里用了服务端没有的字体时也列出来（标“未安装”）。
+ */
+const fontChoices = computed(() => fontOptions(serverFamilies(), style.value.fontFamily))
 
 /**
  * 水平对齐的按钮。
@@ -71,7 +77,7 @@ function insert(key: string): void {
   <div class="prow">
     <label for="prop-font">字体</label>
     <select id="prop-font" v-model="style.fontFamily" class="sel" @change="commit()">
-      <option v-for="font in FONT_OPTIONS" :key="font.value" :value="font.value">{{ font.label }}</option>
+      <option v-for="font in fontChoices" :key="font.value" :value="font.value">{{ font.label }}</option>
     </select>
   </div>
   <div class="prow">

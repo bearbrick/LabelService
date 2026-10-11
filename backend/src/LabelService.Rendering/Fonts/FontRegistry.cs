@@ -1,12 +1,11 @@
 using LabelService.Contracts.Protocol;
 using LabelService.Contracts.Templates;
 using LabelService.Rendering.Diagnostics;
-using SkiaSharp;
 
 namespace LabelService.Rendering.Fonts;
 
 /// <summary>
-/// 字体注册表：服务启动时加载字体目录里的全部字体文件，渲染时按模板的 fontFamily 查找（设计书第 7 节“字体”）。
+/// 字体注册表：加载部署目录和上传目录里的全部字体文件，渲染时按模板的 fontFamily 查找（设计书第 7 节“字体”，ADR 0011）。
 /// </summary>
 /// <remarks>
 /// <para>
@@ -17,7 +16,8 @@ namespace LabelService.Rendering.Fonts;
 /// 找不到时降级到思源黑体，并给 FONT_FALLBACK 警告。一个字体都没加载到时用 Skia 的默认字体，中文会显示成方框。
 /// </para>
 /// <para>
-/// 加载完成后只读，线程安全。字体、SKFont 在加载时创建，渲染时不再创建（R3）。
+/// 线程安全。字体、SKFont 在加载时创建，渲染时不再创建（R3）。管理后台上传、删除字体后调用 <see cref="Reload"/>：
+/// 整份换成新加载的一套，渲染时取一次当前的那套；旧的一套不立即释放（可能还有请求在用），等注册表释放时一起释放。
 /// </para>
 /// </remarks>
 public sealed class FontRegistry : IDisposable
@@ -30,7 +30,7 @@ public sealed class FontRegistry : IDisposable
     /// <summary>
     /// 同一款字体的不同名字，每组第一个是模板里写的名字（和设计器一致）。
     /// </summary>
-    private static readonly string[][] AliasGroups =
+    internal static readonly string[][] AliasGroups =
     [
         ["SourceHanSansSC", "Source Han Sans SC", "Source Han Sans CN", "Noto Sans SC", "Noto Sans CJK SC", "思源黑体"],
         ["SourceHanSerifSC", "Source Han Serif SC", "Source Han Serif CN", "Noto Serif SC", "Noto Serif CJK SC", "思源宋体"],
@@ -39,154 +39,149 @@ public sealed class FontRegistry : IDisposable
     /// <summary>
     /// 可变字体的字重轴标签 wght。
     /// </summary>
-    private static readonly uint WeightAxis = Tag("wght");
+    internal static readonly uint WeightAxis = Tag("wght");
 
     /// <summary>
-    /// 设计器提供的模板字体名（每组别名的第一个）：思源黑体、思源宋体。
+    /// 内置别名的模板字体名（每组别名的第一个）：思源黑体、思源宋体。
     /// </summary>
     public static IReadOnlyList<string> TemplateFamilies { get; } = AliasGroups.Select(group => group[0]).ToArray();
 
     /// <summary>
-    /// 规范化的家族名（去掉空格、连字符、下划线，小写）→ 字体家族。
+    /// 部署目录；<see cref="Empty"/> 为 null（不能重新加载）。
     /// </summary>
-    private readonly Dictionary<string, FontFamily> families;
+    private readonly string? directory;
 
     /// <summary>
-    /// 加载时创建的全部字形（包括可变字体生成的实例），释放时一起释放。
+    /// 换下来的旧字体，等注册表释放时一起释放。
     /// </summary>
-    private readonly List<SKTypeface> owned;
+    private readonly List<FontSnapshot> retired = [];
 
     /// <summary>
-    /// 一个字体都没加载到时用的 Skia 默认字体；有字体时为 null。
+    /// 重新加载时加锁，避免两次上传同时换。
     /// </summary>
-    private readonly FontFace? defaultFallback;
+    private readonly Lock reloadGate = new();
 
     /// <summary>
-    /// 规范化的家族名 → 第一个提供它的字体文件和是否可变字体（给设计器的 /fonts 用）。
+    /// 当前的一套字体。渲染时读一次引用就用这一套，重新加载时整份替换。
     /// </summary>
-    private readonly Dictionary<string, (string Path, bool IsVariable)> sources;
+    private volatile FontSnapshot current;
 
     /// <summary>
-    /// 由 <see cref="Load"/> 创建：封好每个家族的四种组合。
+    /// 由 <see cref="Load(string, string?)"/> 创建。
     /// </summary>
-    /// <param name="families">字体家族。</param>
-    /// <param name="owned">要负责释放的字形。</param>
-    /// <param name="files">成功加载的字体文件。</param>
-    /// <param name="errors">加载失败的文件和原因。</param>
-    /// <param name="sources">家族名 → 字体文件。</param>
-    private FontRegistry(
-        Dictionary<string, FontFamily> families,
-        List<SKTypeface> owned,
-        IReadOnlyList<string> files,
-        IReadOnlyList<string> errors,
-        Dictionary<string, (string Path, bool IsVariable)> sources)
+    /// <param name="snapshot">加载好的一套字体。</param>
+    /// <param name="directory">部署目录；null 表示不能重新加载。</param>
+    /// <param name="uploadDirectory">上传目录；null 表示没有。</param>
+    private FontRegistry(FontSnapshot snapshot, string? directory, string? uploadDirectory)
     {
-        foreach (var family in families.Values)
-        {
-            family.Seal();
-        }
-
-        this.families = families;
-        this.owned = owned;
-        this.sources = sources;
-        Files = files;
-        Errors = errors;
-        defaultFallback = families.Count == 0 ? new FontFace(SKTypeface.Default, fakeBold: false, fakeItalic: false) : null;
+        current = snapshot;
+        this.directory = directory;
+        UploadDirectory = uploadDirectory;
     }
 
     /// <summary>
     /// 没有任何字体的注册表：文本用 Skia 的默认字体，并给 FONT_FALLBACK 警告。只适合不涉及文本的检查和基准。
     /// </summary>
-    public static FontRegistry Empty { get; } = new([], [], [], [], []);
+    public static FontRegistry Empty { get; } = new(FontSnapshot.Empty, null, null);
+
+    /// <summary>
+    /// 上传字体的目录（数据目录的 fonts/）；null 表示不支持上传（检查程序、基准）。
+    /// </summary>
+    public string? UploadDirectory
+    {
+        get;
+    }
 
     /// <summary>
     /// 已加载的字体家族名（字体文件里的名字）。
     /// </summary>
-    public IReadOnlyCollection<string> FamilyNames => families.Values.Select(family => family.Name).ToArray();
+    public IReadOnlyCollection<string> FamilyNames => current.Families.Values.Select(family => family.Name).ToArray();
+
+    /// <summary>
+    /// 模板里可以写的字体名：内置别名的字体用模板名（SourceHanSansSC 等），其余用字体文件里的家族名。内置的在前，其余按名字排序。
+    /// </summary>
+    public IReadOnlyList<string> TemplateNames
+    {
+        get
+        {
+            var names = current.Families.Values.Select(family => TemplateNameOf(family.Name)).Distinct(StringComparer.Ordinal).ToList();
+            var builtin = TemplateFamilies.Where(names.Contains);
+            return builtin.Concat(names.Except(TemplateFamilies).Order(StringComparer.Ordinal)).ToArray();
+        }
+    }
 
     /// <summary>
     /// 成功加载的字体文件。
     /// </summary>
-    public IReadOnlyList<string> Files
-    {
-        get;
-    }
+    public IReadOnlyList<string> Files => current.Files;
+
+    /// <summary>
+    /// 每个成功加载的字体文件：家族名、大小、修改时间、是否上传的。
+    /// </summary>
+    public IReadOnlyList<FontFileInfo> FileDetails => current.Details;
 
     /// <summary>
     /// 加载失败的文件和原因，由调用方写日志。
     /// </summary>
-    public IReadOnlyList<string> Errors
-    {
-        get;
-    }
+    public IReadOnlyList<string> Errors => current.Errors;
 
     /// <summary>
     /// 是否能显示思源黑体（默认字体）。
     /// </summary>
-    public bool HasDefaultFamily => FindFamily(TextStyle.DefaultFontFamily) is not null;
+    public bool HasDefaultFamily => current.FindFamily(TextStyle.DefaultFontFamily) is not null;
 
     /// <summary>
-    /// 加载目录里的全部字体文件（不含子目录）。目录不存在时返回空注册表。只在启动时调用。
+    /// 加载目录里的全部字体文件（不含子目录），不支持上传。目录不存在时返回空注册表。
     /// </summary>
     /// <param name="directory">字体目录。</param>
     /// <returns>字体注册表；加载失败的文件记在 <see cref="Errors"/> 里。</returns>
-    public static FontRegistry Load(string directory)
+    public static FontRegistry Load(string directory) => Load(directory, null);
+
+    /// <summary>
+    /// 加载部署目录和上传目录里的全部字体文件（不含子目录）。
+    /// </summary>
+    /// <param name="directory">部署目录（程序目录的 fonts/）。</param>
+    /// <param name="uploadDirectory">上传目录（数据目录的 fonts/）；null 表示不支持上传。</param>
+    /// <returns>字体注册表；加载失败的文件记在 <see cref="Errors"/> 里。</returns>
+    public static FontRegistry Load(string directory, string? uploadDirectory) =>
+        new(FontSnapshot.Load(directory, uploadDirectory), directory, uploadDirectory);
+
+    /// <summary>
+    /// 读出字体文件内容里的家族名，用来检查上传的文件是不是字体。
+    /// </summary>
+    /// <param name="content">文件内容。</param>
+    /// <returns>家族名；不是字体时为空。</returns>
+    public static IReadOnlyList<string> ReadFamilyNames(byte[] content) => FontSnapshot.ReadFamilyNames(content);
+
+    /// <summary>
+    /// 重新加载两个目录里的字体（上传、删除字体后调用），立即生效。旧的一套等注册表释放时再释放。
+    /// </summary>
+    public void Reload()
     {
-        var families = new Dictionary<string, FontFamily>(StringComparer.Ordinal);
-        var owned = new List<SKTypeface>();
-        var files = new List<string>();
-        var errors = new List<string>();
-        var sources = new Dictionary<string, (string Path, bool IsVariable)>(StringComparer.Ordinal);
-        if (!Directory.Exists(directory))
+        if (directory is null)
         {
-            return new FontRegistry(families, owned, files, [$"字体目录不存在：{directory}"], sources);
+            return;
         }
 
-        var paths = Directory.EnumerateFiles(directory)
-            .Where(path => FileExtensions.Contains(Path.GetExtension(path).ToLowerInvariant()))
-            .Order(StringComparer.Ordinal);
-        foreach (var path in paths)
+        lock (reloadGate)
         {
-            // 一个文件可能是字体集合（.ttc），按序号一个个读，直到读不出来为止。
-            var loaded = 0;
-            using var data = LoadData(path);
-            for (var index = 0; ; index++)
-            {
-                var typeface = data is null ? SKTypeface.FromFile(path, index) : SKTypeface.FromData(data, index);
-                if (typeface is null)
-                {
-                    break;
-                }
-
-                owned.Add(typeface);
-                AddTypeface(families, owned, typeface);
-                sources.TryAdd(Normalize(typeface.FamilyName), (path, typeface.VariationDesignParameters.Any(item => item.Tag == WeightAxis)));
-                loaded++;
-            }
-
-            if (loaded == 0)
-            {
-                errors.Add($"无法读取字体文件：{path}");
-            }
-            else
-            {
-                files.Add(path);
-            }
+            var next = FontSnapshot.Load(directory, UploadDirectory);
+            retired.Add(current);
+            current = next;
         }
-
-        return new FontRegistry(families, owned, files, errors, sources);
     }
 
     /// <summary>
     /// 模板字体名对应的字体文件：和渲染时找到的是同一个家族（同样认别名），但不做降级，找不到返回 null。
-    /// 设计器通过 /fonts 加载同一份文件，保证所见即所得。一个家族有多个文件时取第一个加载的（按文件名排序）。
+    /// 设计器通过 /fonts 加载同一份文件，保证所见即所得。一个家族有多个文件时取第一个加载的（部署目录优先，按文件名排序）。
     /// </summary>
     /// <param name="fontFamily">模板里的字体名，如 SourceHanSansSC。</param>
     /// <returns>字体文件、是否可变字体和上下高度；找不到时为 null。</returns>
     public FontSource? SourceOf(string fontFamily)
     {
-        var family = FindFamily(fontFamily);
-        if (family is null || !sources.TryGetValue(Normalize(family.Name), out var source))
+        var snapshot = current;
+        var family = snapshot.FindFamily(fontFamily);
+        if (family is null || !snapshot.Sources.TryGetValue(FontSnapshot.Normalize(family.Name), out var source))
         {
             return null;
         }
@@ -196,32 +191,20 @@ public sealed class FontRegistry : IDisposable
     }
 
     /// <summary>
-    /// 释放加载的字体。
+    /// 释放加载的字体（当前的和换下来的）。
     /// </summary>
     public void Dispose()
     {
-        foreach (var family in families.Values)
+        lock (reloadGate)
         {
-            family.Dispose();
-        }
+            current.Dispose();
+            foreach (var snapshot in retired)
+            {
+                snapshot.Dispose();
+            }
 
-        foreach (var typeface in owned)
-        {
-            typeface.Dispose();
+            retired.Clear();
         }
-    }
-
-    /// <summary>
-    /// 单个字体文件按 <see cref="RadicalCmap"/> 去掉和汉字共用字形的部首码位后加载（PDF 复制、搜索出来的字才对）；
-    /// 字体集合和不需要改的字体返回 null，照常按文件加载。
-    /// </summary>
-    /// <param name="path">字体文件。</param>
-    /// <returns>过滤后的字体数据；不需要过滤时为 null。</returns>
-    private static SKData? LoadData(string path)
-    {
-        var bytes = File.ReadAllBytes(path);
-        var filtered = RadicalCmap.Filter(bytes, out var removed);
-        return removed == 0 ? null : SKData.CreateCopy(filtered);
     }
 
     /// <summary>
@@ -234,8 +217,10 @@ public sealed class FontRegistry : IDisposable
     /// <returns>要用的字体。</returns>
     internal FontFace Resolve(string? fontFamily, bool bold, bool italic, ICollection<string> warnings)
     {
+        // 只读一次当前的那套字体，这次查找和降级都用它（重新加载换掉也不影响）。
+        var snapshot = current;
         var requested = string.IsNullOrWhiteSpace(fontFamily) ? TextStyle.DefaultFontFamily : fontFamily.Trim();
-        var family = FindFamily(requested);
+        var family = snapshot.FindFamily(requested);
         if (family is not null)
         {
             RenderCaches.Fonts.Hit();
@@ -244,70 +229,22 @@ public sealed class FontRegistry : IDisposable
         {
             RenderCaches.Fonts.Miss();
             warnings.Add(WarningCodes.FontFallback + ":" + Uri.EscapeDataString(requested));
-            family = FindFamily(TextStyle.DefaultFontFamily) ?? families.Values.FirstOrDefault();
+            family = snapshot.FindFamily(TextStyle.DefaultFontFamily) ?? snapshot.Families.Values.FirstOrDefault();
         }
 
-        return family?.Face(bold, italic) ?? defaultFallback!;
+        return family?.Face(bold, italic) ?? snapshot.DefaultFallback!;
     }
 
     /// <summary>
-    /// 按名字找字体家族：先按名字本身找，找不到再按别名组里的其他名字找。
+    /// 字体文件里的家族名对应的模板字体名：属于内置别名组时用组里第一个名字，否则原样。
     /// </summary>
-    /// <param name="name">字体名。</param>
-    /// <returns>字体家族；找不到时为 null。</returns>
-    private FontFamily? FindFamily(string name)
+    /// <param name="familyName">字体文件里的家族名，如 Noto Sans SC。</param>
+    /// <returns>如 SourceHanSansSC。</returns>
+    private static string TemplateNameOf(string familyName)
     {
-        if (families.TryGetValue(Normalize(name), out var family))
-        {
-            return family;
-        }
-
-        var group = AliasGroups.FirstOrDefault(aliases => aliases.Any(alias => Normalize(alias) == Normalize(name)));
-        return group?.Select(alias => families.GetValueOrDefault(Normalize(alias))).FirstOrDefault(found => found is not null);
+        var key = FontSnapshot.Normalize(familyName);
+        return AliasGroups.FirstOrDefault(group => group.Any(alias => FontSnapshot.Normalize(alias) == key))?[0] ?? familyName;
     }
-
-    /// <summary>
-    /// 把一个字形加进对应的家族；可变字体按常规、粗体两个字重各生成一个实例。
-    /// </summary>
-    /// <param name="families">字体家族，按规范化的名字索引。</param>
-    /// <param name="owned">要负责释放的字形，生成的实例也加进去。</param>
-    /// <param name="typeface">字形。</param>
-    private static void AddTypeface(Dictionary<string, FontFamily> families, List<SKTypeface> owned, SKTypeface typeface)
-    {
-        var key = Normalize(typeface.FamilyName);
-        if (!families.TryGetValue(key, out var family))
-        {
-            family = new FontFamily(typeface.FamilyName);
-            families.Add(key, family);
-        }
-
-        var axis = typeface.VariationDesignParameters.FirstOrDefault(item => item.Tag == WeightAxis);
-        if (axis.Tag != WeightAxis)
-        {
-            family.Add(typeface, typeface.FontWeight, typeface.IsItalic);
-            return;
-        }
-
-        // 可变字体：默认实例常常是最细的字重（Noto Sans SC 是 100），按常规 400、粗体 700 各生成一个实例。
-        foreach (var weight in new[] { 400f, 700f })
-        {
-            var value = Math.Clamp(weight, axis.Min, axis.Max);
-            var instance = typeface.Clone([new SKFontVariationPositionCoordinate { Axis = WeightAxis, Value = value }]);
-            if (instance is not null)
-            {
-                owned.Add(instance);
-                family.Add(instance, (int)value, typeface.IsItalic);
-            }
-        }
-    }
-
-    /// <summary>
-    /// 字体名的比较形式：去掉空格、连字符、下划线，转小写。
-    /// </summary>
-    /// <param name="name">字体名。</param>
-    /// <returns>如 Source Han Sans SC → sourcehansanssc。</returns>
-    private static string Normalize(string name) =>
-        new(name.Where(ch => ch is not (' ' or '-' or '_')).Select(char.ToLowerInvariant).ToArray());
 
     /// <summary>
     /// 四个字符的 OpenType 标签转成 32 位整数。

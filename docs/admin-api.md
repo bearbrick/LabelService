@@ -81,7 +81,9 @@
 | GET | `/assets/{key}/file` | 登录 | 素材文件（设计器显示用） |
 | POST | `/assets` | res.manage | multipart，字段 `file`；PNG、JPG、SVG，≤ 1 MB；按内容判断类型，SVG 先清洗 |
 | PUT / DELETE | `/assets/{key}` | res.manage | `{ name }` 改名 / 删除（内置素材不能改、不能删） |
-| GET | `/fonts` | 登录 | `{ families[], files[] }` |
+| GET | `/fonts` | 登录 | `{ families[], files[], items[{ fileName, families[], size, lastModified, uploaded }], templateFamilies[], hasDefaultFamily }`；`templateFamilies` 是模板里可以写的字体名（设计器字体下拉框），`uploaded` 为 false 的是部署目录里的字体（只读） |
+| POST | `/fonts` | res.manage | 上传字体（ADR 0011）：multipart，字段 `file`；`.ttf`、`.otf`、`.ttc`、`.otc`，≤ 50 MB（这个接口单独放宽请求体上限）；按内容检查是不是字体；和已有文件重名时 400；存在数据目录 `fonts/`，立即生效 → 字体列表 |
+| DELETE | `/fonts/{fileName}` | res.manage | 删除上传的字体（部署目录里的 404），立即生效；引用它的模板生成时降级到默认字体（`FONT_FALLBACK`）→ 字体列表 |
 | GET | `/layouts` | 登录 | 拼版版式 `[{ layout, enabled, updatedBy, updatedAt }]`，`layout` 是版式 JSON（`docs/contracts.md`“拼版”）；带 `slotWidth`、`slotHeight` 时只列格子尺寸相同的（模板详情页“可用的版式”） |
 | GET | `/layouts/{code}` | 登录 | 一个版式，同上 |
 | POST | `/layouts` | res.manage | `{ layout, enabled? }` 新建；长度按 0.1 mm 取整后检查（格子越界、重叠、旋转角度），不通过时 400，`details` 逐条列出（带格子序号）；编码重复 400 |
@@ -110,5 +112,5 @@
 
 ## 字体（不在 /api/admin 下，不需要登录）
 
-- `GET /fonts/fonts.css`：每个模板字体名（`SourceHanSansSC`、`SourceHanSerifSC`）一条 `@font-face`，家族名 `LabelService SourceHanSansSC` 等，指向服务端渲染实际用的字体文件；用 `ascent-override`、`descent-override` 把浏览器的字体度量设成服务端的值。设计器在 `index.html` 里引入。
-- `GET /fonts/{文件名}`：字体文件，只提供已加载的文件，地址带版本号，缓存一年。
+- `GET /fonts/fonts.css`：每个模板字体名（`SourceHanSansSC`、`SourceHanSerifSC` 和上传的字体的家族名）一条 `@font-face`，家族名 `LabelService SourceHanSansSC` 等，指向服务端渲染实际用的字体文件；用 `ascent-override`、`descent-override` 把浏览器的字体度量设成服务端的值。设计器在 `index.html` 里引入。
+- `GET /fonts/{文件名}`：字体文件（部署目录和上传目录的），只提供已加载的文件，地址带版本号，缓存一年。

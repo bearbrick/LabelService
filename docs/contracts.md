@@ -76,7 +76,7 @@
 | `line` | `stroke`；height 为 0 是横线，width 为 0 是竖线，都不为 0 画左上到右下的斜线；线宽以线为中心 | 已实现 |
 | `rect` | `stroke`、`fill`、`radius`；边框画在框**内侧**，外沿和元素框对齐 | 已实现 |
 
-`style` / `textStyle`：`fontFamily`（默认 `SourceHanSansSC`）、`fontSize`（默认 10pt）、`bold`、`italic`、`underline`、`color`（默认 #000000）、`align`（left / center / right，默认 left）、`vAlign`（top / middle / bottom，默认 middle）、`fit`（none / wrap / shrink，默认 none）、`minFontSize`（shrink 的最小字号，默认 4pt）、`lineHeight`（默认 1.2）、`letterSpacing`（mm）。
+`style` / `textStyle`：`fontFamily`（默认 `SourceHanSansSC`；也可以是服务端“素材与字体”页上传的字体的家族名，ADR 0011）、`fontSize`（默认 10pt）、`bold`、`italic`、`underline`、`color`（默认 #000000）、`align`（left / center / right，默认 left）、`vAlign`（top / middle / bottom，默认 middle）、`fit`（none / wrap / shrink，默认 none）、`minFontSize`（shrink 的最小字号，默认 4pt）、`lineHeight`（默认 1.2）、`letterSpacing`（mm）。
 
 文本排版：
 

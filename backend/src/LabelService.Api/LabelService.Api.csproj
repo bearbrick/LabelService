@@ -42,8 +42,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- 字体：构建时从 backend/assets/fonts 复制到输出目录的 fonts/，服务启动时加载。 -->
-    <Content Include="..\..\assets\fonts\*.otf;..\..\assets\fonts\*.ttf;..\..\assets\fonts\*.ttc;..\..\assets\fonts\*.otc;..\..\assets\fonts\*.txt" LinkBase="fonts" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <!-- 字体：开发构建时从 backend/assets/fonts 复制到输出目录的 fonts/（检查程序、基准要用）；发布包不带字体，
+         由客户在管理后台上传自己有授权的字体（ADR 0011）。 -->
+    <Content Include="..\..\assets\fonts\*.otf;..\..\assets\fonts\*.ttf;..\..\assets\fonts\*.ttc;..\..\assets\fonts\*.otc;..\..\assets\fonts\*.txt" LinkBase="fonts" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Never" />
   </ItemGroup>
 
   <ItemGroup>

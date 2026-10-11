@@ -73,7 +73,8 @@ internal static class FontFileEndpoints
     internal static string Css(FontRegistry fonts)
     {
         var css = new StringBuilder("/* 标签服务的字体：和服务端渲染用同一份文件。 */\n");
-        foreach (var family in FontRegistry.TemplateFamilies)
+        // 全部字体：内置别名的用模板名（SourceHanSansSC 等），上传的用家族名；名字里有引号、反斜杠、换行的不能安全写进 CSS，跳过。
+        foreach (var family in fonts.TemplateNames.Where(name => name.IndexOfAny(['"', '\\', '\n', '\r']) < 0))
         {
             if (fonts.SourceOf(family) is not { } source
                 || !Types.TryGetValue(Path.GetExtension(source.Path), out var type) || type.Format == "collection")

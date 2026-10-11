@@ -57,6 +57,7 @@ internal static class Program
         await TimingChecks.RunAsync(backendRoot, Check);
         await ClientLogChecks.RunAsync(backendRoot, Check);
         await AdminChecks.RunAsync(backendRoot, Check);
+        await FontUploadChecks.RunAsync(backendRoot, Check);
         await HostingChecks.RunAsync(backendRoot, Check);
         await MetricsChecks.RunAsync(backendRoot, Check);
         ArchitectureChecks.Run(backendRoot, repositoryRoot, Check);
