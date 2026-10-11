@@ -21,7 +21,7 @@
 
 核心指标：**单张标签服务端处理 P95 ≤ 100 ms**（见 `docs/performance.md`）。
 
-当前阶段：骨架已完成（T-000）。单实例部署（ADR 0003）；数据库默认 SQLite，可切换 SQL Server、PostgreSQL；后端按领域驱动设计分成领域、应用、基础设施、接口四层（T-023，ADR 0010）。单张 PNG 链路可用，7 种元素全部实现（T-001～T-004），PNG、PDF、ZPL 三种格式和批量接口都可用（T-005～T-007）；模板数据库和版本发布、调用方和调用日志已完成（T-008、T-009）；管理接口（见 `docs/admin-api.md`）和管理后台页面已完成（T-014），设计器的模板从服务端打开、草稿自动保存到服务端；服务端预览和设计器加载服务端字体已完成（T-016）；启动预热、并发排队、每日备份和部署说明已完成（T-017，`backend/deploy/`）；`/metrics` 和监控样例已完成（T-010）；基准门禁和 k6 压测脚本已完成（T-015）；SDK 打包脚本和 1.0.0-preview.1 的包说明已完成（T-011，`client/build/pack.ps1`）；WinForms 演示程序完整版已完成，带内置模拟服务和 `--smoke` 自检（T-012）；A4 拼版已完成：版式存 `sheet_layout` 表、管理接口 `/api/admin/layouts`、开放接口的 `layout` / `startSlot`、SDK 的 `Layout` / `PageCount`（T-018）；拼版设计器已完成，资源菜单的“拼版版式”（T-019）；一期验收问题已修复并做了总体 review（T-021，`docs/reviews/phase1-review.md`，证据在 `docs/reviews/phase1-evidence/`），待用户决定的事项列在 review 第 7 节。其余任务见 `docs/tasks/README.md`。
+当前阶段：骨架已完成（T-000）。单实例部署（ADR 0003）；数据库默认 SQLite，可切换 SQL Server、PostgreSQL；后端按领域驱动设计分成领域、应用、基础设施、接口四层（T-023，ADR 0010）。单张 PNG 链路可用，7 种元素全部实现（T-001～T-004），PNG、PDF、ZPL 三种格式和批量接口都可用（T-005～T-007）；模板数据库和版本发布、调用方和调用日志已完成（T-008、T-009）；管理接口（见 `docs/admin-api.md`）和管理后台页面已完成（T-014），设计器的模板从服务端打开、草稿自动保存到服务端；服务端预览和设计器加载服务端字体已完成（T-016）；启动预热、并发排队、每日备份和部署说明已完成（T-017，`backend/deploy/`）；`/metrics` 和监控样例已完成（T-010）；基准门禁和 k6 压测脚本已完成（T-015）；SDK 打包脚本和 1.0.0-preview.1 的包说明已完成（T-011，`client/build/pack.ps1`）；WinForms 演示程序完整版已完成，带内置模拟服务和 `--smoke` 自检（T-012）；A4 拼版已完成：版式存 `sheet_layout` 表、管理接口 `/api/admin/layouts`、开放接口的 `layout` / `startSlot`、SDK 的 `Layout` / `PageCount`（T-018）；拼版设计器已完成，资源菜单的“拼版版式”（T-019）；一期验收问题已修复并做了总体 review（T-021，`docs/reviews/phase1-review.md`，证据在 `docs/reviews/phase1-evidence/`），待用户决定的事项列在 review 第 7 节。三个部分的代码注释已补齐，由各自的检查程序核对，代码里不写任务号（T-024，见 R5）。其余任务见 `docs/tasks/README.md`。
 
 ## 2. 仓库地图
 
@@ -103,7 +103,7 @@ cd frontend; npm run build              # 类型检查 + 打包
 
 **R4 SDK 兼容。** `client/src/LabelService.Client` 必须能编译到 net462：不用 record、init、required、Index/Range、`ToHexStringLower` 之类新 API；不加 Newtonsoft.Json 或日志框架依赖。公开 API 变化要同步设计书第 10 节，并遵守语义化版本。
 
-**R5 语言。** 代码注释、XML 注释、文档、给用户看的错误消息用**中文**；标识符、提交信息用**英文**。产品项目（各部分的 `src/`）公开成员必须写中文 XML 注释，缺了编译失败。
+**R5 语言和注释。** 代码注释、XML 注释、文档、给用户看的错误消息用**中文**；标识符、提交信息用**英文**。每个类型、函数、属性、参数都写完整的注释（包括私有的、检查程序和演示程序里的）：C# 用三行写法的 `/// <summary>`，加上每个参数的 `<param>`、有返回值时的 `<returns>`、泛型参数的 `<typeparam>`，重写和接口实现可以用 `<inheritdoc />`；TypeScript / Vue 用多行的 `/** … */`，函数写 `@param`、`@returns`，接口和类型的属性、store 的状态、组件的 props 和 emits 都要写。函数里关键的步骤（分支的理由、算法、容易误解的地方）写行内注释。代码、项目文件和脚本里不写任务编号（任务号只出现在任务文件、提交信息和文档里）。三个部分的检查程序都会核对，漏写时失败并列出位置：只看注释时运行 `dotnet run --project backend/tests/LabelService.Backend.Checks -- docs`、`dotnet run --project client/tests/LabelService.Client.Checks -- docs`，前端在 `npm run check` 里（`tests/docs.ts`）。
 
 **R6 错误处理。** 调用方能修正的问题（数据、模板内容）返回 400 系列错误码：渲染里抛 `LabelRenderException(错误码)`；开放接口的用例返回 `OpenApiError`（接口层用 `RenderCall.Fail` 写响应）；管理后台的应用服务抛 `UserFriendlyException`（接口层按错误码转成 400、403、404）。程序缺陷不要吞掉、也不要包装成 400，让它以 `RENDER_FAILED` 暴露。
 
@@ -138,7 +138,8 @@ cd frontend; npm run build              # 类型检查 + 打包
 
 - 严格模式，`npm run check` 和 `npm run build`（含 vue-tsc）必须通过。
 - `src/model/` 和 `src/editor/` 里的纯逻辑模块要能被 Node 直接运行：相对导入写 `.ts` 扩展名、只用可擦除的语法（不用 enum、namespace、构造函数参数属性）、不碰 DOM；新增这类模块时在 `tests/checks.ts` 补检查。
-- 所有模板修改通过 `src/stores/designer.ts` 的操作函数，改完调 `commit()` 记录撤销；画布（`src/editor/stage.ts`）只在拖动、变换结束时写坐标。
+- 所有模板修改通过 `src/stores/designer.ts` 导出的操作函数（它是统一入口：状态、撤销和保存、模板、元素、字段分在 `designerState/History/Template/Elements/Fields.ts`），改完调 `commit()` 记录撤销；画布（`src/editor/stage.ts`，视口部分在 `stageViewport.ts`）只在拖动、变换结束时写坐标。
+- `src/` 下的文件也不超过 500 行（`npm run check` 会拦），快到上限就按职责拆分；组件里成块的逻辑放进 `src/composables/useXxx.ts`。
 - 开发环境下 `window.__labelDesigner` 暴露 store，浏览器里调试和自动化测试用它驱动，不要另写调试入口。
 - 模板模型只从 `src/model/template.ts` 导入，长度一律 mm，换算只用 `src/model/units.ts`。
 - 画布状态就是模板 JSON；不要另造一份元素状态再同步。
