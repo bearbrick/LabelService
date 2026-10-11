@@ -21,7 +21,7 @@
 
 核心指标：**单张标签服务端处理 P95 ≤ 100 ms**（见 `docs/performance.md`）。
 
-当前阶段：骨架已完成（T-000）。单实例部署（ADR 0003）；数据库默认 SQLite，可切换 SQL Server、PostgreSQL；后端按领域驱动设计分成领域、应用、基础设施、接口四层（T-023，ADR 0010）。单张 PNG 链路可用，7 种元素全部实现（T-001～T-004），PNG、PDF、ZPL 三种格式和批量接口都可用（T-005～T-007）；模板数据库和版本发布、调用方和调用日志已完成（T-008、T-009）；管理接口（见 `docs/admin-api.md`）和管理后台页面已完成（T-014），设计器的模板从服务端打开、草稿自动保存到服务端；服务端预览和设计器加载服务端字体已完成（T-016）；启动预热、并发排队、每日备份和部署说明已完成（T-017，`backend/deploy/`）；`/metrics` 和监控样例已完成（T-010）；基准门禁和 k6 压测脚本已完成（T-015）；SDK 打包脚本和 1.0.0-preview.1 的包说明已完成（T-011，`client/build/pack.ps1`）；WinForms 演示程序完整版已完成，带内置模拟服务和 `--smoke` 自检（T-012）；A4 拼版已完成：版式存 `sheet_layout` 表、管理接口 `/api/admin/layouts`、开放接口的 `layout` / `startSlot`、SDK 的 `Layout` / `PageCount`（T-018）；拼版设计器已完成，资源菜单的“拼版版式”（T-019）；一期验收问题已修复并做了总体 review（T-021，`docs/reviews/phase1-review.md`，证据在 `docs/reviews/phase1-evidence/`），待用户决定的事项列在 review 第 7 节。三个部分的代码注释已补齐，由各自的检查程序核对，代码里不写任务号（T-024，见 R5）。管理后台可以设置系统名称、公司 Logo、版权信息等系统信息，读取不用登录，修改要权限点 sys.settings（T-026，`/api/admin/system-info`）。其余任务见 `docs/tasks/README.md`。
+当前阶段：骨架已完成（T-000）。单实例部署（ADR 0003）；数据库默认 SQLite，可切换 SQL Server、PostgreSQL；后端按领域驱动设计分成领域、应用、基础设施、接口四层（T-023，ADR 0010）。单张 PNG 链路可用，7 种元素全部实现（T-001～T-004），PNG、PDF、ZPL 三种格式和批量接口都可用（T-005～T-007）；模板数据库和版本发布、调用方和调用日志已完成（T-008、T-009）；管理接口（见 `docs/admin-api.md`）和管理后台页面已完成（T-014），设计器的模板从服务端打开、草稿自动保存到服务端；服务端预览和设计器加载服务端字体已完成（T-016）；启动预热、并发排队、每日备份和部署说明已完成（T-017，`backend/deploy/`）；`/metrics` 和监控样例已完成（T-010）；基准门禁和 k6 压测脚本已完成（T-015）；SDK 打包脚本和 1.0.0-preview.1 的包说明已完成（T-011，`client/build/pack.ps1`）；WinForms 演示程序完整版已完成，带内置模拟服务和 `--smoke` 自检（T-012）；A4 拼版已完成：版式存 `sheet_layout` 表、管理接口 `/api/admin/layouts`、开放接口的 `layout` / `startSlot`、SDK 的 `Layout` / `PageCount`（T-018）；拼版设计器已完成，资源菜单的“拼版版式”（T-019）；一期验收问题已修复并做了总体 review（T-021，`docs/reviews/phase1-review.md`，证据在 `docs/reviews/phase1-evidence/`），待用户决定的事项列在 review 第 7 节。三个部分的代码注释已补齐，由各自的检查程序核对，代码里不写任务号（T-024，见 R5）。管理后台可以设置系统名称、公司 Logo、版权信息等系统信息，读取不用登录，修改要权限点 sys.settings（T-026，`/api/admin/system-info`）。字体由使用单位在“素材与字体”页上传，上传后不用重启立即生效，发布包不带字体（T-028，ADR 0011）。其余任务见 `docs/tasks/README.md`。
 
 ## 2. 仓库地图
 
@@ -107,7 +107,7 @@ cd frontend; npm run build              # 类型检查 + 打包
 
 **R6 错误处理。** 调用方能修正的问题（数据、模板内容）返回 400 系列错误码：渲染里抛 `LabelRenderException(错误码)`；开放接口的用例返回 `OpenApiError`（接口层用 `RenderCall.Fail` 写响应）；管理后台的应用服务抛 `UserFriendlyException`（接口层按错误码转成 400、403、404）。程序缺陷不要吞掉、也不要包装成 400，让它以 `RENDER_FAILED` 暴露。
 
-**R7 安全。** 不提交任何真实 Key、密码、证书、连接字符串；配置里的 API Key 只存 SHA-256。图片字段只收 base64，不支持 URL。不打包微软雅黑、宋体等系统字体（授权不允许），只用思源黑体、思源宋体（SIL OFL）。
+**R7 安全。** 不提交任何真实 Key、密码、证书、连接字符串；配置里的 API Key 只存 SHA-256。图片字段只收 base64，不支持 URL。不打包微软雅黑、宋体等系统字体（授权不允许），开发和检查只用思源黑体、思源宋体（SIL OFL）；发布包不带字体，正式环境由使用单位在管理后台上传自己有授权的字体（ADR 0011）。
 
 **R8 依赖。** 新增 NuGet / npm 包要在任务文件里说明理由；NuGet 版本写在对应部分的 `Directory.Packages.props`，npm 版本写死不加 `^`；选发布满两周的稳定版。引入新的第三方库（不是升级）写 ADR。
 
