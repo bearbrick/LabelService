@@ -76,9 +76,9 @@ function forgotText(): string {
     <div class="login-shell">
       <div class="login-intro">
         <BrandMark :info="system.info" />
-        <span class="eyebrow">LABEL SERVICE · 内部工具</span>
-        <h1>标签和唛头在网页上设计，<br />业务系统一个接口生成</h1>
-        <p>拖拽设计模板，定义数据字段，发布后 MES、WMS、ERP 用模板编码加数据调用，拿回 PDF、PNG 或 ZPL 文件。</p>
+        <span class="eyebrow">{{ system.info.companyName || 'LABEL SERVICE' }}</span>
+        <h1 class="login-title">{{ system.info.loginTitle }}</h1>
+        <p v-if="system.info.loginIntro" class="login-intro-text">{{ system.info.loginIntro }}</p>
         <div class="login-tags"><span>标签纸 / A4 / A5 唛头</span><span>条码按 DPI 对齐</span><span>版本发布</span><span>按业务隔离权限</span></div>
       </div>
       <form class="login-form" novalidate @submit.prevent="submit">

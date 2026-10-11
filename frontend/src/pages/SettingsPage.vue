@@ -34,6 +34,10 @@ interface FieldSpec {
    * 输入框下面的说明。
    */
   hint: string
+  /**
+   * 是否多行（用文本框，可以换行）。
+   */
+  multiline?: boolean
 }
 
 /**
@@ -45,6 +49,8 @@ const FIELDS: FieldSpec[] = [
   { key: 'companyName', label: '所属公司', placeholder: '如：某某制造有限公司', hint: '鼠标停在 Logo 上时显示' },
   { key: 'copyright', label: '版权信息', placeholder: '如：© 2026 某某制造有限公司 版权所有', hint: '显示在登录页下方和用户菜单底部' },
   { key: 'support', label: '技术支持', placeholder: '如：信息部 分机 8001', hint: '显示在版权信息旁边；登录页点“忘记密码”时也会提示' },
+  { key: 'loginTitle', label: '登录页标语', placeholder: '登录页左栏的大标题', hint: '登录页左栏的大标题，回车换行', multiline: true },
+  { key: 'loginIntro', label: '登录页说明', placeholder: '标语下面的一段说明', hint: '登录页大标题下面的说明；不填就不显示', multiline: true },
 ]
 
 /**
@@ -83,7 +89,7 @@ const dirty = computed(() => FIELDS.some((field) => form[field.key].trim() !== s
  * @returns 文字部分的副本。
  */
 function copyText(info: SystemInfo): SaveSystemInfo {
-  return { systemName: info.systemName, subtitle: info.subtitle, companyName: info.companyName, copyright: info.copyright, support: info.support }
+  return { systemName: info.systemName, subtitle: info.subtitle, companyName: info.companyName, copyright: info.copyright, support: info.support, loginTitle: info.loginTitle, loginIntro: info.loginIntro }
 }
 
 /**
@@ -176,7 +182,8 @@ async function restoreLogo(): Promise<void> {
               <label :for="`si-${field.key}`">{{ field.label }}</label>
               <div>
                 <div class="with-count">
-                  <input :id="`si-${field.key}`" v-model="form[field.key]" class="inp" :maxlength="SYSTEM_INFO_LIMITS[field.key]" :placeholder="field.placeholder" @input="error = ''" />
+                  <textarea v-if="field.multiline" :id="`si-${field.key}`" v-model="form[field.key]" class="inp" rows="2" :maxlength="SYSTEM_INFO_LIMITS[field.key]" :placeholder="field.placeholder" @input="error = ''"></textarea>
+                  <input v-else :id="`si-${field.key}`" v-model="form[field.key]" class="inp" :maxlength="SYSTEM_INFO_LIMITS[field.key]" :placeholder="field.placeholder" @input="error = ''" />
                   <span class="field-count">{{ form[field.key].length }}/{{ SYSTEM_INFO_LIMITS[field.key] }}</span>
                 </div>
                 <div class="hint" style="margin-top: 4px">{{ field.hint }}</div>
@@ -204,7 +211,12 @@ async function restoreLogo(): Promise<void> {
             <h3><AppIcon name="preview" small />效果预览<span v-if="dirty" class="pill warn" style="margin-left: 8px">未保存</span></h3>
             <div class="preview-bar">
               <BrandMark :info="preview" />
-              <span v-if="preview.subtitle" class="brand-sub">{{ preview.subtitle }}</span>
+              <span v-if="preview.subtitle" class="brand-sub" :title="preview.subtitle">{{ preview.subtitle }}</span>
+            </div>
+            <div class="preview-login">
+              <span class="eyebrow">{{ preview.companyName || 'LABEL SERVICE' }}</span>
+              <b>{{ preview.loginTitle }}</b>
+              <p v-if="preview.loginIntro">{{ preview.loginIntro }}</p>
             </div>
             <div class="preview-foot">
               <div class="hint" style="margin-bottom: 6px">登录页下方</div>
