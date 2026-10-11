@@ -1,8 +1,15 @@
 using System.Text;
 using System.Text.RegularExpressions;
 using LabelService.Contracts.Protocol;
-using LabelService.Server.Data;
-using LabelService.Server.Logging;
+using LabelService.Domain.ApiClients;
+using LabelService.Domain.Businesses;
+using LabelService.Domain.Identity;
+using LabelService.Domain.Layouts;
+using LabelService.Domain.Logs;
+using LabelService.Domain.Resources;
+using LabelService.Domain.Shared;
+using LabelService.Domain.Templates;
+using LabelService.Infrastructure.Persistence;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace LabelService.Backend.Checks;
@@ -33,7 +40,7 @@ internal static partial class TimingChecks
 
             var (fastHeader, fastBytes) = await SendAsync(http, body, "TIMING-FAST", delayMs: 0);
             var (slowHeader, slowBytes) = await SendAsync(http, body, "TIMING-SLOW", delayMs: ReaderDelayMs);
-            var logs = factory.Services.GetRequiredService<RenderLogQuery>();
+            var logs = factory.Services.GetRequiredService<IRenderLogRepository>();
             var fast = await WaitForLogAsync(logs, "TIMING-FAST");
             var slow = await WaitForLogAsync(logs, "TIMING-SLOW");
             Console.WriteLine($"INFO: 计时口径：响应 {slowBytes / 1024} KB；正常读取 头 total {fastHeader:0.0} ms / 日志 {fast?.DurationMs:0.0} ms；停 {ReaderDelayMs} ms 再读 头 total {slowHeader:0.0} ms / 日志 {slow?.DurationMs:0.0} ms");
@@ -68,7 +75,7 @@ internal static partial class TimingChecks
         return (headerTotal, bytes);
     }
 
-    private static async Task<RenderLogRecord?> WaitForLogAsync(RenderLogQuery logs, string requestId)
+    private static async Task<RenderLogEntity?> WaitForLogAsync(IRenderLogRepository logs, string requestId)
     {
         for (var i = 0; i < 100; i++)
         {

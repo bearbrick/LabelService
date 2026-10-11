@@ -1,8 +1,11 @@
 <Solution>
   <Folder Name="/src/">
     <Project Path="src/LabelService.Contracts/LabelService.Contracts.csproj" />
+    <Project Path="src/LabelService.Domain/LabelService.Domain.csproj" />
+    <Project Path="src/LabelService.Application/LabelService.Application.csproj" />
+    <Project Path="src/LabelService.Infrastructure/LabelService.Infrastructure.csproj" />
     <Project Path="src/LabelService.Rendering/LabelService.Rendering.csproj" />
-    <Project Path="src/LabelService.Server/LabelService.Server.csproj" />
+    <Project Path="src/LabelService.Api/LabelService.Api.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/LabelService.Backend.Checks/LabelService.Backend.Checks.csproj" />

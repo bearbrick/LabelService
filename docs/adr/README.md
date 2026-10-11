@@ -46,3 +46,4 @@
 | [0007](0007-preview-in-admin-api.md) | 服务端预览放在管理接口，字体通过 /fonts 公开提供 | 已采纳 |
 | [0008](0008-deployment.md) | 部署：Docker 或 Windows 服务，单实例，每日 VACUUM INTO 备份 | 已采纳 |
 | [0009](0009-metrics-export.md) | 指标导出：自己实现 Prometheus 文本格式，暂不引入 OpenTelemetry 包 | 已采纳 |
+| [0010](0010-layered-architecture-and-databases.md) | 后端分层（领域驱动设计）与多数据库支持 | 已采纳 |

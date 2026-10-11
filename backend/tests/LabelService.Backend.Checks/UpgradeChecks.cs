@@ -3,7 +3,16 @@ using System.Net;
 using System.Security.Cryptography;
 using System.Text;
 using LabelService.Contracts.Protocol;
-using LabelService.Server.Data;
+using LabelService.Domain.ApiClients;
+using LabelService.Domain.Businesses;
+using LabelService.Domain.Identity;
+using LabelService.Domain.Layouts;
+using LabelService.Domain.Logs;
+using LabelService.Domain.Resources;
+using LabelService.Domain.Shared;
+using LabelService.Domain.Templates;
+using LabelService.Infrastructure.Persistence;
+using LabelService.Infrastructure.Persistence.Sqlite;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
@@ -181,13 +190,13 @@ internal static class UpgradeChecks
 
     private static LabelDbContext Context(string directory, IInterceptor? interceptor)
     {
-        var builder = new DbContextOptionsBuilder<LabelDbContext>().UseSqlite(new SqliteConnectionStringBuilder { DataSource = Path.Combine(directory, DataOptions.DatabaseFileName) }.ToString());
+        var builder = new DbContextOptionsBuilder<SqliteLabelDbContext>().UseSqlite(new SqliteConnectionStringBuilder { DataSource = Path.Combine(directory, DataOptions.DatabaseFileName) }.ToString());
         if (interceptor is not null)
         {
             builder.AddInterceptors(interceptor);
         }
 
-        return new LabelDbContext(builder.Options);
+        return new SqliteLabelDbContext(builder.Options);
     }
 
     private static SqliteConnection Open(string directory)

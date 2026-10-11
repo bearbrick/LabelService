@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- 领域层：实体、值对象、领域规则、仓储接口和领域异常。只引用契约层，不引用 EF Core、ASP.NET Core 和渲染引擎（ADR 0010）。 -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\LabelService.Contracts\LabelService.Contracts.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="LabelService.Backend.Checks" />
+  </ItemGroup>
+
+</Project>

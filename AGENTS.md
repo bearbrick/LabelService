@@ -21,7 +21,7 @@
 
 核心指标：**单张标签服务端处理 P95 ≤ 100 ms**（见 `docs/performance.md`）。
 
-当前阶段：骨架已完成（T-000）。数据库用 SQLite、单实例部署（ADR 0003）。单张 PNG 链路可用，7 种元素全部实现（T-001～T-004），PNG、PDF、ZPL 三种格式和批量接口都可用（T-005～T-007）；模板数据库和版本发布、调用方和调用日志已完成（T-008、T-009）；管理接口（见 `docs/admin-api.md`）和管理后台页面已完成（T-014），设计器的模板从服务端打开、草稿自动保存到服务端；服务端预览和设计器加载服务端字体已完成（T-016）；启动预热、并发排队、每日备份和部署说明已完成（T-017，`backend/deploy/`）；`/metrics` 和监控样例已完成（T-010）；基准门禁和 k6 压测脚本已完成（T-015）；SDK 打包脚本和 1.0.0-preview.1 的包说明已完成（T-011，`client/build/pack.ps1`）；WinForms 演示程序完整版已完成，带内置模拟服务和 `--smoke` 自检（T-012）；A4 拼版已完成：版式存 `sheet_layout` 表、管理接口 `/api/admin/layouts`、开放接口的 `layout` / `startSlot`、SDK 的 `Layout` / `PageCount`（T-018）；拼版设计器已完成，资源菜单的“拼版版式”（T-019）；一期验收问题已修复并做了总体 review（T-021，`docs/reviews/phase1-review.md`，证据在 `docs/reviews/phase1-evidence/`），待用户决定的事项列在 review 第 7 节。其余任务见 `docs/tasks/README.md`。
+当前阶段：骨架已完成（T-000）。单实例部署（ADR 0003）；数据库默认 SQLite，可切换 SQL Server、PostgreSQL；后端按领域驱动设计分成领域、应用、基础设施、接口四层（T-023，ADR 0010）。单张 PNG 链路可用，7 种元素全部实现（T-001～T-004），PNG、PDF、ZPL 三种格式和批量接口都可用（T-005～T-007）；模板数据库和版本发布、调用方和调用日志已完成（T-008、T-009）；管理接口（见 `docs/admin-api.md`）和管理后台页面已完成（T-014），设计器的模板从服务端打开、草稿自动保存到服务端；服务端预览和设计器加载服务端字体已完成（T-016）；启动预热、并发排队、每日备份和部署说明已完成（T-017，`backend/deploy/`）；`/metrics` 和监控样例已完成（T-010）；基准门禁和 k6 压测脚本已完成（T-015）；SDK 打包脚本和 1.0.0-preview.1 的包说明已完成（T-011，`client/build/pack.ps1`）；WinForms 演示程序完整版已完成，带内置模拟服务和 `--smoke` 自检（T-012）；A4 拼版已完成：版式存 `sheet_layout` 表、管理接口 `/api/admin/layouts`、开放接口的 `layout` / `startSlot`、SDK 的 `Layout` / `PageCount`（T-018）；拼版设计器已完成，资源菜单的“拼版版式”（T-019）；一期验收问题已修复并做了总体 review（T-021，`docs/reviews/phase1-review.md`，证据在 `docs/reviews/phase1-evidence/`），待用户决定的事项列在 review 第 7 节。其余任务见 `docs/tasks/README.md`。
 
 ## 2. 仓库地图
 
@@ -33,7 +33,10 @@
 | `backend/LabelService.Backend.slnx` | 后端解决方案 | |
 | `backend/src/LabelService.Contracts/` | 模板 JSON 模型、错误码、HTTP 头、计时阶段 | **契约**，改动见 §6.4 |
 | `backend/src/LabelService.Rendering/` | 绑定、校验、排版、绘制、输出编码 | 热路径，遵守 R3 |
-| `backend/src/LabelService.Server/` | ASP.NET Core：开放接口、鉴权、模板存储、指标 | |
+| `backend/src/LabelService.Domain/` | 领域层：实体（`XxxEntity`）、领域规则、仓储接口（`IXxxRepository`）、`UserFriendlyException` | 不引用 EF Core、ASP.NET Core、Rendering |
+| `backend/src/LabelService.Application/` | 应用层：应用服务（`IXxxAppService`）、输入输出模型（`XxxDto`）、内存缓存、开放接口的用例 | 按业务分文件夹，见 `docs/architecture.md` |
+| `backend/src/LabelService.Infrastructure/` | 基础设施层：EF Core 和三种数据库（SQLite、SQL Server、PostgreSQL）的迁移、仓储实现、文件存储、密码和令牌、后台任务、启动初始化 | 迁移按数据库分文件夹 |
+| `backend/src/LabelService.Api/` | 接口层（ASP.NET Core）：路由（`XxxEndpoints`）、鉴权、指标和健康检查、组装（`Program`） | 只做“读请求 → 调应用服务 → 写响应” |
 | `backend/tests/LabelService.Backend.Checks/` | 后端检查程序，**也负责跨三个部分的契约一致性检查** | 不是 xUnit，见 §5 |
 | `backend/tests/LabelService.Benchmarks/` | BenchmarkDotNet，基准门禁（`--gate`，基线 `baseline.json`） | 必须 Release 运行 |
 | `backend/tests/load/` | k6 压测脚本、压测报告模板 | |
@@ -66,7 +69,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\verify.ps1 -Part backend  
 dotnet build backend/LabelService.Backend.slnx
 dotnet format backend/LabelService.Backend.slnx --verify-no-changes --no-restore
 dotnet run --project backend/tests/LabelService.Backend.Checks
-dotnet run --project backend/src/LabelService.Server          # http://localhost:5080，开发 Key：lbl_test_local_dev
+dotnet run --project backend/src/LabelService.Api             # http://localhost:5080，开发 Key：lbl_test_local_dev
 curl.exe -o box.png -H "X-Api-Key: lbl_test_local_dev" -H "Content-Type: application/json" --data-binary "@backend/samples/requests/box-label.render.json" http://localhost:5080/api/v1/render
 dotnet run -c Release --project backend/tests/LabelService.Benchmarks -- --filter "*"   # 改了 Rendering 必跑
 dotnet run -c Release --project backend/tests/LabelService.Benchmarks -- --gate        # 基准门禁：比基线慢 20% 以上失败
@@ -94,7 +97,7 @@ cd frontend; npm run build              # 类型检查 + 打包
 
 **R1 契约优先。** 模板 JSON、开放接口、错误码、HTTP 头、计时阶段名只在 `backend/src/LabelService.Contracts` 定义，后端其他地方引用常量，不写字面量。调用端和前端各有一份副本（见 §6.4）。改契约走 §6.4。
 
-**R2 依赖方向。** 三个部分互不引用项目和文件：`backend/`、`client/` 的项目只引用本部分的项目；`frontend/` 不 import 本文件夹以外的文件。后端内部：Contracts ← Rendering ← Server，Contracts 不引用任何项目和包，Rendering 只引用 Contracts。检查程序会拦。
+**R2 依赖方向。** 三个部分互不引用项目和文件：`backend/`、`client/` 的项目只引用本部分的项目；`frontend/` 不 import 本文件夹以外的文件。后端内部分层（ADR 0010）：Contracts ← Domain ← Application ← Infrastructure ← Api，Rendering 只引用 Contracts、只给 Application 及以上用；Contracts 不引用任何项目和包；领域层不用 EF Core、ASP.NET Core 和渲染引擎；应用层不用 EF Core 和 ASP.NET Core；接口层不直接访问数据库。检查程序会拦。
 
 **R3 热路径。** 开放接口从收到请求到返回的代码（包括 Rendering 全部）：不访问数据库、磁盘、网络；不做一次性初始化；计时用 `Stopwatch.GetTimestamp()`。细则见 `docs/performance.md`。改 Rendering 必须附基准前后对比。
 
@@ -102,7 +105,7 @@ cd frontend; npm run build              # 类型检查 + 打包
 
 **R5 语言。** 代码注释、XML 注释、文档、给用户看的错误消息用**中文**；标识符、提交信息用**英文**。产品项目（各部分的 `src/`）公开成员必须写中文 XML 注释，缺了编译失败。
 
-**R6 错误处理。** 调用方能修正的问题（数据、模板内容）返回 400 系列错误码：渲染里抛 `LabelRenderException(错误码)`，接口里用 `RenderCall.Fail`。程序缺陷不要吞掉、也不要包装成 400，让它以 `RENDER_FAILED` 暴露。
+**R6 错误处理。** 调用方能修正的问题（数据、模板内容）返回 400 系列错误码：渲染里抛 `LabelRenderException(错误码)`；开放接口的用例返回 `OpenApiError`（接口层用 `RenderCall.Fail` 写响应）；管理后台的应用服务抛 `UserFriendlyException`（接口层按错误码转成 400、403、404）。程序缺陷不要吞掉、也不要包装成 400，让它以 `RENDER_FAILED` 暴露。
 
 **R7 安全。** 不提交任何真实 Key、密码、证书、连接字符串；配置里的 API Key 只存 SHA-256。图片字段只收 base64，不支持 URL。不打包微软雅黑、宋体等系统字体（授权不允许），只用思源黑体、思源宋体（SIL OFL）。
 
@@ -125,6 +128,8 @@ cd frontend; npm run build              # 类型检查 + 打包
 - 遵循根目录 `.editorconfig`：4 空格、CRLF、文件范围命名空间、控制流一律带大括号、System 命名空间的 using 排最前。没有初始值的自动属性会被 `dotnet format` 展开成多行，这是公司约定，照做即可。
 - `Nullable` 开启、`TreatWarningsAsErrors` 开启，0 警告。
 - 内部类型用 `internal`；只有真正给别的程序集用的才 `public`。
+- 后端命名（ADR 0010，参照 ABP 的习惯）：实体 `XxxEntity`，仓储 `IXxxRepository` / `XxxRepository`，应用服务 `IXxxAppService` / `XxxAppService`，输出模型 `XxxDto`，输入模型 `CreateXxxDto`、`UpdateXxxDto`、`SaveXxxDto`、`XxxInput`，路由 `XxxEndpoints`，配置 `XxxOptions`。
+- 后端新功能的落点：业务规则写在领域层（实体旁边的 `XxxRules` 或实体方法），用例写在应用层的 `XxxAppService`（做业务范围检查、记操作日志、转换成 Dto），数据库访问只写在基础设施层的仓储里，接口层的处理函数一般一行：调应用服务。新的应用服务在 `AddLabelApplication` 登记，新的仓储在 `AddLabelInfrastructure` 登记。
 - 新元素绘制器、新输出格式按 `docs/architecture.md` 的“扩展点”做：一个类型一个文件，在登记文件里加一行。
 - 测试写进对应部分的检查程序（`backend/tests/LabelService.Backend.Checks` 或 `client/tests/LabelService.Client.Checks`）：按主题放在 `XxxChecks.cs`，用 `check("中文描述", 条件)`。需要像素检查的选“按设计必然空白”或“已实现元素”的位置。新行为必须有对应检查。
 - 后端检查程序的 `Program` 在命名空间里，引用服务端入口要写 `global::Program`。
@@ -163,7 +168,7 @@ cd frontend; npm run build              # 类型检查 + 打包
 这些文件多个任务都可能改，是冲突的高发区。改之前在任务文件“共享文件”里列出，改动尽量只**追加**行，单独提交：
 
 - 全仓库：`.editorconfig`、`global.json`、`verify.ps1`、`AGENTS.md`、`docs/contracts.md`、`docs/tasks/README.md`
-- 后端：`backend/LabelService.Backend.slnx`、`backend/Directory.Build.props`、`backend/src/Directory.Build.props`、`backend/Directory.Packages.props`、`backend/src/LabelService.Contracts/**`、`backend/src/LabelService.Rendering/Elements/ElementPainters.cs`、`backend/src/LabelService.Rendering/Output/OutputDocuments.cs`、`backend/src/LabelService.Server/Program.cs`、`backend/src/LabelService.Server/Endpoints/PublicApiEndpoints.cs`
+- 后端：`backend/LabelService.Backend.slnx`、`backend/Directory.Build.props`、`backend/src/Directory.Build.props`、`backend/Directory.Packages.props`、`backend/src/LabelService.Contracts/**`、`backend/src/LabelService.Rendering/Elements/ElementPainters.cs`、`backend/src/LabelService.Rendering/Output/OutputDocuments.cs`、`backend/src/LabelService.Api/Program.cs`、`backend/src/LabelService.Api/Endpoints/OpenApi/PublicApiEndpoints.cs`、`backend/src/LabelService.Application/ApplicationServiceCollectionExtensions.cs`、`backend/src/LabelService.Infrastructure/InfrastructureServiceCollectionExtensions.cs`
 - 调用端：`client/LabelService.Client.slnx`、`client/Directory.Build.props`、`client/Directory.Packages.props`、`client/src/LabelService.Client/LabelErrorCodes.cs`、`client/src/LabelService.Client/Internal/Protocol.cs`
 - 前端：`frontend/package.json`、`frontend/src/model/template.ts`、`frontend/src/samples/box-label.json`
 
@@ -227,10 +232,12 @@ cd frontend; npm run build              # 类型检查 + 打包
 - **SDK 在 netstandard2.0 下没有可空性特性**：`string.IsNullOrEmpty` 不会帮编译器推断非空，写显式判断。
 - **行尾**：`.editorconfig` 要求 CRLF。用脚本生成的文件如果是 LF，`dotnet format --verify-no-changes` 会报错，跑一次 `dotnet format` 即可。
 - **WebApplicationFactory 不认识 .slnx**：后端检查程序里已经显式指定内容根目录，新增服务端检查时沿用 `ServerChecks` 里的 `ServerFactory`。
-- **SkiaSharp 在 Linux** 需要 `SkiaSharp.NativeAssets.Linux.NoDependencies`（Server 已引用）。
+- **SkiaSharp 在 Linux** 需要 `SkiaSharp.NativeAssets.Linux.NoDependencies`（Api 已引用）。
 - **条码模块宽度必须是整数个打印点**，否则看着正常、扫不出来。
 - **字体**：`backend/assets/fonts/` 里没有思源黑体时文本检查失败（准备方法见那里的 README）。Noto Sans SC 可变字体的默认字重是最细的 100，注册表会按 400、700 生成实例，不要直接用默认实例。
 - **SQLite**：数据目录不能放网络共享盘，同一数据目录只能有一个服务进程；时间列存 UTC `DateTime`，不用 `DateTimeOffset`；检查程序用临时数据目录（`ServerFactory`、`TempDataDirectory`），删除前要 `SqliteConnection.ClearAllPools()`，否则 Windows 上库文件被占用删不掉。
-- **EF Core 迁移**：改了 `Server/Data` 的实体要用 `dotnet ef migrations add` 生成迁移（命令见 `backend/README.md`），不要手改迁移和快照。
+- **EF Core 迁移**：改了领域层的实体或 `Infrastructure/Persistence/Configurations` 要给三种数据库（SQLite、SQL Server、PostgreSQL）各生成一次迁移（命令见 `backend/README.md`），不要手改迁移和快照；检查程序会核对六套迁移（主库、日志库各三种）都和模型一致。
+- **多数据库**：默认 SQLite；`LabelService:Data:Provider` 改成 `SqlServer` 或 `PostgreSql` 时要配 `ConnectionString`。SQLite 特有的功能（PRAGMA、升级前快照、每日备份）只在 SQLite 下启用。设置环境变量 `LABEL_TEST_SQLSERVER`、`LABEL_TEST_POSTGRES`（不带库名的连接字符串）后，检查程序会在真实数据库上建临时库跑一遍主要流程，跑完删库。
+- **应用服务的生命周期**：管理后台的应用服务、仓储、工作单元每个请求一个，共用一个数据库上下文；内存缓存和开放接口的服务是单例。检查程序里直接调用应用服务用 `AdminScope`（建作用域并以 admin 登录），调用模板核心流程用 `ScopedTemplateManager`。
 - **管理后台账号**：首次启动建 `admin`，开发环境初始密码 `admin123`（首次登录必须改），其他环境随机生成写在启动日志里。JWT 签名密钥没配置时生成在数据目录的 `admin-signing.key`，不要提交。检查程序里登录、改密码用 `AdminSession`（`AdminAccountChecks.CreateUserAsync` 能一步建好用户并改好密码）。
 - **开发 Key** `lbl_test_local_dev` 只在 Development 环境有效；后端检查程序用 `WebApplicationFactory` 启动服务，默认就是 Development；`verify.ps1` 启动服务时也会设置 Development。

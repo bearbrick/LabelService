@@ -9,7 +9,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\LabelService.Contracts\LabelService.Contracts.csproj" />
     <ProjectReference Include="..\..\src\LabelService.Rendering\LabelService.Rendering.csproj" />
-    <ProjectReference Include="..\..\src\LabelService.Server\LabelService.Server.csproj" />
+    <ProjectReference Include="..\..\src\LabelService.Api\LabelService.Api.csproj" />
   </ItemGroup>
 
   <ItemGroup>

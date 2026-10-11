@@ -1,9 +1,12 @@
 using System.Diagnostics;
 using System.Net;
 using System.Text;
+using LabelService.Api.Hosting;
+using LabelService.Application.Diagnostics;
+using LabelService.Application.Hosting;
+using LabelService.Application.Rendering;
 using LabelService.Contracts.Protocol;
-using LabelService.Server.Diagnostics;
-using LabelService.Server.Hosting;
+using LabelService.Infrastructure.Hosting;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;

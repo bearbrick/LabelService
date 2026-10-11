@@ -5,7 +5,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using LabelService.Contracts;
 using LabelService.Contracts.Protocol;
-using LabelService.Server.Logging;
+using LabelService.Domain.Logs;
 using Microsoft.Extensions.DependencyInjection;
 using SkiaSharp;
 
@@ -31,8 +31,8 @@ internal static partial class LayoutServerChecks
             await CheckSheetsAsync(http, sample, check);
             await CheckErrorsAsync(http, sample, check);
 
-            var logs = factory.Services.GetRequiredService<RenderLogQuery>();
-            IReadOnlyList<Server.Data.RenderLogRecord> records = [];
+            var logs = factory.Services.GetRequiredService<IRenderLogRepository>();
+            IReadOnlyList<LabelService.Domain.Logs.RenderLogEntity> records = [];
             for (var i = 0; i < 100 && !records.Any(log => log.LayoutCode == Layout); i++)
             {
                 await Task.Delay(50);

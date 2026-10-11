@@ -19,7 +19,7 @@ internal static partial class ArchitectureChecks
         var rendering = Project("LabelService.Rendering");
         check("Rendering 只引用 Contracts",
             Regex.Count(rendering, "<ProjectReference") == 1 && rendering.Contains(@"LabelService.Contracts\LabelService.Contracts.csproj"));
-        check("Server 不引用调用端 SDK", !Project("LabelService.Server").Contains("LabelService.Client"));
+        CheckLayers(backendRoot, check);
 
         foreach (var part in new[] { "backend", "client" })
         {
@@ -93,6 +93,46 @@ internal static partial class ArchitectureChecks
             && agents.Contains("npm run build"));
     }
 
+    /// <summary>
+    /// 后端分层（ADR 0010）：Contracts ← Domain ← Application ← Infrastructure ← Api，Rendering 只给 Application 及以上用。
+    /// 领域层不碰 EF Core、ASP.NET Core 和渲染引擎；应用层不碰 EF Core 和 ASP.NET Core；接口层不直接访问数据库。
+    /// </summary>
+    /// <param name="backendRoot">backend 目录。</param>
+    /// <param name="check">记录检查结果。</param>
+    private static void CheckLayers(string backendRoot, Action<string, bool> check)
+    {
+        var src = Path.Combine(backendRoot, "src");
+        string[] References(string name) => XDocument.Load(Path.Combine(src, name, name + ".csproj")).Descendants("ProjectReference")
+            .Select(reference => Path.GetFileNameWithoutExtension((string)reference.Attribute("Include")!))
+            .Order(StringComparer.Ordinal)
+            .ToArray();
+        string[] Packages(string name) => XDocument.Load(Path.Combine(src, name, name + ".csproj")).Descendants("PackageReference")
+            .Select(reference => (string)reference.Attribute("Include")!)
+            .ToArray();
+        bool Uses(string name, Regex pattern) => SourceFiles(Path.Combine(src, name), "*.cs").Any(path => pattern.IsMatch(File.ReadAllText(path)));
+
+        var allowed = new Dictionary<string, string[]>
+        {
+            ["LabelService.Domain"] = ["LabelService.Contracts"],
+            ["LabelService.Application"] = ["LabelService.Contracts", "LabelService.Domain", "LabelService.Rendering"],
+            ["LabelService.Infrastructure"] = ["LabelService.Application", "LabelService.Contracts", "LabelService.Domain", "LabelService.Rendering"],
+            ["LabelService.Api"] = ["LabelService.Application", "LabelService.Contracts", "LabelService.Domain", "LabelService.Infrastructure", "LabelService.Rendering"],
+        };
+        foreach (var (project, expected) in allowed)
+        {
+            var actual = References(project);
+            check($"{project} 只引用下层项目：{string.Join("、", expected)}（实际：{string.Join("、", actual)}）", actual.SequenceEqual(expected));
+        }
+
+        check("领域层不引用任何包", Packages("LabelService.Domain").Length == 0);
+        check("领域层不用 EF Core、ASP.NET Core 和渲染引擎", !Uses("LabelService.Domain", DomainForbidden()));
+        check("应用层不引用 EF Core、ASP.NET Core 的包",
+            !Packages("LabelService.Application").Any(item => item.StartsWith("Microsoft.EntityFrameworkCore", StringComparison.Ordinal) || item.StartsWith("Microsoft.AspNetCore", StringComparison.Ordinal)));
+        check("应用层不用 EF Core 和 ASP.NET Core", !Uses("LabelService.Application", ApplicationForbidden()));
+        check("接口层不直接访问数据库（只通过应用服务）", !Uses("LabelService.Api", ApiForbidden()));
+        check("接口层不引用调用端 SDK", !References("LabelService.Api").Any(item => item.StartsWith("LabelService.Client", StringComparison.Ordinal)));
+    }
+
     private static IEnumerable<string> SourceFiles(string directory, string pattern)
     {
         if (!Directory.Exists(directory))
@@ -104,6 +144,15 @@ internal static partial class ArchitectureChecks
         return Directory.GetFiles(directory, pattern, SearchOption.AllDirectories)
             .Where(path => !path.Contains($"{separator}bin{separator}") && !path.Contains($"{separator}obj{separator}") && !path.Contains($"{separator}node_modules{separator}"));
     }
+
+    [GeneratedRegex(@"using (Microsoft\.EntityFrameworkCore|Microsoft\.AspNetCore|LabelService\.Rendering)")]
+    private static partial Regex DomainForbidden();
+
+    [GeneratedRegex(@"using (Microsoft\.EntityFrameworkCore|Microsoft\.AspNetCore)")]
+    private static partial Regex ApplicationForbidden();
+
+    [GeneratedRegex(@"using (Microsoft\.EntityFrameworkCore|LabelService\.Infrastructure\.(Persistence|Repositories))\b|\bDbContext\b")]
+    private static partial Regex ApiForbidden();
 
     [GeneratedRegex(@"\b(HttpClient|DbContext|SqlConnection|WebRequest)\b")]
     private static partial Regex ForbiddenInRendering();

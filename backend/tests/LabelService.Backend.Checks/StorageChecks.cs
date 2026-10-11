@@ -1,12 +1,20 @@
 using System.Diagnostics;
+using LabelService.Application.Templates;
 using LabelService.Contracts.Protocol;
 using LabelService.Contracts.Templates;
-using LabelService.Server;
-using LabelService.Server.Data;
-using LabelService.Server.Templates;
+using LabelService.Domain.ApiClients;
+using LabelService.Domain.Businesses;
+using LabelService.Domain.Identity;
+using LabelService.Domain.Layouts;
+using LabelService.Domain.Logs;
+using LabelService.Domain.Resources;
+using LabelService.Domain.Shared;
+using LabelService.Domain.Templates;
+using LabelService.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace LabelService.Backend.Checks;
 
@@ -36,7 +44,7 @@ internal static class StorageChecks
             await using (var restarted = new ServerFactory(backendRoot, dataDirectory))
             {
                 using var http = restarted.CreateClient();
-                var templates = await restarted.Services.GetRequiredService<TemplateRepository>().ListAsync();
+                var templates = await new ScopedTemplateManager(restarted.Services).ListAsync();
                 check("重启后从数据库加载已发布版本：最新版本仍是 2，示例模板不重复导入",
                     await Version(http, BoxLabel) == "2" && await Version(http, BoxLabel, 1) == "1" && templates.Count(item => item.Code == BoxLabel) == 1);
             }
@@ -45,7 +53,7 @@ internal static class StorageChecks
             {
                 using var http = files.CreateClient();
                 check("模板来源配置为 Files 时从示例目录加载，版本固定为 1",
-                    files.Services.GetRequiredService<ITemplateStore>() is FileTemplateStore && await Version(http, BoxLabel) == "1");
+                    files.Services.GetRequiredService<IOptions<TemplateStoreOptions>>().Value.Source == TemplateSource.Files && await Version(http, BoxLabel) == "1");
             }
         }
         finally
@@ -61,7 +69,7 @@ internal static class StorageChecks
         check("启动时在数据目录自动建库 label.db", File.Exists(Path.Combine(dataDirectory, DataOptions.DatabaseFileName)));
         await using var db = await services.GetRequiredService<IDbContextFactory<LabelDbContext>>().CreateDbContextAsync();
         check("启动时执行了全部迁移", (await db.Database.GetAppliedMigrationsAsync()).Any() && !(await db.Database.GetPendingMigrationsAsync()).Any());
-        check("实体和迁移一致（改了 Server/Data 的实体要生成迁移，命令见 backend/README.md）", !db.Database.HasPendingModelChanges());
+        check("实体和迁移一致（改了领域层的实体要生成迁移，命令见 backend/README.md）", !db.Database.HasPendingModelChanges());
 
         await db.Database.OpenConnectionAsync();
         async Task<string?> Pragma(string name)
@@ -80,8 +88,8 @@ internal static class StorageChecks
 
     private static async Task CheckDraftAndPublishAsync(IServiceProvider services, HttpClient http, string backendRoot, Action<string, bool> check)
     {
-        var repository = services.GetRequiredService<TemplateRepository>();
-        var store = services.GetRequiredService<DbTemplateStore>();
+        var repository = new ScopedTemplateManager(services);
+        var store = services.GetRequiredService<PublishedTemplateCache>();
         var box = (await repository.ListAsync()).SingleOrDefault(item => item.Code == BoxLabel);
         check("开发环境首次建库把示例模板导入为已发布版本 1，放在示例业务分组里",
             box is { Status: TemplateStatuses.Published, LatestVersion: 1, HasDraft: false, BusinessId: not null });
@@ -111,8 +119,8 @@ internal static class StorageChecks
 
     private static async Task CheckPublishRulesAsync(IServiceProvider services, HttpClient http, string backendRoot, Action<string, bool> check)
     {
-        var repository = services.GetRequiredService<TemplateRepository>();
-        var store = services.GetRequiredService<DbTemplateStore>();
+        var repository = new ScopedTemplateManager(services);
+        var store = services.GetRequiredService<PublishedTemplateCache>();
 
         var broken = Fixtures.LoadTemplate(backendRoot);
         broken.Elements.OfType<TextElement>().First().Content = "{{nope}}";
@@ -165,7 +173,7 @@ internal static class StorageChecks
         // 两个人同时操作同一个草稿：A 发布了，B 还拿着旧的草稿保存。状态是并发令牌，B 必须失败，不能改到已发布的版本。
         var race = Fixtures.LoadTemplate(backendRoot);
         race.Code = "RACE_LABEL";
-        await services.GetRequiredService<TemplateRepository>().SaveDraftAsync(race, "checks");
+        await new ScopedTemplateManager(services).SaveDraftAsync(race, "checks");
         await using var a = await contexts.CreateDbContextAsync();
         await using var b = await contexts.CreateDbContextAsync();
         var draftA = await a.TemplateVersions.SingleAsync(item => item.Template!.Code == "RACE_LABEL");
@@ -189,7 +197,7 @@ internal static class StorageChecks
         }
 
         var duringRequests = counter.Count;
-        await services.GetRequiredService<TemplateRepository>().ListAsync();
+        await new ScopedTemplateManager(services).ListAsync();
         check($"开放接口取模板不访问数据库（生成、字段定义各调用多次，数据库命令 {duringRequests} 条）", duringRequests == 0 && counter.Count > 0);
     }
 
@@ -206,14 +214,14 @@ internal static class StorageChecks
         return await db.TemplateVersions.CountAsync(item => item.Template!.Code == code && item.Status == TemplateStatuses.Draft);
     }
 
-    private static async Task<ManagementException?> CatchAsync(Func<Task> action)
+    private static async Task<UserFriendlyException?> CatchAsync(Func<Task> action)
     {
         try
         {
             await action();
             return null;
         }
-        catch (ManagementException ex)
+        catch (UserFriendlyException ex)
         {
             return ex;
         }

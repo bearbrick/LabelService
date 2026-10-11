@@ -1,0 +1,61 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <!-- 接口层：开放接口、管理接口、鉴权、指标和健康检查，以及整个服务的组装（ADR 0010）。业务规则写在应用层和领域层。 -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ServerGarbageCollection>true</ServerGarbageCollection>
+    <ConcurrentGarbageCollection>true</ConcurrentGarbageCollection>
+    <!-- 发布时指定了运行时标识（-r linux-x64、-r win-x64）就预编译成本机代码，缩短启动和第一个请求的 JIT。 -->
+    <PublishReadyToRun Condition="'$(RuntimeIdentifier)' != ''">true</PublishReadyToRun>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\LabelService.Contracts\LabelService.Contracts.csproj" />
+    <ProjectReference Include="..\LabelService.Rendering\LabelService.Rendering.csproj" />
+    <ProjectReference Include="..\LabelService.Domain\LabelService.Domain.csproj" />
+    <ProjectReference Include="..\LabelService.Application\LabelService.Application.csproj" />
+    <ProjectReference Include="..\LabelService.Infrastructure\LabelService.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- SkiaSharp 的 Linux 原生库，Docker 部署需要。Windows 原生库随 SkiaSharp 包自带。 -->
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="LabelService.Backend.Checks" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- 生成数据库迁移时 dotnet ef 要求启动项目引用 Design 包；不随程序发布。 -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- 管理后台登录：JWT（ADR 0006）。 -->
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- 作为 Windows 服务运行（ADR 0008）；不是以服务方式启动时不起作用。 -->
+    <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- 字体：构建时从 backend/assets/fonts 复制到输出目录的 fonts/，服务启动时加载。 -->
+    <Content Include="..\..\assets\fonts\*.otf;..\..\assets\fonts\*.ttf;..\..\assets\fonts\*.ttc;..\..\assets\fonts\*.otc;..\..\assets\fonts\*.txt" LinkBase="fonts" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- 图标和内置图片素材：构建时复制到输出目录的 icons/、images/，服务启动时加载。 -->
+    <Content Include="..\..\assets\icons\**\*.svg" LinkBase="icons" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="..\..\assets\images\*.svg;..\..\assets\images\*.png;..\..\assets\images\*.jpg" LinkBase="images" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- 示例模板：开发环境首次建库时导入为已发布版本；模板来源配置为 Files 时直接从这里加载。 -->
+    <Content Include="..\..\samples\templates\*.json" LinkBase="SeedTemplates" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="..\..\samples\layouts\*.json" LinkBase="SeedLayouts" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

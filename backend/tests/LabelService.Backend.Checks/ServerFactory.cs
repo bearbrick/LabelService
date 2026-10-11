@@ -27,7 +27,7 @@ internal sealed class ServerFactory(string backendRoot, string dataDirectory, IR
             values[key] = value;
         }
 
-        builder.UseContentRoot(Path.Combine(backendRoot, "src", "LabelService.Server"))
+        builder.UseContentRoot(Path.Combine(backendRoot, "src", "LabelService.Api"))
             .ConfigureAppConfiguration((_, configuration) => configuration.AddInMemoryCollection(values));
     }
 }
