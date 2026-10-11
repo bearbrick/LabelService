@@ -101,6 +101,8 @@ npm run build     # 类型检查（vue-tsc）+ 打包
 - `src/model/layout.ts` 是后端 `Contracts/Layouts/SheetLayout.cs` 的镜像（ADR 0005），后端检查程序按属性名核对；越界、重叠的规则和容差（0.05 mm）和服务端保存前的检查一致。
 - 拼版画布的格子画的是服务端缩略图（一张位图），24 个格子一帧约 0.5 ms，和模板有多少元素无关。对齐、分布直接用 `editor/arrange.ts`（它接受任意矩形），吸附用 `editor/snapping.ts`，撤销用 `editor/history.ts`。
 - 窗口大小：管理页面在 768px 宽以上都能用（900px 以下模板树收进顶栏左边的按钮）；设计器和拼版设计器要 1100px 以上，更窄时显示“窗口太窄”的提示。窗口窄于 1440px 时打开设计器会自动收起模板树（面包屑前的按钮可以再展开）；画布停在“适应窗口”的状态时随窗口大小重新适应，手动缩放或平移过就保持不变。名称太长时省略显示，鼠标停在上面看完整名称。
-- 系统信息：顶栏“系统管理”菜单的“系统信息”页（`pages/SettingsPage.vue`，权限点 `sys.settings`）设置系统名称、副标题、所属公司、版权信息、技术支持和公司 Logo。读取不用登录，登录页左上角、下方的版权信息和“忘记密码”提示都用它；没上传 Logo 时显示“公司 LOGO”占位。样式在 `src/system.css`。
+- 系统信息：顶栏“系统管理”菜单的“系统信息”页（`pages/SettingsPage.vue`，权限点 `sys.settings`）设置系统名称、副标题、所属公司、版权信息、技术支持和公司 Logo。读取不用登录，登录页左上角、下方的版权信息和“忘记密码”提示都用它；没上传 Logo 时显示“公司 LOGO”占位；登录页左栏的标语和说明也在这里改，所属公司显示在标语上方。样式在 `src/system.css`。
+- 左侧模板树的右边缘可以拖动改宽度（220～560px，双击恢复 280px，记在浏览器本地，`composables/useSidebarWidth.ts`）。
+- 下拉框统一用 `class="sel"`：自定义箭头；浏览器支持可定制下拉框（`appearance: base-select`，Chrome / Edge 135 起）时，展开的列表也是系统风格，其他浏览器用原生列表。样式在 `src/system.css`。
 - 不引用 `frontend/` 以外的文件（后端检查程序会拦）。
 - 注释（AGENTS.md R5）：每个模块级的函数、常量、接口和类型（含属性）、store 的状态、组件的 props 和 emits 都写多行 JSDoc，函数写 `@param`、`@returns`；`npm run check` 用 `tests/docs.ts` 核对。`src/` 下的文件不超过 500 行，同样由 `npm run check` 核对。

@@ -98,8 +98,9 @@
 | GET | `/op-logs` | log.view | 参数 `from、to、userId、type、q、beforeId、pageSize` |
 | GET | `/dashboard` | tpl.view | `templates{total,published,changed,neverPublished}`；有 log.view 时再给 `today{total,errors,slow,labels,averageMs,p95Ms}`（p95Ms 是今日单张成功调用的 P95）、`days[14]`、`topTemplates`、`slowTemplates`（近 7 天单张平均耗时最高的 5 个）、`recentOps` |
 | POST | `/api-test/render` | api.test | 请求体和开放接口单张生成一样，用已发布的模板试生成，返回文件；不写调用日志 |
-| GET | `/system-info` | — | 系统信息 `{ systemName, subtitle, companyName, copyright, support, logoVersion? }`；不用登录（登录页要显示）；没上传 Logo 时没有 `logoVersion` |
-| PUT | `/system-info` | sys.settings | `{ systemName, subtitle, companyName, copyright, support }`；去掉首尾空白、换行换成空格；系统名称必填，最长 20 / 30 / 60 / 120 / 60 字 |
+| GET | `/system-info` | — | 系统信息 `{ systemName, subtitle, companyName, copyright, support, loginTitle, loginIntro, logoVersion? }`；不用登录（登录页要显示）；没上传 Logo 时没有 `logoVersion`；`loginTitle`、`loginIntro` 是登录页左栏的标语和说明，可以有换行 `
+` |
+| PUT | `/system-info` | sys.settings | `{ systemName, subtitle, companyName, copyright, support, loginTitle, loginIntro }`；某项不传表示不改，传空字符串表示清空；去掉首尾空白，除 `loginTitle`、`loginIntro` 外换行换成空格；系统名称不能为空，最长 20 / 30 / 60 / 120 / 60 / 40 / 200 字 |
 | GET | `/system-info/logo` | — | 公司 Logo 文件，不用登录；前端在地址后面拼 `?v={logoVersion}`；没上传时 404 |
 | POST | `/system-info/logo` | sys.settings | multipart，字段 `file`；PNG、JPG、SVG，≤ 1 MB；按内容判断类型，SVG 先清洗；替换原来的 Logo → 系统信息 |
 | DELETE | `/system-info/logo` | sys.settings | 删除上传的 Logo，恢复成占位 → 系统信息 |
