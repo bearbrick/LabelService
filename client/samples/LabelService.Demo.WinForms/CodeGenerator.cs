@@ -182,8 +182,6 @@ internal static partial class CodeGenerator
 
         code.AppendLine();
         code.AppendLine("            LabelFile file = await client.RenderAsync(request);");
-        code.AppendLine("            var path = Path.Combine(Path.GetTempPath(), file.FileName);");
-        code.AppendLine("            file.Save(path);   // 留一份文件，打印出问题时好查、好重打");
         code.AppendLine("            Console.WriteLine(file.FileName + \"，\" + file.LabelCount + \" 张，服务端 \" + file.ServerDuration?.TotalMilliseconds + \" ms，traceId \" + file.TraceId);");
     }
 
@@ -227,8 +225,6 @@ internal static partial class CodeGenerator
 
         code.AppendLine();
         code.AppendLine("            LabelFile file = await client.RenderBatchAsync(batch);");
-        code.AppendLine("            var path = Path.Combine(Path.GetTempPath(), file.FileName);");
-        code.AppendLine("            file.Save(path);   // 留一份文件，打印出问题时好查、好重打");
         code.AppendLine("            Console.WriteLine(file.FileName + \"，\" + file.LabelCount + \" 张，服务端 \" + file.ServerDuration?.TotalMilliseconds + \" ms\");");
     }
 

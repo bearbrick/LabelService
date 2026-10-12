@@ -74,20 +74,18 @@ internal static partial class CodeGenerator
     }
 
     /// <summary>
-    /// Main 里保存文件之后的打印调用。
+    /// Main 里生成之后的打印调用：直接用内存里的结果（file.Content）打印，不用先存文件；另存一份留底写成注释，需要时再打开。
     /// </summary>
     /// <param name="code">正在生成的代码。</param>
     /// <param name="settings">当前设置。</param>
     private static void AppendPrintCall(StringBuilder code, Settings settings)
     {
         code.AppendLine();
-        code.AppendLine("            // 发送到打印机（打印机地址、名称在上面的常量里改）");
-        code.AppendLine(settings.Format switch
-        {
-            LabelFormat.Zpl => "            await PrintAsync(file);",
-            LabelFormat.Png => "            Print(file);",
-            _ => "            Print(path);",
-        });
+        code.AppendLine("            // 发送到打印机：直接用内存里的生成结果，不用先存文件（打印机地址、名称在上面的常量里改）");
+        code.AppendLine(settings.Format == LabelFormat.Zpl ? "            await PrintAsync(file);" : "            Print(file);");
+        code.AppendLine();
+        code.AppendLine("            // 需要留底（出问题时好查、好重打）时可以另存一份：");
+        code.AppendLine("            // file.Save(Path.Combine(Path.GetTempPath(), file.FileName));");
     }
 
     /// <summary>
@@ -159,7 +157,7 @@ internal static partial class CodeGenerator
 
                         """
                     : """
-                            // PNG：用 Windows 打印机打印。
+                            // PNG：用 Windows 打印机打印，图片直接从内存里读。
                             private static void Print(LabelFile file)
                             {
                                 PrintImage(new MemoryStream(file.Content), file.Dpi);
@@ -168,7 +166,7 @@ internal static partial class CodeGenerator
                         """);
                 code.Append("""
 
-                        // PrintDocument 不能直接收文件，要在 PrintPage 里把图画到纸上。按“像素 ÷ DPI”画成标签的实际尺寸（单位是 1/100 英寸）：
+                        // PrintDocument 没有“把图片数据直接交给它”的方法，要在 PrintPage 里把图画到纸上。按“像素 ÷ DPI”画成标签的实际尺寸（单位是 1/100 英寸）：
                         // 不能缩放，否则条码扫不出来。纸张大小用打印机驱动里的设置（标签打印机在驱动里设成标签尺寸）。
                         private static void PrintImage(Stream png, int dpi)
                         {
@@ -186,14 +184,17 @@ internal static partial class CodeGenerator
             default:
                 code.Append("""
                         // PDF：.NET 自己读不了 PDF，PrintDocument 也打不了。
-                        private static void Print(string path)
+                        private static void Print(LabelFile file)
                         {
                             // 方式一：交给本机的 PDF 阅读器，用 Windows 默认打印机打印（要装支持“打印”命令的阅读器，如 Adobe Reader、福昕）。
+                            // 阅读器是另一个程序，只能打开磁盘上的文件，所以先存到临时目录。
+                            var path = Path.Combine(Path.GetTempPath(), file.FileName);
+                            file.Save(path);
                             Process.Start(new ProcessStartInfo(path) { Verb = "print", UseShellExecute = true });
 
                             // 方式二：打印机本身支持 PDF 直接打印（不少办公激光打印机支持，说明书里叫“PDF 直接打印”或 PDF Direct）时，
-                            // 像 ZPL 一样把文件直接发过去，不用装阅读器（用这种时把上面一行注释掉）：
-                            // LabelService.Client.Printing.WindowsRawPrinter.Send("打印机名称", File.ReadAllBytes(path), Path.GetFileName(path));
+                            // 像 ZPL 一样把内存里的内容直接发过去，不用存文件，也不用装阅读器（用这种时把上面三行注释掉）：
+                            // LabelService.Client.Printing.WindowsRawPrinter.Send("打印机名称", file.Content, file.FileName);
                         }
 
                     """);
