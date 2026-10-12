@@ -6,7 +6,7 @@ using LabelService.Domain.Identity;
 namespace LabelService.Api.Endpoints.Admin;
 
 /// <summary>
-/// 系统信息、公司 Logo 和 Logo 图标。读取不用登录（登录页要显示系统名称、Logo 和版权信息），修改要权限点 sys.settings。
+/// 系统信息、公司 Logo、Logo 图标和深色背景 Logo。读取不用登录（登录页要显示系统名称、Logo 和版权信息），修改要权限点 sys.settings。
 /// </summary>
 internal static class SystemInfoEndpoints
 {
@@ -45,10 +45,21 @@ internal static class SystemInfoEndpoints
             .DisableAntiforgery();
         api.MapDelete("/system-info/icon", (ISystemInfoAppService service) => service.ResetIconAsync())
             .RequireAdmin(PermissionNames.SettingsManage);
+
+        // 深色背景 Logo：登录页深蓝底上直接显示，同样不用登录就能读。
+        api.MapGet("/system-info/logo-dark", async (HttpContext http, ISystemInfoAppService service, CancellationToken cancellationToken) =>
+                ImageResult(http, await service.GetLogoDarkAsync(cancellationToken)))
+            .AllowAnonymousAdmin();
+        api.MapPost("/system-info/logo-dark", (IFormFile? file, ISystemInfoAppService service) =>
+                service.UploadLogoDarkAsync(file is null ? null : new UploadAssetInput(file.FileName, file.Length, file.OpenReadStream())))
+            .RequireAdmin(PermissionNames.SettingsManage)
+            .DisableAntiforgery();
+        api.MapDelete("/system-info/logo-dark", (ISystemInfoAppService service) => service.ResetLogoDarkAsync())
+            .RequireAdmin(PermissionNames.SettingsManage);
     }
 
     /// <summary>
-    /// 公司 Logo、Logo 图标的文件响应：带修改时间（浏览器按修改时间重新验证）、内容安全策略和禁止猜测类型的响应头。
+    /// 公司 Logo、Logo 图标、深色背景 Logo 的文件响应：带修改时间（浏览器按修改时间重新验证）、内容安全策略和禁止猜测类型的响应头。
     /// 地址后面的 ?v= 由前端按版本拼上，换图后地址变化，不会显示缓存里的旧图。
     /// </summary>
     /// <param name="http">当前请求。</param>

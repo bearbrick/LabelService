@@ -114,6 +114,34 @@ internal static class SystemInfoChecks
             permissions.EnumerateArray().Any(item => item.GetProperty("key").GetString() == "sys.settings" && item.GetProperty("group").GetString() == "系统"));
 
         await CheckIconAndWebpAsync(http, admin, designer, check);
+        await CheckLogoDarkAsync(http, admin, designer, check);
+    }
+
+    /// <summary>
+    /// 深色背景 Logo（登录页深蓝底上用）的上传、读取、恢复，和完整 Logo、图标互不影响。
+    /// </summary>
+    /// <param name="http">未登录的客户端。</param>
+    /// <param name="admin">已登录的系统管理员。</param>
+    /// <param name="designer">没有 sys.settings 的用户。</param>
+    /// <param name="check">记录检查结果。</param>
+    /// <returns>检查做完时完成。</returns>
+    private static async Task CheckLogoDarkAsync(HttpClient http, AdminSession admin, AdminSession designer, Action<string, bool> check)
+    {
+        check("没上传深色背景 Logo 时取它返回 404；没有 sys.settings 不能上传",
+            (await http.GetAsync("/api/admin/system-info/logo-dark")).StatusCode == HttpStatusCode.NotFound
+            && await AdminSession.CodeAsync(await designer.UploadAsync("/api/admin/system-info/logo-dark", "dark.png", Png(), "image/png")) == "FORBIDDEN");
+
+        var dark = await AdminSession.ReadAsync(await admin.UploadAsync("/api/admin/system-info/logo-dark", "dark.png", Png(), "image/png"));
+        var darkFile = await http.GetAsync("/api/admin/system-info/logo-dark?v=" + dark.GetProperty("logoDarkVersion").GetString());
+        check("上传深色背景 Logo 后未登录也能取到，完整 Logo 和图标不受影响",
+            dark.GetProperty("logoDarkVersion").GetString() is { Length: 12 }
+            && NoLogo(dark) && (!dark.TryGetProperty("iconVersion", out var icon) || icon.ValueKind == JsonValueKind.Null)
+            && darkFile.StatusCode == HttpStatusCode.OK && darkFile.Content.Headers.ContentType?.MediaType == "image/png");
+
+        var reset = await admin.JsonAsync(HttpMethod.Delete, "/api/admin/system-info/logo-dark");
+        check("恢复深色背景 Logo 后版本为空、取它 404",
+            (!reset.TryGetProperty("logoDarkVersion", out var version) || version.ValueKind == JsonValueKind.Null)
+            && (await http.GetAsync("/api/admin/system-info/logo-dark")).StatusCode == HttpStatusCode.NotFound);
     }
 
     /// <summary>

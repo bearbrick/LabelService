@@ -89,6 +89,16 @@ public sealed class SystemInfoAppService(
     /// <inheritdoc />
     public Task<SystemInfoDto> ResetIconAsync() => ResetImageAsync(BrandImage.Icon);
 
+    /// <inheritdoc />
+    public async Task<AssetFileDto> GetLogoDarkAsync(CancellationToken cancellationToken = default) =>
+        await GetImageAsync(BrandImage.LogoDark, cancellationToken);
+
+    /// <inheritdoc />
+    public Task<SystemInfoDto> UploadLogoDarkAsync(UploadAssetInput? input) => UploadImageAsync(BrandImage.LogoDark, input);
+
+    /// <inheritdoc />
+    public Task<SystemInfoDto> ResetLogoDarkAsync() => ResetImageAsync(BrandImage.LogoDark);
+
     /// <summary>
     /// 取上传的完整 Logo 或图标文件。
     /// </summary>
@@ -220,11 +230,12 @@ public sealed class SystemInfoAppService(
             Text(SystemInfoRules.LoginTitle),
             Text(SystemInfoRules.LoginIntro),
             Version(BrandImage.Logo),
-            Version(BrandImage.Icon));
+            Version(BrandImage.Icon),
+            Version(BrandImage.LogoDark));
     }
 
     /// <summary>
-    /// 系统信息里的一张图：完整 Logo 或图标。
+    /// 系统信息里的一张图：完整 Logo、图标或深色背景 Logo。
     /// </summary>
     /// <param name="Key">存文件名的设置项键。</param>
     /// <param name="Prefix">文件名前缀，后面接内容摘要的前 12 位。</param>
@@ -240,5 +251,10 @@ public sealed class SystemInfoAppService(
         /// Logo 图标：顶栏和浏览器标签页显示；没有完整 Logo 时登录页也用它。
         /// </summary>
         public static BrandImage Icon { get; } = new(SystemInfoRules.CompanyIcon, "company-icon-", "Logo 图标");
+
+        /// <summary>
+        /// 深色背景 Logo：登录页深蓝底上直接显示（不加白底卡片）；没有时登录页用白底卡片放完整 Logo。
+        /// </summary>
+        public static BrandImage LogoDark { get; } = new(SystemInfoRules.CompanyLogoDark, "company-logo-dark-", "深色背景 Logo");
     }
 }

@@ -54,6 +54,11 @@ public static class SystemInfoRules
     public const string CompanyIcon = "company.icon";
 
     /// <summary>
+    /// 深色背景用的 Logo（白色或浅色、透明背景）的文件名（数据目录 branding/ 下），登录页深蓝底上直接显示；空表示没上传，用白底卡片放完整 Logo。不在 <see cref="Fields"/> 里。
+    /// </summary>
+    public const string CompanyLogoDark = "company.logoDark";
+
+    /// <summary>
     /// 可以在表单里修改的文字设置项，按页面上的顺序排列。
     /// </summary>
     public static IReadOnlyList<SystemInfoField> Fields
