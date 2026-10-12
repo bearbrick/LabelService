@@ -1155,7 +1155,7 @@ catch (LabelServiceException ex) when (ex.IsTransient)
               <text x="52" y="141" class="d-sub">内置模拟服务、模拟 503 抖动</text>
               <rect x="40" y="160" width="250" height="100" rx="4" class="d-box"/>
               <text x="52" y="180" class="d-name">模板与数据</text>
-              <text x="52" y="198" class="d-sub">模板编码 + 读取字段</text>
+              <text x="52" y="198" class="d-sub">模板编码（刷新列表）+ 读取字段 · 单张 / 批量数据</text>
               <line x1="52" y1="210" x2="278" y2="210" class="d-rule"/>
               <line x1="52" y1="222" x2="278" y2="222" class="d-rule"/>
               <line x1="52" y1="234" x2="278" y2="234" class="d-rule"/>
@@ -1164,7 +1164,7 @@ catch (LabelServiceException ex) when (ex.IsTransient)
               <rect x="40" y="270" width="250" height="64" rx="4" class="d-box"/>
               <text x="52" y="290" class="d-name">生成选项</text>
               <text x="52" y="308" class="d-sub">PNG / PDF / ZPL · DPI · 份数</text>
-              <text x="52" y="325" class="d-sub">批量条数、递增字段</text>
+              <text x="52" y="325" class="d-sub">批量按批量数据的行数</text>
               <rect x="210" y="278" width="70" height="22" rx="3" class="d-accent"/>
               <text x="245" y="293" text-anchor="middle" class="d-sub">生成单张</text>
               <rect x="306" y="86" width="56" height="22" rx="3" class="d-box"/>
@@ -1197,9 +1197,9 @@ catch (LabelServiceException ex) when (ex.IsTransient)
         <div class="tw"><table>
           <thead><tr><th>区域</th><th>功能</th><th>对应的 SDK</th></tr></thead>
           <tbody>
-            <tr><td>连接设置</td><td>服务地址、API Key、超时、重试次数、测试连接；可以切换到内置模拟服务</td><td>LabelServiceClientOptions、GetSchemaAsync</td></tr>
-            <tr><td>模板与数据</td><td>输入模板编码读取字段，在表格里填值，必填项为空时标红</td><td>GetSchemaAsync、TemplateSchema</td></tr>
-            <tr><td>生成选项</td><td>格式、DPI、份数；批量条数和逐条递增的字段</td><td>RenderRequest、BatchRenderRequest</td></tr>
+            <tr><td>连接设置</td><td>服务地址、API Key、超时、重试次数、测试连接；可以切换到内置模拟服务。窗口按屏幕缩放（150% 时控件放大 1.5 倍）</td><td>LabelServiceClientOptions、GetSchemaAsync</td></tr>
+            <tr><td>模板与数据</td><td>“刷新”列出这把 Key 能用的模板（启动时、测试连接成功后自动刷新），选中后读取字段。“单张数据”一个字段一行；“批量数据”一行一张标签，列是全部字段，可以加行、删行、从 Excel 复制粘贴。必填项为空时标红</td><td>ListTemplatesAsync、GetSchemaAsync、TemplateSchema</td></tr>
+            <tr><td>生成选项</td><td>格式、DPI、份数；批量按批量数据的行数生成，每条的数据都由调用方给全（不用公共字段，也不在客户端推算递增值）</td><td>RenderRequest、BatchRenderRequest</td></tr>
             <tr><td>预览</td><td>PNG 直接显示，批量显示缩略图，ZPL 显示指令和黑白效果，PDF 用默认程序打开</td><td>LabelFile</td></tr>
             <tr><td>发送到打印机</td><td>网络打印机（TCP 9100）或 Windows 打印机；PNG 按 DPI 原尺寸打印</td><td>NetworkPrinter、WindowsRawPrinter、PrintDocument</td></tr>
             <tr><td>调用代码</td><td>按当前设置生成可以直接复制的 C# 代码，有单张和批量两种写法</td><td>—</td></tr>
