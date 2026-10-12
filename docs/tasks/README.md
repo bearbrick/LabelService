@@ -45,11 +45,11 @@ Select-String -Path docs/tasks/T-*.md -Pattern '^(状态|负责人)：'
 | [T-026](T-026-system-info.md) | 系统信息设置和公司 Logo | 后端 + 前端 | 一期验收 | T-025 | `Domain/SystemSettings`、`Application/SystemSettings`、`src/pages/SettingsPage.vue` |
 | [T-027](T-027-ui-feedback.md) | 界面反馈修复：模板树拖宽、素材格子、工作台滚动条、下拉框、登录页公司信息 | 前端 + 后端 | 一期验收 | T-026 | `src/**/*.vue`、样式、`Domain/SystemSettings` |
 | [T-028](T-028-font-upload.md) | 字体由客户上传（ADR 0011） | 后端 + 前端 | 一期验收 | T-027 | `Rendering/Fonts`、`Application/Resources`、`src/pages/AssetsPage.vue` |
-| [T-029](T-029-logo-icon.md) | Logo 图标（顶栏、浏览器标签页）和 WebP 格式 | 后端 + 前端 | 一期验收 | T-028 | `Application/SystemSettings`、`src/pages/SettingsPage.vue` |
 | [T-031](T-031-functional-integration.md) | 最新代码上的隔离功能与页面修复整合 | 后端 + 前端 | 一期验收 | 固定 0456cb4 | Logs、Persistence、页面、检查程序 |
 | [T-032](T-032-layout-integration.md) | 页面与功能修复整合、缩放折叠及干净克隆回归 | 后端 + 前端 + 调用端 | 一期开发 | T-025、隔离候选 091c4e1 | Logs、Persistence、页面、浏览器回归 |
 | [T-029](T-029-segmented-review.md) | 分段按钮页面补丁独立审阅 | 前端 | 一期开发 | T-032 | style.css、浏览器回归 |
 | [T-030](T-030-page-compatibility.md) | 固定最新版本的页面与恢复兼容整合 | 后端 + 前端 | 一期开发 | T-025–T-028、1b5ec3a | 页面、Logs、Persistence、回归 |
+| [T-033](T-033-logo-icon.md) | Logo 图标（顶栏、浏览器标签页）和 WebP 格式 | 后端 + 前端 | 一期验收 | T-028、T-030 | `Application/SystemSettings`、`src/pages/SettingsPage.vue` |
 
 “主要目录”是相对于对应部分（`frontend/`、`backend/`、`client/`）的路径；后端的 Rendering、Server 指 `backend/src/LabelService.Rendering`、`backend/src/LabelService.Server`（T-023 起 Server 改名为 `LabelService.Api`，原来的模板存储、鉴权、日志等拆到 Domain、Application、Infrastructure，见 ADR 0010；已完成任务的“主要目录”保留当时的写法）。跨两个部分的任务（T-014、T-016、T-018、T-020）建议按部分拆成子任务分别认领；T-018 是契约变更，后端和调用端的契约副本要在同一个提交里改齐。
 
