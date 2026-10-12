@@ -9,6 +9,7 @@ import { iconUrl, logoUrl, resetIcon, resetLogo, saveSystemInfo, SYSTEM_INFO_LIM
 import type { SaveSystemInfo, SystemInfo } from '../api/system.ts'
 import AppIcon from '../components/AppIcon.vue'
 import BrandMark from '../components/admin/BrandMark.vue'
+import LoginBrand from '../components/admin/LoginBrand.vue'
 import { toast } from '../stores/designer.ts'
 import { confirmBox } from '../stores/dialogs.ts'
 import { go } from '../stores/router.ts'
@@ -262,8 +263,7 @@ async function restoreImage(slot: ImageSlot): Promise<void> {
                 <span v-if="preview.subtitle" class="brand-sub" :title="preview.subtitle">{{ preview.subtitle }}</span>
               </div>
               <div class="preview-login">
-                <BrandMark :info="preview" full />
-                <span class="eyebrow">{{ preview.companyName || 'LABEL SERVICE' }}</span>
+                <LoginBrand :info="preview" compact />
                 <b>{{ preview.loginTitle }}</b>
                 <p v-if="preview.loginIntro">{{ preview.loginIntro }}</p>
               </div>

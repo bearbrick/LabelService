@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /**
- * 公司 Logo 加系统名称：顶栏左上角、登录页、系统信息页的预览共用。
- * 紧凑（顶栏）先用 Logo 图标、没有时用完整 Logo；完整（登录页）先用完整 Logo、没有时用图标；都没上传时显示“公司 LOGO”占位。
+ * 公司 Logo 加系统名称：顶栏左上角和系统信息页的顶栏预览用（登录页用 LoginBrand）。
+ * 先用 Logo 图标，没有时用完整 Logo；都没上传时显示“公司 LOGO”占位。
  */
 import { computed } from 'vue'
 import { iconUrl, logoUrl } from '../../api/system.ts'
@@ -15,16 +15,12 @@ const props = defineProps<{
    * 要显示的系统信息（系统信息页预览时是还没保存的表单内容）。
    */
   info: SystemInfo
-  /**
-   * 是否显示完整 Logo（登录页，显示得更大）；不传时是紧凑的顶栏样式，优先用图标。
-   */
-  full?: boolean
 }>()
 
 /**
  * 要显示的图片地址；都没上传时为空字符串。
  */
-const url = computed(() => (props.full ? logoUrl(props.info) || iconUrl(props.info) : iconUrl(props.info) || logoUrl(props.info)))
+const url = computed(() => iconUrl(props.info) || logoUrl(props.info))
 
 /**
  * Logo 的替代文字和悬停提示：有公司名称时用公司名称。
@@ -33,7 +29,7 @@ const logoText = computed(() => props.info.companyName || '公司 Logo')
 </script>
 
 <template>
-  <span class="brand-mark" :class="{ full: props.full }">
+  <span class="brand-mark">
     <span class="company-logo" :title="logoText">
       <img v-if="url" :src="url" :alt="logoText" />
       <span v-else class="logo-placeholder">公司 LOGO</span>
