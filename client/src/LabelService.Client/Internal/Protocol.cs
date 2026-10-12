@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Text.Json;
 
 namespace LabelService.Client.Internal;
 
@@ -94,20 +93,6 @@ internal static class ServerTimingParser
 
         return result;
     }
-}
-
-/// <summary>
-/// 序列化设置。
-/// </summary>
-internal static class ClientJson
-{
-    /// <summary>
-    /// 读写接口 JSON 的设置：属性名不区分大小写。
-    /// </summary>
-    public static readonly JsonSerializerOptions Options = new JsonSerializerOptions
-    {
-        PropertyNameCaseInsensitive = true,
-    };
 }
 
 /// <summary>

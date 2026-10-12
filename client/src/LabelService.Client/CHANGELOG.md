@@ -9,9 +9,14 @@
 - `ListTemplatesAsync` / `ListTemplates`：列出这把 API Key 有权使用的已发布模板（`TemplateSummary`：编码、名称、最新版本、尺寸），对应服务端新增的 `GET /api/v1/templates`。`CallCompleted` 的操作名是 `ListTemplates`。
 - `TemplateField.Auto`：字段的自动值（如 `today`、`today+30d`、`index`、`client`），有自动值的字段不传时服务端自动算（服务端 T-038）。
 
+- 支持 .NET Framework 4.6.1：目标框架改成 `net461`、`netstandard2.0`、`net8.0`（ADR 0013）。
+
 ### 变更
 
 - `ILabelServiceClient` 增加上面两个方法：自己实现了这个接口的调用方（单元测试里的替身）要补上。
+- 不再依赖 System.Text.Json（JSON 读写是 SDK 自带的），SDK 没有任何 NuGet 依赖。
+- **不兼容：** `TemplateSchema.Sample` 从 `Dictionary<string, JsonElement>` 改成 `Dictionary<string, object?>`，`TemplateField.Default` 从 `JsonElement?` 改成 `object?`；值是 string、decimal、bool（JSON 对象、数组是 Dictionary、List）。原来写 `sample.GetString()`、`GetRawText()` 的改成 `Convert.ToString(value, CultureInfo.InvariantCulture)`；样例值可以直接 `request.Set(key, value)`。
+- `Set(key, value)` 传 `JsonElement` 时按文本发送（原来按 JSON 原样发送）；数字、布尔请传 .NET 的数字、bool。
 
 ## [1.0.0-preview.2] - 2026-10-10
 

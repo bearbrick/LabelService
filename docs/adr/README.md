@@ -49,3 +49,4 @@
 | [0010](0010-layered-architecture-and-databases.md) | 后端分层（领域驱动设计）与多数据库支持 | 已采纳 |
 | [0011](0011-customer-uploaded-fonts.md) | 字体由客户上传，发布包不再带字体 | 已采纳（发布包一条待确认） |
 | [0012](0012-field-auto-values.md) | 字段的自动值：调用方不传时由服务端算出来 | 已采纳 |
+| [0013](0013-sdk-own-json-net461.md) | SDK 自带 JSON 读写，最低支持 .NET Framework 4.6.1 | 已采纳 |

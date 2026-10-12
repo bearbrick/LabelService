@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Text.Json;
 
 namespace LabelService.Client.Internal;
 
@@ -43,7 +42,7 @@ internal static class Payloads
         AddSheet(body, request.Layout, request.StartSlot);
         body["copies"] = request.Copies;
         body["data"] = Values(request.Data);
-        return JsonSerializer.SerializeToUtf8Bytes(body, ClientJson.Options);
+        return JsonText.Serialize(body);
     }
 
     /// <summary>
@@ -92,7 +91,7 @@ internal static class Payloads
         body["output"] = request.Output == BatchOutput.Zip ? "zip" : "merge";
         body["common"] = Values(request.Common);
         body["items"] = items;
-        return JsonSerializer.SerializeToUtf8Bytes(body, ClientJson.Options);
+        return JsonText.Serialize(body);
     }
 
     /// <summary>
@@ -136,7 +135,7 @@ internal static class Payloads
     }
 
     /// <summary>
-    /// 把一个值转成可以直接序列化的形式：基本类型和 JsonElement 原样，日期转 ISO 8601，byte[] 转 base64，其他转字符串。
+    /// 把一个值转成可以直接序列化的形式：基本类型、字典和列表原样，日期转 ISO 8601，byte[] 转 base64，其他转字符串。
     /// </summary>
     /// <param name="value">调用方传的值。</param>
     /// <returns>转换后的值；null 仍是 null。</returns>
@@ -155,7 +154,7 @@ internal static class Payloads
             case float _:
             case double _:
             case decimal _:
-            case JsonElement _:
+            case System.Collections.IDictionary _:
                 return value;
             case DateTime date:
                 return date.TimeOfDay == TimeSpan.Zero

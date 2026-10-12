@@ -164,7 +164,7 @@ internal sealed partial class MainForm
             {
                 var value = old.TryGetValue(field.Key, out var typed) && typed.Length > 0
                     ? typed
-                    : schema.Sample.TryGetValue(field.Key, out var sample) ? (sample.ValueKind == System.Text.Json.JsonValueKind.String ? sample.GetString() ?? "" : sample.GetRawText()) : "";
+                    : schema.Sample.TryGetValue(field.Key, out var sample) ? System.Convert.ToString(sample, CultureInfo.InvariantCulture) ?? "" : "";
                 // 有自动值的字段不用填：不算必填，提示服务端会自动算
                 var index = fields.Rows.Add(field.Key, field.Name ?? "", field.Type, field.Required && field.Auto is null, value);
                 if (field.Auto is not null)

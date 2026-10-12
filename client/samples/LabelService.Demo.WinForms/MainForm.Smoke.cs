@@ -86,6 +86,13 @@ internal sealed partial class MainForm
         Check("生成单张 PNG，有预览图", result is { Format: LabelFormat.Png, LabelCount: 1 } && images.Count == 1);
         if (server is null)
         {
+            // 调用日志是 CallCompleted 事件异步加进列表的（BeginInvoke）：等这次生成的那条加进来再看，最多等 1 秒
+            for (var i = 0; i < 50 && (logList.Items.Count == 0 || logList.Items[0].SubItems[1].Text != "Render"); i++)
+            {
+                Application.DoEvents();
+                await Task.Delay(20);
+            }
+
             Check("模拟网络抖动：调用日志里第一条是重试 1 次后成功", logList.Items.Count > 0 && logList.Items[0].SubItems[6].Text == "1" && logList.Items[0].SubItems[9].Text.Contains("成功"));
         }
 

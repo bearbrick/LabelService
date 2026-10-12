@@ -2,8 +2,8 @@
 
 标签生成服务的 .NET 客户端：几行代码生成标签文件（PDF、PNG、ZPL），自带超时、重试和错误码映射，还有把 ZPL 直接送到标签打印机的辅助类。
 
-- 目标框架：`net462`（.NET Framework 4.6.2–4.8.1）、`netstandard2.0`、`net8.0`（.NET 8、9、10）
-- 依赖：.NET Framework 和 netstandard2.0 只依赖 `System.Text.Json`；net8.0 无额外依赖。不依赖 Newtonsoft.Json，也不依赖任何日志框架。
+- 目标框架：`net461`（.NET Framework 4.6.1–4.8.1）、`netstandard2.0`、`net8.0`（.NET 8、9、10）
+- 依赖：没有任何 NuGet 依赖（JSON 读写是自带的），.NET Framework 版只用框架自带的 System.Net.Http。不依赖 System.Text.Json、Newtonsoft.Json，也不依赖任何日志框架。
 
 ## 快速开始
 

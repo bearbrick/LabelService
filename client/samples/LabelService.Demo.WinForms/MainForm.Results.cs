@@ -430,7 +430,7 @@ internal sealed partial class MainForm
     /// </summary>
     private void ShowAbout() =>
         MessageBox.Show(this,
-            $"标签服务 SDK 调用演示　{SdkVersion}\r\n\r\nLabelService.Client.dll {SdkVersion}\r\n目标框架：net462 · netstandard2.0 · net8.0\r\n依赖：System.Text.Json 8.x（仅 .NET Framework 和 .NET Standard 版本）\r\n\r\n当前运行在 {RuntimeName}。演示程序同时提供 .NET Framework 4.8 和 .NET 10 两个版本，源码随 SDK 一起发给对接方。",
+            $"标签服务 SDK 调用演示　{SdkVersion}\r\n\r\nLabelService.Client.dll {SdkVersion}\r\n目标框架：net461 · netstandard2.0 · net8.0（.NET Framework 4.6.1 起）\r\n依赖：无（只用 .NET 自带的组件）\r\n\r\n当前运行在 {RuntimeName}。演示程序同时提供 .NET Framework 4.8 和 .NET 10 两个版本，源码随 SDK 一起发给对接方。",
             "关于 LabelServiceDemo", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
     /// <summary>

@@ -24,7 +24,7 @@ $root = Resolve-Path (Join-Path $PSScriptRoot '..\..')
 $project = Join-Path $root 'client\src\LabelService.Client\LabelService.Client.csproj'
 $demo = Join-Path $root 'client\samples\LabelService.Demo.WinForms'
 $out = Join-Path $root $Output
-$frameworks = @('net462', 'netstandard2.0', 'net8.0')
+$frameworks = @('net461', 'netstandard2.0', 'net8.0')
 
 function Invoke-Step([string]$name, [scriptblock]$block) {
     Write-Host "==> $name" -ForegroundColor Cyan
@@ -86,10 +86,10 @@ Get-ChildItem $demo -Recurse -File | Where-Object { $_.FullName -notmatch '\\(bi
 @"
 # 依赖
 
-- net462、netstandard2.0：需要 System.Text.Json 8.x（NuGet 包），net462 另需框架自带的 System.Net.Http。
-- net8.0：没有额外依赖。
+- 不依赖任何 NuGet 包（JSON 读写是 SDK 自带的，ADR 0013）。
+- net461（.NET Framework 4.6.1–4.8.1）只用框架自带的 System.Net.Http；netstandard2.0、net8.0 没有额外依赖。
 
-用 NuGet 包（LabelService.Client.$packageVersion.nupkg）引用时依赖会自动带上；直接引用 DLL 时自己加上 System.Text.Json。
+直接引用 lib 里的 DLL 也行，不用另外加包。
 
 演示程序 samples\LabelService.Demo.WinForms 引用的是 SDK 源码项目；单独编译时把项目引用换成 NuGet 包或 lib 里的 DLL。
 "@ | Set-Content -Encoding utf8 (Join-Path $staging 'DEPENDENCIES.md')

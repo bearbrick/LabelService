@@ -1020,12 +1020,12 @@ X-Api-Key: ********
         <div class="tw"><table>
           <thead><tr><th>目标框架</th><th>适用的调用方</th><th>额外依赖</th></tr></thead>
           <tbody>
-            <tr><td><code>net462</code></td><td>.NET Framework 4.6.2–4.8.1 的 WinForms、WPF、ASP.NET 系统，工厂现场最常见</td><td>System.Text.Json 8.x、System.Net.Http</td></tr>
-            <tr><td><code>netstandard2.0</code></td><td>Mono 等其他 .NET 实现</td><td>System.Text.Json 8.x</td></tr>
+            <tr><td><code>net461</code></td><td>.NET Framework 4.6.1–4.8.1 的 WinForms、WPF、ASP.NET 系统，工厂现场最常见</td><td>框架自带的 System.Net.Http</td></tr>
+            <tr><td><code>netstandard2.0</code></td><td>Mono 等其他 .NET 实现</td><td>无</td></tr>
             <tr><td><code>net8.0</code></td><td>.NET 8、9、10</td><td>无</td></tr>
           </tbody>
         </table></div>
-        <p>不依赖 Newtonsoft.Json，也不依赖任何日志框架，避免和调用方已有的版本冲突；日志通过事件交给调用方自己记。</p>
+        <p>不依赖任何 NuGet 包（JSON 读写是 SDK 自带的，不用 System.Text.Json、Newtonsoft.Json），也不依赖任何日志框架，避免和调用方已有的版本冲突；日志通过事件交给调用方自己记（ADR 0013）。</p>
 
         <h3>公开 API</h3>
         <div class="tw"><table>
@@ -1036,7 +1036,7 @@ X-Api-Key: ********
             <tr><td><code>RenderRequest</code></td><td>TemplateCode、Version、Format、Dpi、Mono、Copies、Layout、StartSlot、Data、Set(key, value)</td><td>单张请求，Set 可以链式调用</td></tr>
             <tr><td><code>BatchRenderRequest</code></td><td>TemplateCode、Version、Format、Dpi、Output（Merge / Zip）、Layout、StartSlot、Common、Items、SetCommon()、AddItem()</td><td>批量请求，公共字段只传一次</td></tr>
             <tr><td><code>LabelFile</code></td><td>Content、ContentType、FileName、Format、IsZip、TemplateVersion、LabelCount、PageCount、Dpi、TraceId、RequestId、ServerDuration、ServerTiming、Warnings、Save()、SaveAsync()、OpenRead()、GetZplText()</td><td>生成结果，属性来自响应头</td></tr>
-            <tr><td><code>TemplateSchema</code></td><td>TemplateCode、Name、Version、Page、Fields、Sample</td><td>字段定义，演示程序用它生成录入表格</td></tr>
+            <tr><td><code>TemplateSchema</code></td><td>TemplateCode、Name、Version、Page、Fields、Sample</td><td>字段定义，演示程序用它生成录入表格；Sample 的值是 string、decimal、bool，可以直接 Set 进请求</td></tr>
             <tr><td><code>TemplateSummary</code></td><td>TemplateCode、Name、Version、Page</td><td>模板列表的一项，演示程序用它刷新模板编码下拉框</td></tr>
             <tr><td><code>LabelServiceException</code></td><td>StatusCode、ErrorCode、Message、TraceId、Errors、IsTransient</td><td>服务端错误和网络错误都转成它</td></tr>
             <tr><td><code>LabelErrorCodes</code></td><td>FieldRequired、TemplateNotFound 等常量</td><td>和第 8 节的错误码一一对应</td></tr>
@@ -1213,7 +1213,7 @@ catch (LabelServiceException ex) when (ex.IsTransient)
         <h3>工程结构</h3>
 <pre><code>LabelService/client/                    调用端，和 frontend/、backend/ 并列，单独管理
 ├─ LabelService.Client.slnx
-├─ src/LabelService.Client/            SDK：net462、netstandard2.0、net8.0，不引用服务端程序集
+├─ src/LabelService.Client/            SDK：net461、netstandard2.0、net8.0，不引用服务端程序集
 ├─ samples/LabelService.Demo.WinForms/ 演示程序：net48、net10.0-windows
 │  └─ Mock/MockLabelServiceHandler.cs  内置模拟服务（HttpMessageHandler）
 └─ tests/LabelService.Client.Checks/   控制台检查程序：对模拟响应跑全部用例，有真实服务时再跑端到端</code></pre>

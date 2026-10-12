@@ -5,7 +5,7 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
   </PropertyGroup>
 
-  <ItemGroup Label="SDK（net462、netstandard2.0）">
+  <ItemGroup Label="演示程序 net48 版的内置模拟服务（SDK 本身不依赖任何包）">
     <PackageVersion Include="System.Text.Json" Version="8.0.6" />
   </ItemGroup>
 
