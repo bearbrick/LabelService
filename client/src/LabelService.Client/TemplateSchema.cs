@@ -1,5 +1,3 @@
-using System.Text.Json;
-
 namespace LabelService.Client;
 
 /// <summary>
@@ -36,9 +34,9 @@ public sealed class TemplateSchema
     public List<TemplateField> Fields { get; set; } = new List<TemplateField>();
 
     /// <summary>
-    /// 样例数据，可以直接作为请求数据使用。
+    /// 样例数据，可以直接作为请求数据使用（`request.Set(key, value)`）。值是 string、decimal、bool，JSON 对象、数组读成 Dictionary、List。
     /// </summary>
-    public Dictionary<string, JsonElement> Sample { get; set; } = new Dictionary<string, JsonElement>();
+    public Dictionary<string, object?> Sample { get; set; } = new Dictionary<string, object?>();
 }
 
 /// <summary>
@@ -68,20 +66,6 @@ public sealed class TemplateSummary
     /// 标签尺寸和默认 DPI。
     /// </summary>
     public TemplatePage Page { get; set; } = new TemplatePage();
-}
-
-/// <summary>
-/// GET /api/v1/templates 的响应体。
-/// </summary>
-internal sealed class TemplateListBody
-{
-    /// <summary>
-    /// 模板；服务端没返回时为 null。
-    /// </summary>
-    public List<TemplateSummary>? Templates
-    {
-        get; set;
-    }
 }
 
 /// <summary>
@@ -143,9 +127,9 @@ public sealed class TemplateField
     public bool Required { get; set; } = true;
 
     /// <summary>
-    /// 不传时使用的默认值。
+    /// 不传时使用的固定默认值：string、decimal、bool 等；没有时为 null。
     /// </summary>
-    public JsonElement? Default
+    public object? Default
     {
         get; set;
     }
