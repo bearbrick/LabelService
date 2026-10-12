@@ -29,9 +29,20 @@
 
 .login-product b { font-size: 26px; font-weight: 600; line-height: 1.3; letter-spacing: 2px; color: #fff; overflow-wrap: anywhere; }
 
-.login-product span { font-size: 13px; letter-spacing: 1px; color: #91acd3; }
+.login-product span { font-size: 13px; line-height: 1.5; letter-spacing: 1px; color: #91acd3; }
 
 .login-brand .eyebrow { color: #91acd3; letter-spacing: 2px; font-size: 12px; }
+
+/* 登录页左右两栏对齐：上边距一样；第一行（Logo 卡片 / ACCOUNT LOGIN）都是 56px 高、垂直居中；第二行（系统名称 / 登录）字号和行高一样；第三行（副标题 / 说明）一样 */
+@media (min-width: 860px) {
+  .login-intro, .login-form { padding-top: 44px; }
+
+  .login-brand > .eyebrow, .login-form > .eyebrow { height: 56px; display: flex; align-items: center; }
+
+  .login-form h2 { font-size: 26px; line-height: 1.3; letter-spacing: 2px; margin: 24px 0 6px; }
+
+  .login-form > p { font-size: 13px; line-height: 1.5; }
+}
 
 .login-brand.compact { gap: 10px; margin-bottom: 4px; }
 
