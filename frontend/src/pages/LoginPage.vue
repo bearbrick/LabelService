@@ -6,7 +6,7 @@
 import { reactive } from 'vue'
 import { errorText } from '../api/http.ts'
 import AppIcon from '../components/AppIcon.vue'
-import BrandMark from '../components/admin/BrandMark.vue'
+import LoginBrand from '../components/admin/LoginBrand.vue'
 import { toast } from '../stores/designer.ts'
 import { session, signIn } from '../stores/session.ts'
 import { system } from '../stores/system.ts'
@@ -75,8 +75,7 @@ function forgotText(): string {
   <div class="login-page">
     <div class="login-shell">
       <div class="login-intro">
-        <BrandMark :info="system.info" full />
-        <span class="eyebrow">{{ system.info.companyName || 'LABEL SERVICE' }}</span>
+        <LoginBrand :info="system.info" />
         <h1 class="login-title">{{ system.info.loginTitle }}</h1>
         <p v-if="system.info.loginIntro" class="login-intro-text">{{ system.info.loginIntro }}</p>
         <div class="login-tags"><span>标签纸 / A4 / A5 唛头</span><span>条码按 DPI 对齐</span><span>版本发布</span><span>按业务隔离权限</span></div>

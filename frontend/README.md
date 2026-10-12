@@ -70,7 +70,7 @@ frontend/
    ├─ composables/                   组件用的组合函数：useTextEdit（画布上直接编辑文本）、useCanvasDrop（拖放到画布）、useAvailableLayouts（隔离过期异步结果）
    ├─ pages/                         管理后台的页面（每页一个文件）
    ├─ components/                    设计器：工具栏、左侧面板、画布、属性面板、状态栏
-   │  ├─ admin/                      顶栏（左上角 BrandMark：公司 Logo 加系统名称）、模板树、弹窗、新建模板、缩略图、接口调试面板
+   │  ├─ admin/                      顶栏（左上角 BrandMark：公司 Logo 加系统名称）、登录页品牌区（LoginBrand：Logo 单独一行，下面系统名称和副标题）、模板树、弹窗、新建模板、缩略图、接口调试面板
    │  ├─ workspace/                  模板工作区的数据源、版本记录、发布对话框
    │  └─ sheet/                      拼版设计器：工具栏和快捷键、左侧模板和自动排列、画布、右侧属性和预览
    └─ samples/box-label.json         示例模板（和 backend/samples/templates 保持一致）
