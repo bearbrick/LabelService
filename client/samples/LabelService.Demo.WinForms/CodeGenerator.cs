@@ -5,13 +5,13 @@ using LabelService.Client;
 namespace LabelService.Demo;
 
 /// <summary>
-/// 按演示程序左边的当前设置生成可以直接复制的 C# 代码（“调用代码”页签）。
+/// 按演示程序左边的当前设置生成可以直接复制的 C# 代码（“调用代码”页签）：建客户端、生成、保存文件、发送到打印机、处理错误。
 /// </summary>
 /// <remarks>
 /// 生成的代码只用 C# 7.3 的语法（.NET Framework 4.6.2+ 的默认版本），在新建的 .NET Framework 4.8 和 .NET 10 控制台项目里都能编译：
 /// 引用 LabelService.Client 包后，把代码放进 Program.cs 即可。API Key 从环境变量读，不写进代码。
 /// </remarks>
-internal static class CodeGenerator
+internal static partial class CodeGenerator
 {
     /// <summary>
     /// 批量写法最多写出几条数据（再多只在注释里写总条数）。
@@ -97,16 +97,24 @@ internal static class CodeGenerator
     {
         var format = "LabelFormat." + settings.Format;
         var code = new StringBuilder();
-        code.AppendLine("using System;");
-        code.AppendLine("using System.IO;");
-        code.AppendLine("using System.Threading.Tasks;");
-        code.AppendLine("using LabelService.Client;");
+        AppendHeader(code, settings);
+
+        // System 开头的排前面，其余按字母顺序（和常见的 using 排法一致）
+        var usings = new[] { "System", "System.IO", "System.Threading.Tasks", "LabelService.Client" }.Concat(PrintUsings(settings))
+            .OrderBy(name => name == "System" || name.StartsWith("System.", StringComparison.Ordinal) ? 0 : 1)
+            .ThenBy(name => name, StringComparer.Ordinal);
+        foreach (var name in usings)
+        {
+            code.AppendLine($"using {name};");
+        }
+
         code.AppendLine();
         code.AppendLine("internal static class Program");
         code.AppendLine("{");
+        AppendPrinterSettings(code, settings);
         code.AppendLine("    private static async Task Main()");
         code.AppendLine("    {");
-        // 生成的代码：建客户端（Key 从环境变量读）→ 单张或批量调用 → 保存文件 → 捕获 LabelServiceException。
+        // 生成的代码：建客户端（Key 从环境变量读）→ 单张或批量调用 → 保存文件 → 发送到打印机 → 捕获 LabelServiceException 和打印机的错误。
         code.AppendLine("        // 应用内只建一个客户端实例，多线程共享。API Key 放配置文件或环境变量，不要写进代码。");
         code.AppendLine("        var client = new LabelServiceClient(new LabelServiceClientOptions");
         code.AppendLine("        {");
@@ -127,6 +135,7 @@ internal static class CodeGenerator
             AppendSingle(code, settings, format);
         }
 
+        AppendPrintCall(code, settings);
         code.AppendLine("        }");
         code.AppendLine("        catch (LabelServiceException ex) when (ex.ErrorCode == LabelErrorCodes.FieldRequired)");
         code.AppendLine("        {");
@@ -138,7 +147,9 @@ internal static class CodeGenerator
         code.AppendLine("            // ex.IsTransient 为 true 时 SDK 已经自动重试过，可以稍后再试；反馈问题时带上 traceId。");
         code.AppendLine("            Console.WriteLine(ex.ErrorCode + \"：\" + ex.Message + \"（traceId \" + ex.TraceId + \"）\");");
         code.AppendLine("        }");
+        AppendPrintCatch(code, settings);
         code.AppendLine("    }");
+        AppendPrintMethods(code, settings);
         code.AppendLine("}");
         return code.ToString();
     }
@@ -171,7 +182,8 @@ internal static class CodeGenerator
 
         code.AppendLine();
         code.AppendLine("            LabelFile file = await client.RenderAsync(request);");
-        code.AppendLine("            file.Save(Path.Combine(Path.GetTempPath(), file.FileName));");
+        code.AppendLine("            var path = Path.Combine(Path.GetTempPath(), file.FileName);");
+        code.AppendLine("            file.Save(path);   // 留一份文件，打印出问题时好查、好重打");
         code.AppendLine("            Console.WriteLine(file.FileName + \"，\" + file.LabelCount + \" 张，服务端 \" + file.ServerDuration?.TotalMilliseconds + \" ms，traceId \" + file.TraceId);");
     }
 
@@ -215,7 +227,8 @@ internal static class CodeGenerator
 
         code.AppendLine();
         code.AppendLine("            LabelFile file = await client.RenderBatchAsync(batch);");
-        code.AppendLine("            file.Save(Path.Combine(Path.GetTempPath(), file.FileName));");
+        code.AppendLine("            var path = Path.Combine(Path.GetTempPath(), file.FileName);");
+        code.AppendLine("            file.Save(path);   // 留一份文件，打印出问题时好查、好重打");
         code.AppendLine("            Console.WriteLine(file.FileName + \"，\" + file.LabelCount + \" 张，服务端 \" + file.ServerDuration?.TotalMilliseconds + \" ms\");");
     }
 

@@ -89,6 +89,13 @@ internal sealed class MockLabelServiceHandler : HttpMessageHandler
         if (request.Method == HttpMethod.Post && (path == "/api/v1/render" || path == "/api/v1/render/batch"))
         {
             using var body = JsonDocument.Parse(await request.Content!.ReadAsStringAsync().ConfigureAwait(false));
+
+            // A4 唛头这样的大模板用来演示“慢调用”：固定多等 110 ms，保证服务端耗时超过 100 ms，不看机器快慢
+            if (MockTemplates.Find(Text(body.RootElement, "templateCode")) is { Width: > 150 })
+            {
+                await Task.Delay(110, cancellationToken).ConfigureAwait(false);
+            }
+
             return path.EndsWith("/batch", StringComparison.Ordinal) ? RenderBatch(body.RootElement, started) : RenderSingle(body.RootElement, started);
         }
 
