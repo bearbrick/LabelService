@@ -14,6 +14,8 @@
     <!-- 模拟服务（HttpMessageHandler）和批量 ZIP 的预览 -->
     <Reference Include="System.Net.Http" />
     <Reference Include="System.IO.Compression" />
+    <!-- 内置模拟服务解析请求、写响应用；.NET 10 自带，SDK 本身不依赖它 -->
+    <PackageReference Include="System.Text.Json" />
   </ItemGroup>
 
   <ItemGroup>

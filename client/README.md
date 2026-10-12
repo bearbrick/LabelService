@@ -6,10 +6,10 @@
 client/
 ├─ LabelService.Client.slnx
 ├─ Directory.Build.props          调用端全部项目的编译设置
-├─ Directory.Packages.props       调用端的 NuGet 版本（只有 System.Text.Json）
+├─ Directory.Packages.props       调用端的 NuGet 版本（只有演示程序 .NET Framework 版的模拟服务用 System.Text.Json，SDK 不依赖任何包）
 ├─ build/pack.ps1                打包：nupkg（含 snupkg）和 zip，可选强名称和 Authenticode 签名
 ├─ src/
-│  └─ LabelService.Client/        SDK：net462、netstandard2.0、net8.0；包里的 README.md、CHANGELOG.md 也在这里
+│  └─ LabelService.Client/        SDK：net461、netstandard2.0、net8.0；包里的 README.md、CHANGELOG.md 也在这里
 ├─ samples/
 │  └─ LabelService.Demo.WinForms/ 演示程序：net48、net10.0-windows
 └─ tests/
@@ -99,7 +99,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\client\build\pack.ps1 -Ver
 
 ## 要点
 
-- SDK 必须能编译到 net462：不用 record、init、required 等新语法，不加 Newtonsoft.Json 或日志框架依赖（检查程序会拦）。
+- SDK 必须能编译到 net461（ADR 0013）：不用 record、init、required 等新语法，不依赖任何 NuGet 包，JSON 读写用自带的 `Internal/JsonText.cs`（检查程序会拦）。
 - 错误码 `LabelErrorCodes` 和 HTTP 头 `Internal/Protocol.cs` 是后端契约的副本，后端检查程序会核对一致。
 - 公开 API 变化要同步设计书第 10 节，遵守语义化版本。
 - 注释（AGENTS.md R5）：SDK、演示程序、检查程序的每个类型和成员都写完整的 XML 注释，检查程序核对（演示程序按 net10.0-windows 的编译结果核对，要先编译解决方案；没有 Windows 桌面运行时的环境跳过演示程序）。
