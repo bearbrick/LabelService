@@ -7,8 +7,8 @@ namespace LabelService.Demo;
 /// 调用代码里“发送到打印机”的部分：按输出格式写出打印方法、要用的命名空间和打印出错时的处理。
 /// </summary>
 /// <remarks>
-/// ZPL 直接发给标签打印机（网络 TCP 9100，或 USB 打印机按 RAW 写入打印队列）；PNG 用 Windows 打印机按标签原尺寸打印（批量是 ZIP，逐张打）；
-/// PDF 交给本机的 PDF 阅读器打印。生成的代码只用 C# 7.3 的语法。
+/// ZPL 直接把文件发给标签打印机（网络 TCP 9100，或 USB 打印机按 RAW 写入打印队列）；PNG 用 PrintDocument 按“像素 ÷ DPI”画成实际尺寸
+/// （批量是 ZIP，逐张打）；PDF 交给本机的 PDF 阅读器打印，打印机支持 PDF 直接打印时也可以直接发文件。生成的代码只用 C# 7.3 的语法。
 /// </remarks>
 internal static partial class CodeGenerator
 {
@@ -148,15 +148,10 @@ internal static partial class CodeGenerator
                                 {
                                     foreach (var entry in zip.Entries)
                                     {
-                                        using (var stream = entry.Open())
-                                        using (var memory = new MemoryStream())
+                                        using (var png = new MemoryStream())
                                         {
-                                            stream.CopyTo(memory);
-                                            memory.Position = 0;
-                                            using (var image = Image.FromStream(memory))
-                                            {
-                                                PrintImage(image, file.Dpi, entry.Name);
-                                            }
+                                            using (var stream = entry.Open()) stream.CopyTo(png);
+                                            PrintImage(png, file.Dpi);
                                         }
                                     }
                                 }
@@ -164,43 +159,24 @@ internal static partial class CodeGenerator
 
                         """
                     : """
-                            // PNG：用 Windows 打印机按标签原尺寸打印。
+                            // PNG：用 Windows 打印机打印。
                             private static void Print(LabelFile file)
                             {
-                                using (var image = Image.FromStream(new MemoryStream(file.Content)))
-                                {
-                                    PrintImage(image, file.Dpi, file.FileName);
-                                }
+                                PrintImage(new MemoryStream(file.Content), file.Dpi);
                             }
 
                         """);
                 code.Append("""
 
-                        // 按标签的实际尺寸打印一张图：像素 ÷ DPI = 英寸，PrintDocument 的单位是 1/100 英寸；纸张设成标签大小，页边距为 0。
-                        private static void PrintImage(Image image, int dpi, string documentName)
+                        // PrintDocument 不能直接收文件，要在 PrintPage 里把图画到纸上。按“像素 ÷ DPI”画成标签的实际尺寸（单位是 1/100 英寸）：
+                        // 不能缩放，否则条码扫不出来。纸张大小用打印机驱动里的设置（标签打印机在驱动里设成标签尺寸）。
+                        private static void PrintImage(Stream png, int dpi)
                         {
-                            if (dpi <= 0)
-                            {
-                                dpi = 300;
-                            }
-
-                            var width = image.Width * 100 / dpi;
-                            var height = image.Height * 100 / dpi;
+                            using (var image = Image.FromStream(png))
                             using (var document = new PrintDocument())
                             {
-                                document.DocumentName = documentName;
-                                if (PrinterName.Length > 0)
-                                {
-                                    document.PrinterSettings.PrinterName = PrinterName;
-                                }
-
-                                document.DefaultPageSettings.PaperSize = new PaperSize("Label", width, height);
-                                document.DefaultPageSettings.Margins = new Margins(0, 0, 0, 0);
-                                document.PrintPage += (sender, e) =>
-                                {
-                                    e.Graphics.DrawImage(image, new Rectangle(0, 0, width, height));
-                                    e.HasMorePages = false;
-                                };
+                                if (PrinterName.Length > 0) document.PrinterSettings.PrinterName = PrinterName;
+                                document.PrintPage += (sender, e) => e.Graphics.DrawImage(image, 0, 0, image.Width * 100f / dpi, image.Height * 100f / dpi);
                                 document.Print();
                             }
                         }
@@ -209,11 +185,15 @@ internal static partial class CodeGenerator
                 break;
             default:
                 code.Append("""
-                        // PDF：标签打印机一般不能直接收 PDF，交给本机的 PDF 阅读器打印（要装支持“打印”命令的阅读器，如 Adobe Reader、福昕）。
-                        // A4 拼版用激光打印机打时也可以这样；要静默、批量打标签，建议改用 ZPL 发给标签打印机。
+                        // PDF：.NET 自己读不了 PDF，PrintDocument 也打不了。
                         private static void Print(string path)
                         {
+                            // 方式一：交给本机的 PDF 阅读器，用 Windows 默认打印机打印（要装支持“打印”命令的阅读器，如 Adobe Reader、福昕）。
                             Process.Start(new ProcessStartInfo(path) { Verb = "print", UseShellExecute = true });
+
+                            // 方式二：打印机本身支持 PDF 直接打印（不少办公激光打印机支持，说明书里叫“PDF 直接打印”或 PDF Direct）时，
+                            // 像 ZPL 一样把文件直接发过去，不用装阅读器（用这种时把上面一行注释掉）：
+                            // LabelService.Client.Printing.WindowsRawPrinter.Send("打印机名称", File.ReadAllBytes(path), Path.GetFileName(path));
                         }
 
                     """);

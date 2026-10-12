@@ -177,12 +177,12 @@ internal sealed partial class MainForm
                 File.WriteAllText(Path.Combine(directory, $"Program.{radio.Text}.{(batchCode ? "Batch" : "Single")}.cs.txt"), codeText.Text, Encoding.UTF8);
                 if (radio == png)
                 {
-                    Check($"调用代码：PNG {(batchCode ? "批量（ZIP 逐张）" : "单张")}用 PrintDocument 按原尺寸打印",
-                        codeText.Text.Contains("new PaperSize(\"Label\", width, height)") && codeText.Text.Contains(batchCode ? "new ZipArchive(file.OpenRead()" : "Image.FromStream(new MemoryStream(file.Content))"));
+                    Check($"调用代码：PNG {(batchCode ? "批量（ZIP 逐张）" : "单张")}用 PrintDocument 按“像素 ÷ DPI”画成实际尺寸",
+                        codeText.Text.Contains("e.Graphics.DrawImage(image, 0, 0, image.Width * 100f / dpi, image.Height * 100f / dpi)") && codeText.Text.Contains(batchCode ? "new ZipArchive(file.OpenRead()" : "PrintImage(new MemoryStream(file.Content), file.Dpi)"));
                 }
                 else if (radio == pdf)
                 {
-                    Check($"调用代码：PDF {(batchCode ? "批量" : "单张")}交给 PDF 阅读器打印", codeText.Text.Contains("Verb = \"print\"") && codeText.Text.Contains("Print(path);"));
+                    Check($"调用代码：PDF {(batchCode ? "批量" : "单张")}交给 PDF 阅读器打印，也写了打印机支持 PDF 直接打印时的写法", codeText.Text.Contains("Verb = \"print\"") && codeText.Text.Contains("Print(path);") && codeText.Text.Contains("WindowsRawPrinter.Send("));
                 }
             }
         }
