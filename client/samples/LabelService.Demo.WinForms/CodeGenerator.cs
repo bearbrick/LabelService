@@ -5,10 +5,10 @@ using LabelService.Client;
 namespace LabelService.Demo;
 
 /// <summary>
-/// 按演示程序左边的当前设置生成可以直接复制的 C# 代码（“调用代码”页签）：建客户端、生成、保存文件、发送到打印机、处理错误。
+/// 按演示程序左边的当前设置生成可以直接复制的 C# 代码（“调用代码”页签）：建客户端、生成、发送到打印机（三种格式的打法都写全）、处理错误。
 /// </summary>
 /// <remarks>
-/// 生成的代码只用 C# 7.3 的语法（.NET Framework 4.6.2+ 的默认版本），在新建的 .NET Framework 4.8 和 .NET 10 控制台项目里都能编译：
+/// 生成的代码只用 C# 7.3 的语法（.NET Framework 4.6.1+ 的默认版本），在新建的 .NET Framework 4.8 和 .NET 10 控制台项目里都能编译：
 /// 引用 LabelService.Client 包后，把代码放进 Program.cs 即可。API Key 从环境变量读，不写进代码。
 /// </remarks>
 internal static partial class CodeGenerator
@@ -97,10 +97,10 @@ internal static partial class CodeGenerator
     {
         var format = "LabelFormat." + settings.Format;
         var code = new StringBuilder();
-        AppendHeader(code, settings);
+        AppendHeader(code);
 
         // System 开头的排前面，其余按字母顺序（和常见的 using 排法一致）
-        var usings = new[] { "System", "System.IO", "System.Threading.Tasks", "LabelService.Client" }.Concat(PrintUsings(settings))
+        var usings = new[] { "System", "System.IO", "System.Threading.Tasks", "LabelService.Client" }.Concat(PrintUsings)
             .OrderBy(name => name == "System" || name.StartsWith("System.", StringComparison.Ordinal) ? 0 : 1)
             .ThenBy(name => name, StringComparer.Ordinal);
         foreach (var name in usings)
@@ -111,10 +111,10 @@ internal static partial class CodeGenerator
         code.AppendLine();
         code.AppendLine("internal static class Program");
         code.AppendLine("{");
-        AppendPrinterSettings(code, settings);
+        AppendPrinterSettings(code);
         code.AppendLine("    private static async Task Main()");
         code.AppendLine("    {");
-        // 生成的代码：建客户端（Key 从环境变量读）→ 单张或批量调用 → 保存文件 → 发送到打印机 → 捕获 LabelServiceException 和打印机的错误。
+        // 生成的代码：建客户端（Key 从环境变量读）→ 单张或批量调用 → 发送到打印机 → 捕获 LabelServiceException 和打印机的错误。
         code.AppendLine("        // 应用内只建一个客户端实例，多线程共享。API Key 放配置文件或环境变量，不要写进代码。");
         code.AppendLine("        var client = new LabelServiceClient(new LabelServiceClientOptions");
         code.AppendLine("        {");
@@ -135,7 +135,7 @@ internal static partial class CodeGenerator
             AppendSingle(code, settings, format);
         }
 
-        AppendPrintCall(code, settings);
+        AppendPrintCall(code);
         code.AppendLine("        }");
         code.AppendLine("        catch (LabelServiceException ex) when (ex.ErrorCode == LabelErrorCodes.FieldRequired)");
         code.AppendLine("        {");
@@ -147,15 +147,15 @@ internal static partial class CodeGenerator
         code.AppendLine("            // ex.IsTransient 为 true 时 SDK 已经自动重试过，可以稍后再试；反馈问题时带上 traceId。");
         code.AppendLine("            Console.WriteLine(ex.ErrorCode + \"：\" + ex.Message + \"（traceId \" + ex.TraceId + \"）\");");
         code.AppendLine("        }");
-        AppendPrintCatch(code, settings);
+        AppendPrintCatch(code);
         code.AppendLine("    }");
-        AppendPrintMethods(code, settings);
+        AppendPrintMethods(code);
         code.AppendLine("}");
         return code.ToString();
     }
 
     /// <summary>
-    /// 写单张调用：RenderRequest 加字段值、DPI、份数，调 RenderAsync 并保存文件。
+    /// 写单张调用：RenderRequest 加字段值、DPI、份数（ZPL 没指定 DPI、PDF 和 PNG 的拼版写成注释），调 RenderAsync。
     /// </summary>
     /// <param name="code">正在生成的代码。</param>
     /// <param name="settings">当前设置。</param>
@@ -180,13 +180,15 @@ internal static partial class CodeGenerator
             code.AppendLine($"            request.Copies = {settings.Copies};");
         }
 
+        AppendOptionHints(code, settings, "request");
+
         code.AppendLine();
         code.AppendLine("            LabelFile file = await client.RenderAsync(request);");
         code.AppendLine("            Console.WriteLine(file.FileName + \"，\" + file.LabelCount + \" 张，服务端 \" + file.ServerDuration?.TotalMilliseconds + \" ms，traceId \" + file.TraceId);");
     }
 
     /// <summary>
-    /// 写批量调用：每条用 AddItem().Set(...) 把字段给全（调用方准备好每条的数据，不用公共字段），PNG 时选 ZIP 输出。
+    /// 写批量调用：每条用 AddItem().Set(...) 把字段给全（调用方准备好每条的数据，不用公共字段），PNG 时选 ZIP 输出；ZPL 没指定 DPI、PDF 和 PNG 的拼版写成注释。
     /// </summary>
     /// <param name="code">正在生成的代码。</param>
     /// <param name="settings">当前设置。</param>
@@ -199,6 +201,8 @@ internal static partial class CodeGenerator
         {
             code.AppendLine($"            batch.Dpi = {dpi};");
         }
+
+        AppendOptionHints(code, settings, "batch");
 
         code.AppendLine();
         code.AppendLine("            // 每条标签的数据都由调用方给全，要几张就加几条，SDK 原样发给服务端。");
@@ -226,6 +230,27 @@ internal static partial class CodeGenerator
         code.AppendLine();
         code.AppendLine("            LabelFile file = await client.RenderBatchAsync(batch);");
         code.AppendLine("            Console.WriteLine(file.FileName + \"，\" + file.LabelCount + \" 张，服务端 \" + file.ServerDuration?.TotalMilliseconds + \" ms\");");
+    }
+
+    /// <summary>
+    /// 写成注释的可选设置：ZPL 没指定 DPI 时提示要和打印机一致；PDF、PNG 提示可以拼版（多张排在 A4 纸上，打出来是多页）。
+    /// </summary>
+    /// <param name="code">正在生成的代码。</param>
+    /// <param name="settings">当前设置。</param>
+    /// <param name="variable">请求变量名：request 或 batch。</param>
+    private static void AppendOptionHints(StringBuilder code, Settings settings, string variable)
+    {
+        if (settings.Format == LabelFormat.Zpl)
+        {
+            if (settings.Dpi is null)
+            {
+                code.AppendLine($"            // {variable}.Dpi = 300;   // ZPL 要和标签打印机的分辨率一致（203、300 或 600），不写时用模板里设的");
+            }
+
+            return;
+        }
+
+        code.AppendLine($"            // {variable}.Layout = \"A4_100x60_2x4\";   // 拼版：多张排在 A4 等纸上打，打出来是多页；版式编码在管理后台“拼版版式”里看（ZPL 不支持）");
     }
 
     /// <summary>
