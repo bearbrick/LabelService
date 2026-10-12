@@ -25,6 +25,9 @@
 
 .login-logo img { display: block; height: 100%; max-width: 260px; object-fit: contain; }
 
+/* 深色背景 Logo（白色透明的反白图）：直接放在深蓝底上，和白底卡片一样高，左右两栏照样对齐 */
+.login-logo-dark { display: block; height: 56px; max-width: min(300px, 100%); object-fit: contain; object-position: left center; }
+
 .login-product { display: grid; gap: 6px; min-width: 0; max-width: 100%; }
 
 .login-product b { font-size: 26px; font-weight: 600; line-height: 1.3; letter-spacing: 2px; color: #fff; overflow-wrap: anywhere; }
@@ -49,6 +52,8 @@
 .login-brand.compact .login-logo { height: 38px; padding: 5px 10px; border-radius: 6px; box-shadow: none; }
 
 .login-brand.compact .login-logo img { max-width: 180px; }
+
+.login-brand.compact .login-logo-dark { height: 38px; max-width: 200px; }
 
 .login-brand.compact .login-product { gap: 2px; }
 
@@ -120,3 +125,6 @@ table.grid td select.sel, table.grid td select.sel:hover, table.grid td select.s
 .logo-slot-body .btn.ghost { color: #fff; }
 .company-logo.big { height: 60px; max-width: 300px; padding: 6px 12px; }
 .company-logo.big img { max-height: 48px; max-width: 276px; }
+
+/* 系统信息页里深色背景 Logo 的预览：不加白框，直接放在深蓝底上 */
+.company-logo.dark { background: transparent; padding: 0; }

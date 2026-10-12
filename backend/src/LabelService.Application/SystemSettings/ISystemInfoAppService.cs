@@ -63,4 +63,25 @@ public interface ISystemInfoAppService
     /// </summary>
     /// <returns>修改后的系统信息。</returns>
     Task<SystemInfoDto> ResetIconAsync();
+
+    /// <summary>
+    /// 当前的深色背景 Logo 文件（登录页深蓝底上用）。
+    /// </summary>
+    /// <param name="cancellationToken">取消令牌。</param>
+    /// <returns>图片文件。</returns>
+    /// <exception cref="Domain.Shared.UserFriendlyException">还没上传（NOT_FOUND）。</exception>
+    Task<AssetFileDto> GetLogoDarkAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// 上传深色背景 Logo（白色或浅色、透明背景的 PNG、SVG、WebP，不超过 1 MB），替换原来的。
+    /// </summary>
+    /// <param name="input">上传的文件。</param>
+    /// <returns>修改后的系统信息（深色背景 Logo 的版本变了）。</returns>
+    Task<SystemInfoDto> UploadLogoDarkAsync(UploadAssetInput? input);
+
+    /// <summary>
+    /// 删除深色背景 Logo，登录页改回白底卡片放完整 Logo。
+    /// </summary>
+    /// <returns>修改后的系统信息。</returns>
+    Task<SystemInfoDto> ResetLogoDarkAsync();
 }

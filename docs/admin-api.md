@@ -107,6 +107,7 @@
 | POST | `/system-info/logo` | sys.settings | multipart，字段 `file`；PNG、JPG、SVG、WebP，≤ 1 MB；按内容判断类型，SVG 先清洗；替换原来的 Logo → 系统信息 |
 | DELETE | `/system-info/logo` | sys.settings | 删除上传的完整 Logo → 系统信息 |
 | GET / POST / DELETE | `/system-info/icon` | — / sys.settings / sys.settings | Logo 图标（顶栏、浏览器标签页用），读取、上传、删除，规则同 `/system-info/logo`；前端拼 `?v={iconVersion}`。顶栏优先用图标、登录页优先用完整 Logo，没有时互相代替，都没有时显示占位 |
+| GET / POST / DELETE | `/system-info/logo-dark` | — / sys.settings / sys.settings | 深色背景 Logo（白色或浅色、透明背景的反白图），读取、上传、删除，规则同 `/system-info/logo`；前端拼 `?v={logoDarkVersion}`。登录页有它时直接放在深蓝底上，没有时用白底卡片放完整 Logo（T-046） |
 | POST | `/preview` | tpl.view | 服务端预览（ADR 0007）：`{ template, data?, dpi?, mono? }`，模板不用先保存，不传 data 时用字段样例值 → PNG（带 `X-Label-Dpi`、`Server-Timing`、`X-Label-Warnings`）；模板 JSON 不合法时 400，`message` 写 JSON 路径和行；结构问题（元素 ID 重复等）逐条列在 `details` |
 
 \* 必须先改密码的用户也能访问。
