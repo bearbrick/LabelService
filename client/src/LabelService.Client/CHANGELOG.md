@@ -2,6 +2,16 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本遵循[语义化版本](https://semver.org/lang/zh-CN/)：1.x 只做向后兼容的改动，预览版带 `-preview.N`。
 
+## [1.0.0-preview.3] - 2026-10-12
+
+### 新增
+
+- `ListTemplatesAsync` / `ListTemplates`：列出这把 API Key 有权使用的已发布模板（`TemplateSummary`：编码、名称、最新版本、尺寸），对应服务端新增的 `GET /api/v1/templates`。`CallCompleted` 的操作名是 `ListTemplates`。
+
+### 变更
+
+- `ILabelServiceClient` 增加上面两个方法：自己实现了这个接口的调用方（单元测试里的替身）要补上。
+
 ## [1.0.0-preview.2] - 2026-10-10
 
 ### 新增

@@ -128,6 +128,7 @@ PDF：矢量输出，一张标签每份一页；页面尺寸是模板的 mm 尺�
 | POST | `/api/v1/render` | 单张生成，成功时返回文件流 | 可用（PNG、PDF、ZPL） |
 | POST | `/api/v1/render/batch` | 批量生成，返回合并文件或 ZIP | 可用 |
 | GET | `/api/v1/templates/{code}/schema` | 最新发布版本的字段定义和样例 | 可用 |
+| GET | `/api/v1/templates` | 这把 Key 有权使用的已发布模板：`{"templates":[{"templateCode","name","version","page"}]}`，按编码排序；没有时是空数组 | 可用（T-034） |
 | GET | `/health` | 存活检查 | 可用 |
 | GET | `/health/ready` | 就绪检查：启动预热完成前 503，完成后 200 | 可用（T-017） |
 | GET | `/metrics` | Prometheus 指标（只在内网开放），指标见 `backend/deploy/monitoring/README.md` | 可用（T-010） |

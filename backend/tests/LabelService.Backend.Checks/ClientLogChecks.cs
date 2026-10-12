@@ -79,6 +79,10 @@ internal static class ClientLogChecks
 
         var (_, limitedKey) = await Clients(clients => clients.CreateAsync(new SaveApiClientDto("WMS", "", "", AllBusinesses: false, [], "")));
         check("没有授权这个业务分组的调用方返回 403 TEMPLATE_FORBIDDEN", await Status(http, limitedKey) == 403);
+        var (_, wide) = await ServerChecks.ListTemplatesAsync(http, key);
+        var (limitedStatus, limited) = await ServerChecks.ListTemplatesAsync(http, limitedKey);
+        check("模板列表只列调用方有权使用的模板：全部业务的调用方有 BOX_LABEL，没授权任何分组的是空列表",
+            wide?.Templates.Any(item => item.TemplateCode == "BOX_LABEL") == true && limitedStatus == 200 && limited?.Templates.Count == 0);
         check("调用方名称不能重复", await Throws(() => Clients(clients => clients.CreateAsync(new SaveApiClientDto("MES", "", "", AllBusinesses: true, [], "")))));
 
         await Clients(clients => clients.SetStatusAsync(mes.Id, enabled: false));

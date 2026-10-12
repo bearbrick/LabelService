@@ -190,6 +190,46 @@ public sealed class BatchRenderApiItem
 }
 
 /// <summary>
+/// GET /api/v1/templates 的响应体：调用方有权使用的已发布模板。外面包一层对象，以后加分页字段不破坏兼容。
+/// </summary>
+public sealed class TemplateListResponse
+{
+    /// <summary>
+    /// 模板，按编码排序。
+    /// </summary>
+    public List<TemplateSummary> Templates { get; set; } = [];
+}
+
+/// <summary>
+/// 模板列表的一项：编码、名称、最新发布版本和尺寸。
+/// </summary>
+public sealed class TemplateSummary
+{
+    /// <summary>
+    /// 模板编码。
+    /// </summary>
+    public string TemplateCode { get; set; } = "";
+
+    /// <summary>
+    /// 模板显示名。
+    /// </summary>
+    public string Name { get; set; } = "";
+
+    /// <summary>
+    /// 最新发布版本号。
+    /// </summary>
+    public int Version
+    {
+        get; set;
+    }
+
+    /// <summary>
+    /// 标签尺寸和默认 DPI。
+    /// </summary>
+    public LabelPage Page { get; set; } = new();
+}
+
+/// <summary>
 /// GET /api/v1/templates/{code}/schema 的响应体。
 /// </summary>
 public sealed class TemplateSchemaResponse

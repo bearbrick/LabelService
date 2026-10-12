@@ -106,6 +106,53 @@ internal static class ClientChecks
         }
 
         await CheckLayoutAsync(check);
+        await CheckListTemplatesAsync(check);
+    }
+
+    /// <summary>
+    /// 模板列表：GET /api/v1/templates，解析编码、名称、版本、尺寸，触发 CallCompleted；空列表、没有 templates 属性都返回空列表。
+    /// </summary>
+    /// <param name="check">记录检查结果。</param>
+    /// <returns>检查做完时完成。</returns>
+    private static async Task CheckListTemplatesAsync(Action<string, bool> check)
+    {
+        const string listed = """{"templates":[{"templateCode":"A4_SHIPPING_MARK","name":"出口唛头 A4","version":2,"page":{"width":210,"height":297,"dpi":300}},{"templateCode":"BOX_LABEL","name":"成品箱标","version":3,"page":{"width":100,"height":60,"dpi":203}}]}""";
+        var handler = new FakeHandler((_, _, _) => Task.FromResult(Status(HttpStatusCode.OK, listed)));
+        using (var client = Client(handler))
+        {
+            CallCompletedEventArgs? completed = null;
+            client.CallCompleted += (_, e) => completed = e;
+            var templates = await client.ListTemplatesAsync();
+            var request = handler.Requests[0].Request;
+            check("模板列表：GET /api/v1/templates，带 Key",
+                request.Method == HttpMethod.Get && request.RequestUri!.AbsolutePath == "/api/v1/templates" && request.Headers.GetValues("X-Api-Key").Single() == "lbl_test_checks");
+            check("模板列表：解析编码、名称、版本、尺寸",
+                templates.Count == 2 && templates[1] is { TemplateCode: "BOX_LABEL", Name: "成品箱标", Version: 3, Page: { Width: 100, Height: 60, Dpi: 203 } });
+            check("模板列表：触发 CallCompleted，操作名 ListTemplates", completed is { Operation: "ListTemplates", StatusCode: 200, ErrorCode: null });
+            check("模板列表：同步方法可用", client.ListTemplates().Count == 2);
+        }
+
+        handler = new FakeHandler((_, _, _) => Task.FromResult(Status(HttpStatusCode.OK, "{}")));
+        using (var client = Client(handler))
+        {
+            check("模板列表：响应里没有 templates 时返回空列表", (await client.ListTemplatesAsync()).Count == 0);
+        }
+
+        handler = new FakeHandler((_, _, _) => Task.FromResult(Status(HttpStatusCode.Unauthorized, """{"code":"UNAUTHORIZED","message":"API Key 缺失或无效"}""")));
+        LabelServiceException? denied = null;
+        using (var client = Client(handler))
+        {
+            try
+            {
+                await client.ListTemplatesAsync();
+            }
+            catch (LabelServiceException ex)
+            {
+                denied = ex;
+            }
+        }
+
+        check("模板列表：Key 无效抛 UNAUTHORIZED", denied is { ErrorCode: LabelErrorCodes.Unauthorized, StatusCode: 401 });
     }
 
     /// <summary>

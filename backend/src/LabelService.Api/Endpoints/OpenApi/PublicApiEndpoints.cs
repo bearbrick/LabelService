@@ -32,6 +32,7 @@ internal static class PublicApiEndpoints
         api.MapPost("/render", RenderAsync);
         api.MapGet("/templates/{code}/schema", GetSchema);
         api.MapPost("/render/batch", RenderBatchAsync);
+        api.MapGet("/templates", ListTemplates);
         return app;
     }
 
@@ -143,6 +144,18 @@ internal static class PublicApiEndpoints
             ? Results.Json(schema, LabelJson.Options)
             : ApiErrors.Create(http, outcome.Error!.Code, outcome.Error.Message);
     }
+
+    /// <summary>
+    /// GET /api/v1/templates：调用方有权使用的已发布模板。
+    /// </summary>
+    /// <param name="http">当前请求。</param>
+    /// <param name="authenticator">API Key 鉴权。</param>
+    /// <param name="service">开放接口的用例。</param>
+    /// <returns>模板列表或错误响应。</returns>
+    private static IResult ListTemplates(HttpContext http, ApiKeyAuthenticator authenticator, ILabelRenderAppService service) =>
+        CheckClient(http, authenticator, out var client) is { } problem
+            ? ApiErrors.Create(http, ErrorCodes.Unauthorized, problem)
+            : Results.Json(service.ListTemplates(client!), LabelJson.Options);
 
     /// <summary>
     /// 识别调用方，记下鉴权阶段的耗时和调用方。

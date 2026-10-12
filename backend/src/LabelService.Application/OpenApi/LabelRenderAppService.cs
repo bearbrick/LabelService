@@ -166,6 +166,23 @@ public sealed partial class LabelRenderAppService(
         };
     }
 
+    /// <inheritdoc />
+    public TemplateListResponse ListTemplates(AuthenticatedClient client) => new()
+    {
+        // 只看内存里的已发布模板，按调用方的授权过滤（和单张生成用同一个判断）。
+        Templates = templates.LatestPublished()
+            .Where(client.CanUse)
+            .OrderBy(published => published.Template.Code, StringComparer.Ordinal)
+            .Select(published => new TemplateSummary
+            {
+                TemplateCode = published.Template.Code,
+                Name = published.Template.Name,
+                Version = published.Version,
+                Page = published.Template.Page,
+            })
+            .ToList(),
+    };
+
     /// <summary>
     /// 模板没写 DPI 时用默认值。
     /// </summary>
