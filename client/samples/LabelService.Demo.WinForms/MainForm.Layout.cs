@@ -156,7 +156,7 @@ internal sealed partial class MainForm
             status.Text = "已复制调用代码";
         };
         codeTab.Controls.Add(codeText);
-        codeTab.Controls.Add(Toolbar(copy, codeBatch, Hint("根据左侧当前设置生成，C# 7.3 起可用（.NET Framework 4.6.2+ / .NET 8+）")));
+        codeTab.Controls.Add(Toolbar(copy, codeBatch, Hint("根据左侧当前设置生成，C# 7.3 起可用（.NET Framework 4.6.1+ / .NET 8+）")));
 
         foreach (var (text, width) in new[] { ("时间", 70), ("操作", 100), ("模板", 120), ("结果", 140), ("总耗时", 70), ("服务端", 70), ("重试", 44), ("requestId", 90), ("traceId", 120), ("说明", 200) })
         {

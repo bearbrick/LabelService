@@ -17,6 +17,22 @@ namespace LabelService.Demo;
 internal sealed partial class MainForm
 {
     /// <summary>
+    /// 调用代码里必须有的打印写法：不管选哪种格式都写全三种（ZPL 网络和 USB、PNG 多张一个打印任务、PDF 直接打印和交给阅读器、解 ZIP）。
+    /// </summary>
+    private static readonly string[] PrintExamples =
+    [
+        "await PrintAsync(file);",
+        "await NetworkPrinter.SendAsync(ZplPrinterHost, NetworkPrinter.DefaultPort, zpl);",
+        "WindowsRawPrinter.Send(ZplPrinterName, zpl, name);",
+        "e.Graphics.DrawImage(image, 0, 0, image.Width * 100f / dpi, image.Height * 100f / dpi);",
+        "e.HasMorePages = index < pages.Count;",
+        "WindowsRawPrinter.Send(PdfDirectPrinterName, pdf, name);",
+        "Verb = \"print\"",
+        "new ZipArchive(file.OpenRead(), ZipArchiveMode.Read)",
+        "ex is SocketException",
+    ];
+
+    /// <summary>
     /// 自检的输出目录；不是自检时为 null。
     /// </summary>
     private string? smokeDirectory;
@@ -169,32 +185,33 @@ internal sealed partial class MainForm
             codeText.Text.Contains("new BatchRenderRequest(\"BOX_LABEL\", LabelFormat.Zpl)") && codeText.Text.Contains("batch.AddItem()") && codeText.Text.Contains(".Set(\"boxNo\"")
             && !codeText.Text.Contains("SetCommon") && !codeText.Text.Contains("ToString(\"D"));
         File.WriteAllText(Path.Combine(directory, "Program.Batch.cs.txt"), codeText.Text, Encoding.UTF8);
-        Check("调用代码：ZPL 发给网络标签打印机（TCP 9100），也写了 USB 打印机的 RAW 写法和打印机连不上时的处理",
-            codeText.Text.Contains("await NetworkPrinter.SendAsync(PrinterHost, NetworkPrinter.DefaultPort, file.Content)") && codeText.Text.Contains("WindowsRawPrinter.Send(PrinterName")
-            && codeText.Text.Contains("ex is SocketException"));
         Check("调用代码：直接用内存里的结果打印，不先存文件（另存一份写成注释）",
-            !codeText.Text.Contains("var path") && codeText.Text.Contains("// file.Save(Path.Combine(Path.GetTempPath(), file.FileName));"));
+            !codeText.Text.Split('\n').Any(line => line.TrimStart().StartsWith("file.Save(", StringComparison.Ordinal))
+            && codeText.Text.Contains("// file.Save(Path.Combine(Path.GetTempPath(), file.FileName));"));
         Shot("6-code");
 
-        // 三种格式、单张和批量的调用代码各存一份，放进新建的 net48 / net8.0-windows 控制台项目编译
+        // 三种格式、单张和批量的调用代码各存一份，放进新建的 net48 / net8.0-windows 控制台项目编译；每份都要写全三种格式的打法
+        var incomplete = new List<string>();
         foreach (var radio in new[] { png, pdf, zpl })
         {
             radio.Checked = true;
             foreach (var batchCode in new[] { false, true })
             {
                 codeBatch.Checked = batchCode;
-                File.WriteAllText(Path.Combine(directory, $"Program.{radio.Text}.{(batchCode ? "Batch" : "Single")}.cs.txt"), codeText.Text, Encoding.UTF8);
-                if (radio == png)
+                var name = $"{radio.Text}.{(batchCode ? "Batch" : "Single")}";
+                File.WriteAllText(Path.Combine(directory, $"Program.{name}.cs.txt"), codeText.Text, Encoding.UTF8);
+
+                // ZPL 提示 DPI 要和打印机一致，PDF、PNG 提示可以拼版
+                var hint = radio == zpl ? ".Dpi = " : ".Layout = \"A4_100x60_2x4\";";
+                if (!PrintExamples.All(codeText.Text.Contains) || !codeText.Text.Contains(hint))
                 {
-                    Check($"调用代码：PNG {(batchCode ? "批量（ZIP 逐张）" : "单张")}用 PrintDocument 按“像素 ÷ DPI”画成实际尺寸",
-                        codeText.Text.Contains("e.Graphics.DrawImage(image, 0, 0, image.Width * 100f / dpi, image.Height * 100f / dpi)") && codeText.Text.Contains(batchCode ? "new ZipArchive(file.OpenRead()" : "PrintImage(new MemoryStream(file.Content), file.Dpi)"));
-                }
-                else if (radio == pdf)
-                {
-                    Check($"调用代码：PDF {(batchCode ? "批量" : "单张")}交给 PDF 阅读器打印，也写了打印机支持 PDF 直接打印时的写法", codeText.Text.Contains("Verb = \"print\"") && codeText.Text.Contains("Print(file);") && codeText.Text.Contains("WindowsRawPrinter.Send(\"打印机名称\", file.Content"));
+                    incomplete.Add(name);
                 }
             }
         }
+
+        Check("调用代码：不管选哪种格式、单张还是批量，都写全三种格式的打法（ZPL、PNG 多张、PDF、解 ZIP）"
+            + (incomplete.Count > 0 ? "，不全的：" + string.Join("、", incomplete) : ""), incomplete.Count == 0);
 
         zpl.Checked = true;
         codeBatch.Checked = false;
