@@ -49,6 +49,11 @@ public static class SystemInfoRules
     public const string CompanyLogo = "company.logo";
 
     /// <summary>
+    /// Logo 图标的文件名（数据目录 branding/ 下），顶栏和浏览器标签页用；空表示没上传，用完整 Logo。不在 <see cref="Fields"/> 里。
+    /// </summary>
+    public const string CompanyIcon = "company.icon";
+
+    /// <summary>
     /// 可以在表单里修改的文字设置项，按页面上的顺序排列。
     /// </summary>
     public static IReadOnlyList<SystemInfoField> Fields

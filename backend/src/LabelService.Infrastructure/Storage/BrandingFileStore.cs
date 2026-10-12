@@ -6,7 +6,7 @@ using Microsoft.Extensions.Options;
 namespace LabelService.Infrastructure.Storage;
 
 /// <summary>
-/// 公司 Logo 文件存放的实现：数据目录的 branding/ 下。
+/// 公司 Logo 和 Logo 图标文件存放的实现：数据目录的 branding/ 下。
 /// </summary>
 /// <param name="data">数据目录。</param>
 internal sealed class BrandingFileStore(IOptions<DataOptions> data) : IBrandingFileStore
@@ -24,6 +24,7 @@ internal sealed class BrandingFileStore(IOptions<DataOptions> data) : IBrandingF
         [".png"] = "image/png",
         [".jpg"] = "image/jpeg",
         [".svg"] = "image/svg+xml",
+        [".webp"] = "image/webp",
     };
 
     /// <summary>

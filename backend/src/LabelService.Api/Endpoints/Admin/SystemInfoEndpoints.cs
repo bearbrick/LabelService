@@ -6,7 +6,7 @@ using LabelService.Domain.Identity;
 namespace LabelService.Api.Endpoints.Admin;
 
 /// <summary>
-/// 系统信息和公司 Logo。读取不用登录（登录页要显示系统名称、Logo 和版权信息），修改要权限点 sys.settings。
+/// 系统信息、公司 Logo 和 Logo 图标。读取不用登录（登录页要显示系统名称、Logo 和版权信息），修改要权限点 sys.settings。
 /// </summary>
 internal static class SystemInfoEndpoints
 {
@@ -25,7 +25,8 @@ internal static class SystemInfoEndpoints
             .AllowAnonymousAdmin();
         api.MapPut("/system-info", (SaveSystemInfoDto? body, ISystemInfoAppService service) => service.SaveAsync(body))
             .RequireAdmin(PermissionNames.SettingsManage);
-        api.MapGet("/system-info/logo", GetLogoAsync)
+        api.MapGet("/system-info/logo", async (HttpContext http, ISystemInfoAppService service, CancellationToken cancellationToken) =>
+                ImageResult(http, await service.GetLogoAsync(cancellationToken)))
             .AllowAnonymousAdmin();
         api.MapPost("/system-info/logo", (IFormFile? file, ISystemInfoAppService service) =>
                 service.UploadLogoAsync(file is null ? null : new UploadAssetInput(file.FileName, file.Length, file.OpenReadStream())))
@@ -33,19 +34,28 @@ internal static class SystemInfoEndpoints
             .DisableAntiforgery();
         api.MapDelete("/system-info/logo", (ISystemInfoAppService service) => service.ResetLogoAsync())
             .RequireAdmin(PermissionNames.SettingsManage);
+
+        // Logo 图标：顶栏和浏览器标签页用，和完整 Logo 一样不用登录就能读。
+        api.MapGet("/system-info/icon", async (HttpContext http, ISystemInfoAppService service, CancellationToken cancellationToken) =>
+                ImageResult(http, await service.GetIconAsync(cancellationToken)))
+            .AllowAnonymousAdmin();
+        api.MapPost("/system-info/icon", (IFormFile? file, ISystemInfoAppService service) =>
+                service.UploadIconAsync(file is null ? null : new UploadAssetInput(file.FileName, file.Length, file.OpenReadStream())))
+            .RequireAdmin(PermissionNames.SettingsManage)
+            .DisableAntiforgery();
+        api.MapDelete("/system-info/icon", (ISystemInfoAppService service) => service.ResetIconAsync())
+            .RequireAdmin(PermissionNames.SettingsManage);
     }
 
     /// <summary>
-    /// 公司 Logo 文件：带修改时间（浏览器按修改时间重新验证）、内容安全策略和禁止猜测类型的响应头。
-    /// 地址后面的 ?v= 由前端按 Logo 版本拼上，换图后地址变化，不会显示缓存里的旧图。
+    /// 公司 Logo、Logo 图标的文件响应：带修改时间（浏览器按修改时间重新验证）、内容安全策略和禁止猜测类型的响应头。
+    /// 地址后面的 ?v= 由前端按版本拼上，换图后地址变化，不会显示缓存里的旧图。
     /// </summary>
     /// <param name="http">当前请求。</param>
-    /// <param name="service">系统信息。</param>
-    /// <param name="cancellationToken">取消令牌。</param>
-    /// <returns>图片文件。</returns>
-    private static async Task<IResult> GetLogoAsync(HttpContext http, ISystemInfoAppService service, CancellationToken cancellationToken)
+    /// <param name="file">图片文件。</param>
+    /// <returns>文件响应。</returns>
+    private static IResult ImageResult(HttpContext http, AssetFileDto file)
     {
-        var file = await service.GetLogoAsync(cancellationToken);
         http.Response.Headers.ContentSecurityPolicy = LogoContentSecurityPolicy;
         http.Response.Headers.XContentTypeOptions = "nosniff";
         http.Response.Headers.CacheControl = "no-cache";

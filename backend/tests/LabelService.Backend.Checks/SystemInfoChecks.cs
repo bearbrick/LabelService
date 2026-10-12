@@ -112,6 +112,56 @@ internal static class SystemInfoChecks
         var permissions = await admin.JsonAsync(HttpMethod.Get, "/api/admin/permissions");
         check("权限点列表里有 sys.settings（系统分组）",
             permissions.EnumerateArray().Any(item => item.GetProperty("key").GetString() == "sys.settings" && item.GetProperty("group").GetString() == "系统"));
+
+        await CheckIconAndWebpAsync(http, admin, designer, check);
+    }
+
+    /// <summary>
+    /// Logo 图标（顶栏、浏览器标签页用）的上传、读取、恢复；Logo 和图标接受 WebP，素材仍然不收。
+    /// </summary>
+    /// <param name="http">未登录的客户端。</param>
+    /// <param name="admin">已登录的系统管理员。</param>
+    /// <param name="designer">没有 sys.settings 的用户。</param>
+    /// <param name="check">记录检查结果。</param>
+    /// <returns>检查做完时完成。</returns>
+    private static async Task CheckIconAndWebpAsync(HttpClient http, AdminSession admin, AdminSession designer, Action<string, bool> check)
+    {
+        check("没上传图标时取图标返回 404；没有 sys.settings 不能上传图标",
+            (await http.GetAsync("/api/admin/system-info/icon")).StatusCode == HttpStatusCode.NotFound
+            && await AdminSession.CodeAsync(await designer.UploadAsync("/api/admin/system-info/icon", "icon.png", Png(), "image/png")) == "FORBIDDEN");
+
+        var icon = await AdminSession.ReadAsync(await admin.UploadAsync("/api/admin/system-info/icon", "icon.png", Png(), "image/png"));
+        var iconFile = await http.GetAsync("/api/admin/system-info/icon?v=" + icon.GetProperty("iconVersion").GetString());
+        check("上传图标后未登录也能取到，和完整 Logo 互不影响",
+            icon.GetProperty("iconVersion").GetString() is { Length: 12 }
+            && NoLogo(icon)
+            && iconFile.StatusCode == HttpStatusCode.OK && iconFile.Content.Headers.ContentType?.MediaType == "image/png");
+
+        var webp = await AdminSession.ReadAsync(await admin.UploadAsync("/api/admin/system-info/logo", "logo.webp", Webp(), "image/webp"));
+        var webpFile = await http.GetAsync("/api/admin/system-info/logo");
+        check("完整 Logo 接受 WebP（按内容判断，返回 image/webp）",
+            !NoLogo(webp) && webpFile.Content.Headers.ContentType?.MediaType == "image/webp");
+        check("素材仍然不收 WebP（素材要进渲染）",
+            await AdminSession.CodeAsync(await admin.UploadAsync("/api/admin/assets", "a.webp", Webp(), "image/webp")) == "INVALID");
+
+        var reset = await admin.JsonAsync(HttpMethod.Delete, "/api/admin/system-info/icon");
+        check("恢复图标后图标版本为空、取图标 404，完整 Logo 还在",
+            (!reset.TryGetProperty("iconVersion", out var version) || version.ValueKind == JsonValueKind.Null)
+            && !NoLogo(reset)
+            && (await http.GetAsync("/api/admin/system-info/icon")).StatusCode == HttpStatusCode.NotFound);
+        await admin.DeleteAsync("/api/admin/system-info/logo");
+    }
+
+    /// <summary>
+    /// 上传用的 32×16 蓝色 WebP。
+    /// </summary>
+    /// <returns>WebP 文件内容。</returns>
+    private static byte[] Webp()
+    {
+        using var bitmap = new SKBitmap(32, 16);
+        bitmap.Erase(SKColors.RoyalBlue);
+        using var data = bitmap.Encode(SKEncodedImageFormat.Webp, 90);
+        return data.ToArray();
     }
 
     /// <summary>
