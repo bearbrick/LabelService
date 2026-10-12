@@ -20,6 +20,9 @@ internal static partial class ArchitectureChecks
         check("SDK 不引用任何项目", !sdkProject.Contains("<ProjectReference"));
         check("SDK 的目标框架是 net461、netstandard2.0、net8.0", sdkProject.Contains("<TargetFrameworks>net461;netstandard2.0;net8.0</TargetFrameworks>"));
         check("SDK 不依赖任何 NuGet 包（JSON 读写是自带的）", !sdkProject.Contains("<PackageReference"));
+        var windowsProject = File.ReadAllText(Path.Combine(clientRoot, "src", "LabelService.Client.Windows", "LabelService.Client.Windows.csproj"));
+        check("Windows 打印扩展使用系统 PDF 接口，没有第三方包依赖", !windowsProject.Contains("<PackageReference")
+            && windowsProject.Contains("<TargetFrameworks>net461;net8.0-windows</TargetFrameworks>"));
 
         var props = File.ReadAllText(Path.Combine(clientRoot, "src", "Directory.Build.props"));
         check("SDK 强制公开成员写 XML 注释", props.Contains("<GenerateDocumentationFile>true</GenerateDocumentationFile>") && props.Contains("CS1591"));

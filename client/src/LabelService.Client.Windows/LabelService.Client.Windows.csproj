@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Windows 桌面打印扩展；PDF 使用系统接口，不为 HTTP SDK 引入平台和包依赖。 -->
+  <PropertyGroup>
+    <TargetFrameworks>net461;net8.0-windows</TargetFrameworks>
+    <UseWindowsForms Condition="'$(TargetFramework)' == 'net8.0-windows'">true</UseWindowsForms>
+    <PackageId>LabelService.Client.Windows</PackageId>
+    <Description>标签服务的 Windows 静默打印扩展：PNG、PDF 和 ZPL。</Description>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(LabelServiceStrongNameKey)' != ''">
+    <SignAssembly>true</SignAssembly>
+    <AssemblyOriginatorKeyFile>$(LabelServiceStrongNameKey)</AssemblyOriginatorKeyFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../LabelService.Client/LabelService.Client.csproj" />
+    <None Include="README.md" Pack="true" PackagePath="/" />
+    <InternalsVisibleTo Include="LabelService.Client.Checks" Condition="'$(SignAssembly)' != 'true'" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(TargetFramework)' == 'net461'">
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.IO.Compression" />
+  </ItemGroup>
+</Project>

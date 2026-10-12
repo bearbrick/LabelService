@@ -52,6 +52,9 @@ internal static partial class DocumentationChecks
         }
 
         CheckDemo(clientRoot, constructors, check);
+#if WINDOWS
+        Report(check, "LabelService.Client.Windows", Inspect(typeof(Printing.WindowsLabelPrinter).Assembly, constructors));
+#endif
         CheckSourceText(clientRoot, check);
     }
 

@@ -17,19 +17,17 @@ namespace LabelService.Demo;
 internal sealed partial class MainForm
 {
     /// <summary>
-    /// 调用代码里必须有的打印写法：不管选哪种格式都写全三种（ZPL 网络和 USB、PNG 多张一个打印任务、PDF 直接打印和交给阅读器、解 ZIP）。
+    /// 调用代码必须使用统一静默入口，并给出特殊参数及网络 ZPL 的写法。
     /// </summary>
     private static readonly string[] PrintExamples =
     [
-        "await PrintAsync(file);",
-        "await NetworkPrinter.SendAsync(ZplPrinterHost, NetworkPrinter.DefaultPort, zpl);",
-        "WindowsRawPrinter.Send(ZplPrinterName, zpl, name);",
-        "e.Graphics.DrawImage(image, 0, 0, image.Width * 100f / dpi, image.Height * 100f / dpi);",
-        "e.HasMorePages = index < pages.Count;",
-        "WindowsRawPrinter.Send(PdfDirectPrinterName, pdf, name);",
-        "Verb = \"print\"",
-        "new ZipArchive(file.OpenRead(), ZipArchiveMode.Read)",
-        "ex is SocketException",
+        "WindowsLabelPrinter.Print(file, PrinterName);",
+        "WindowsLabelPrinter.CreateDocument(file, PrinterName)",
+        "document.PrinterSettings.Copies = 2;",
+        "document.Print();",
+        "await NetworkPrinter.SendAsync(\"192.168.1.50\", NetworkPrinter.DefaultPort, file.Content);",
+        "Windows 8.1+",
+        "ex is COMException",
     ];
 
     /// <summary>
@@ -190,7 +188,7 @@ internal sealed partial class MainForm
             && codeText.Text.Contains("// file.Save(Path.Combine(Path.GetTempPath(), file.FileName));"));
         Shot("6-code");
 
-        // 三种格式、单张和批量的调用代码各存一份，放进新建的 net48 / net8.0-windows 控制台项目编译；每份都要写全三种格式的打法
+        // 三种格式、单张和批量的代码各留一份，核对统一静默入口和特殊参数说明。
         var incomplete = new List<string>();
         foreach (var radio in new[] { png, pdf, zpl })
         {
@@ -203,14 +201,15 @@ internal sealed partial class MainForm
 
                 // ZPL 提示 DPI 要和打印机一致，PDF、PNG 提示可以拼版
                 var hint = radio == zpl ? ".Dpi = " : ".Layout = \"A4_100x60_2x4\";";
-                if (!PrintExamples.All(codeText.Text.Contains) || !codeText.Text.Contains(hint))
+                if (!PrintExamples.All(codeText.Text.Contains) || !codeText.Text.Contains(hint)
+                    || codeText.Text.Contains("Process.Start") || codeText.Text.Contains("Verb ="))
                 {
                     incomplete.Add(name);
                 }
             }
         }
 
-        Check("调用代码：不管选哪种格式、单张还是批量，都写全三种格式的打法（ZPL、PNG 多张、PDF、解 ZIP）"
+        Check("调用代码：三种格式、单张和批量都使用统一静默打印入口，不调用阅读器"
             + (incomplete.Count > 0 ? "，不全的：" + string.Join("、", incomplete) : ""), incomplete.Count == 0);
 
         zpl.Checked = true;

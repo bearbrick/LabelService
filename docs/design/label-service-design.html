@@ -1041,6 +1041,7 @@ X-Api-Key: ********
             <tr><td><code>LabelServiceException</code></td><td>StatusCode、ErrorCode、Message、TraceId、Errors、IsTransient</td><td>服务端错误和网络错误都转成它</td></tr>
             <tr><td><code>LabelErrorCodes</code></td><td>FieldRequired、TemplateNotFound 等常量</td><td>和第 8 节的错误码一一对应</td></tr>
             <tr><td><code>Printing.NetworkPrinter</code></td><td>SendAsync(host, port, bytes)</td><td>通过 TCP 9100 把 ZPL 直接发给网络标签打印机</td></tr>
+            <tr><td><code>Printing.WindowsLabelPrinter</code>（可选 Windows 扩展）</td><td>Print(file, printerName)、CreateDocument(file, printerName)</td><td>PNG、PDF、ZPL 统一静默打印；保留驱动配置，PNG/PDF 可先调整 PrintDocument；PDF 使用 Windows 8.1+ 的系统引擎，不需要阅读器</td></tr>
             <tr><td><code>Printing.WindowsRawPrinter</code></td><td>Send(printerName, bytes)</td><td>以 RAW 方式写入 Windows 打印队列，用于 USB 连接的标签打印机</td></tr>
           </tbody>
         </table></div>
@@ -1135,7 +1136,8 @@ catch (LabelServiceException ex) when (ex.IsTransient)
           <li>演示程序 LabelServiceDemo：.NET Framework 4.8 和 .NET 10 两个版本的可执行文件，以及源码</li>
           <li>对外接口文档（第 8 节的对外版本）、测试环境地址和测试 Key</li>
         </ul>
-        <p class="callout"><b>暂不做</b>Java、Python SDK（有需要时按同一套接口另做）；PDF 本地渲染打印（PDF 交给系统默认程序打印）；异步批量任务轮询（跟服务端二期一起做）。</p>
+        <p>可选的 <code>LabelService.Client.Windows</code> 模块目标为 net461、net8.0-windows，只依赖 HTTP SDK 和 Windows 桌面框架，不引入第三方 PDF 库。PDF 在内存中逐页渲染后交给驱动打印，PNG 和 PDF 的 ZIP 保持顺序连续分页；ZPL 设备必须支持 ZPL。默认静默打印到已配置的打印机，特殊参数可在打印前修改。</p>
+        <p class="callout"><b>暂不做</b>Java、Python SDK（有需要时按同一套接口另做）；异步批量任务轮询（跟服务端二期一起做）。</p>
       </section>
 
       <!-- 11 -->
@@ -1202,8 +1204,8 @@ catch (LabelServiceException ex) when (ex.IsTransient)
             <tr><td>模板与数据</td><td>“刷新”列出这把 Key 能用的模板（启动时、测试连接成功后自动刷新），选中后读取字段。“单张数据”一个字段一行；“批量数据”一行一张标签，列是全部字段，可以加行、删行、从 Excel 复制粘贴。必填项为空时标红</td><td>ListTemplatesAsync、GetSchemaAsync、TemplateSchema</td></tr>
             <tr><td>生成选项</td><td>格式、DPI、份数；批量按批量数据的行数生成，每条的数据都由调用方给全（不用公共字段，也不在客户端推算递增值）</td><td>RenderRequest、BatchRenderRequest</td></tr>
             <tr><td>预览</td><td>PNG 直接显示，批量显示缩略图，ZPL 显示指令和黑白效果，PDF 用默认程序打开</td><td>LabelFile</td></tr>
-            <tr><td>发送到打印机</td><td>网络打印机（TCP 9100）或 Windows 打印机；PNG 按 DPI 原尺寸打印</td><td>NetworkPrinter、WindowsRawPrinter、PrintDocument</td></tr>
-            <tr><td>调用代码</td><td>按当前设置生成可以直接复制的 C# 代码，有单张和批量两种写法；生成之后接着发送到打印机（ZPL 发网络或 USB 标签打印机，PNG 按原尺寸打印，PDF 交给 PDF 阅读器），打印出错单独处理</td><td>NetworkPrinter、WindowsRawPrinter</td></tr>
+            <tr><td>发送到打印机</td><td>默认静默打印到 Windows 默认打印机，沿用实施人员配置；特殊情况可选择其他打印机，非 ZIP 的 ZPL 也可直连网络</td><td>WindowsLabelPrinter、NetworkPrinter</td></tr>
+            <tr><td>调用代码</td><td>按当前设置生成可复制的 C# 代码，单张和批量共用一行静默打印；支持 PNG、PDF、ZPL 及相应 ZIP，PDF 不需要阅读器；特殊参数先修改标准 PrintDocument 再打印</td><td>WindowsLabelPrinter.Print、CreateDocument</td></tr>
             <tr><td>调用日志</td><td>每次调用的总耗时、服务端耗时、重试次数、requestId 和 traceId；单张超过 100 ms 标为慢调用</td><td>CallCompleted 事件</td></tr>
             <tr><td>响应信息</td><td>成功时显示 LabelFile 的属性和响应头，失败时显示 LabelServiceException 的全部字段</td><td>LabelFile、LabelServiceException</td></tr>
             <tr><td>内置模拟服务</td><td>不连服务器也能演示；可以模拟 503 抖动，看 SDK 自动重试</td><td>自定义 HttpMessageHandler</td></tr>
@@ -1214,6 +1216,7 @@ catch (LabelServiceException ex) when (ex.IsTransient)
 <pre><code>LabelService/client/                    调用端，和 frontend/、backend/ 并列，单独管理
 ├─ LabelService.Client.slnx
 ├─ src/LabelService.Client/            SDK：net461、netstandard2.0、net8.0，不引用服务端程序集
+├─ src/LabelService.Client.Windows/    可选 Windows 静默打印扩展，PDF 使用系统引擎，无第三方库
 ├─ samples/LabelService.Demo.WinForms/ 演示程序：net48、net10.0-windows
 │  └─ Mock/MockLabelServiceHandler.cs  内置模拟服务（HttpMessageHandler）
 └─ tests/LabelService.Client.Checks/   控制台检查程序：对模拟响应跑全部用例，有真实服务时再跑端到端</code></pre>

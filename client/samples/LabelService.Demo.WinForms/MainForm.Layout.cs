@@ -34,13 +34,14 @@ internal sealed partial class MainForm
         var exit = new ToolStripMenuItem("退出(&X)", null, (_, _) => Close()) { ShortcutKeys = Keys.Alt | Keys.F4 };
         menu.Items.Add(new ToolStripMenuItem("文件(&F)", null, saveMenu, openMenu, new ToolStripSeparator(), exit));
         var clearLog = new ToolStripMenuItem("清空调用日志", null, (_, _) => logList.Items.Clear());
-        menu.Items.Add(new ToolStripMenuItem("工具(&T)", null, new ToolStripMenuItem("测试连接", null, async (_, _) => await TestConnectionAsync()), printMenu, new ToolStripSeparator(), clearLog));
+        menu.Items.Add(new ToolStripMenuItem("工具(&T)", null, new ToolStripMenuItem("测试连接", null, async (_, _) => await TestConnectionAsync()), printMenu,
+            new ToolStripMenuItem("选择其他打印机…", null, (_, _) => PrintResultWithSelection()), new ToolStripSeparator(), clearLog));
         var showCode = new ToolStripMenuItem("查看调用代码", null, (_, _) => tabs.SelectedTab = codeTab);
         var about = new ToolStripMenuItem("关于 LabelServiceDemo", null, (_, _) => ShowAbout());
         menu.Items.Add(new ToolStripMenuItem("帮助(&H)", null, showCode, about));
         saveMenu.Click += (_, _) => SaveResult();
         openMenu.Click += (_, _) => OpenResult();
-        printMenu.Click += (_, _) => PrintResult();
+        printMenu.Click += async (_, _) => await PrintResultAsync();
         return menu;
     }
 
@@ -141,7 +142,7 @@ internal sealed partial class MainForm
         var previewTools = Toolbar(
             ResultButton("保存文件…", (_, _) => SaveResult()),
             ResultButton("用默认程序打开", (_, _) => OpenResult()),
-            ResultButton("发送到打印机…", (_, _) => PrintResult()),
+            ResultButton("静默打印", async (_, _) => await PrintResultAsync()),
             new Label { Text = "缩放", AutoSize = true, Margin = new Padding(16, 7, 3, 0) },
             zoom);
         previewTab.Controls.Add(previewHost);

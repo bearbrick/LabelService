@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\LabelService.Client\LabelService.Client.csproj" />
+    <ProjectReference Include="..\..\src\LabelService.Client.Windows\LabelService.Client.Windows.csproj" />
   </ItemGroup>
 
 </Project>

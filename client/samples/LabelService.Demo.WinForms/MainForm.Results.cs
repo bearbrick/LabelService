@@ -95,7 +95,7 @@ internal sealed partial class MainForm
             panel.RowStyles.Add(new RowStyle(SizeType.Percent, 50));
             panel.RowStyles.Add(new RowStyle(SizeType.Percent, 50));
             panel.Controls.Add(Message(file.Format == LabelFormat.Pdf
-                ? $"PDF 共 {file.LabelCount} 张。WinForms 里不直接显示 PDF，用默认程序打开查看或打印。"
+                ? $"PDF 共 {file.PageCount} 页。可以直接静默打印；需要查看时用默认程序打开。"
                 : "压缩包里的文件不能预览，保存后查看。"), 0, 0);
             panel.Controls.Add(open, 0, 1);
             SetPreview(panel);
@@ -414,13 +414,13 @@ internal sealed partial class MainForm
     }
 
     /// <summary>
-    /// 打开打印窗口发送当前结果。
+    /// 特殊情况打开打印机选择窗口，普通打印使用默认打印机的静默入口。
     /// </summary>
-    private void PrintResult()
+    private void PrintResultWithSelection()
     {
-        if (result is not null)
+        if (result is not null && !printing)
         {
-            using var dialog = new PrintForm(result, images.Count > current ? images[current] : null);
+            using var dialog = new PrintForm(result);
             dialog.ShowDialog(this);
         }
     }

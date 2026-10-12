@@ -59,6 +59,14 @@ internal static class LiveServerChecks
         var merged = await client.RenderBatchAsync(Batch(LabelFormat.Pdf));
         check("端到端：SDK 批量合并成一个 PDF，张数含份数",
             merged is { LabelCount: 3, IsZip: false } && merged.Content.Length > 4 && merged.Content[0] == (byte)'%' && merged.Content[1] == (byte)'P');
+#if WINDOWS
+        using (var nativePdf = new Printing.WindowsPdfDocument(merged.Content))
+        {
+            using var page = nativePdf.Render(0, merged.Dpi);
+            check("端到端：Windows 系统引擎渲染服务生成的字体和条码 PDF", nativePdf.PageCount == 3
+                && Math.Abs(page.WidthInches * 25.4 - 100) < 0.1 && page.Image.Width > 1000);
+        }
+#endif
         var zipped = await client.RenderBatchAsync(Batch(LabelFormat.Png));
         check("端到端：SDK 批量 PNG 默认打包成 zip",
             zipped is { LabelCount: 3, IsZip: true } && zipped.Content.Length > 4 && zipped.Content[0] == (byte)'P' && zipped.Content[1] == (byte)'K');
@@ -72,6 +80,14 @@ internal static class LiveServerChecks
         var twoPages = await client.RenderBatchAsync(pages);
         check("端到端：拼版 PDF，单张 8 份是 1 页；批量 3 张从第 7 格开始是 2 页（PageCount 来自 X-Page-Count）",
             onePage is { LabelCount: 8, PageCount: 1 } && twoPages is { LabelCount: 3, PageCount: 2, IsZip: false });
+#if WINDOWS
+        using (var nativePdf = new Printing.WindowsPdfDocument(twoPages.Content))
+        {
+            using var page = nativePdf.Render(1, twoPages.Dpi);
+            check("端到端：Windows 引擎读取拼版实际页数并保持 A4 尺寸", nativePdf.PageCount == 2
+                && Math.Abs(page.WidthInches * 25.4 - 210) < 0.1 && Math.Abs(page.HeightInches * 25.4 - 297) < 0.1);
+        }
+#endif
         sheet.Layout = "A4_NOPE";
         check("端到端：版式不存在映射为 LAYOUT_NOT_FOUND", await Fails(() => client.RenderAsync(sheet)) is { ErrorCode: LabelErrorCodes.LayoutNotFound, StatusCode: 404 });
 

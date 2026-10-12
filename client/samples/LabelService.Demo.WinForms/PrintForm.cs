@@ -1,7 +1,9 @@
 using System.ComponentModel;
 using System.Drawing;
 using System.Drawing.Printing;
+using System.IO;
 using System.Net.Sockets;
+using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using LabelService.Client;
 using LabelService.Client.Printing;
@@ -9,8 +11,7 @@ using LabelService.Client.Printing;
 namespace LabelService.Demo;
 
 /// <summary>
-/// “发送到打印机”对话框：ZPL 发网络打印机（TCP 9100，<see cref="NetworkPrinter"/>）或以 RAW 方式写 Windows 打印队列
-/// （<see cref="WindowsRawPrinter"/>）；PNG 用 PrintDocument 按 DPI 原尺寸打印；PDF 交给默认程序。
+/// 特殊情况下选择其他打印机：三种格式使用统一静默入口，非 ZIP 的 ZPL 也可直连网络。
 /// </summary>
 internal sealed class PrintForm : Form
 {
@@ -20,17 +21,12 @@ internal sealed class PrintForm : Form
     private readonly LabelFile file;
 
     /// <summary>
-    /// 预览中当前这张图片（PNG 打印用）；没有时为 null。
-    /// </summary>
-    private readonly Image? image;
-
-    /// <summary>
     /// 发到网络打印机（只有 ZPL 可用）。
     /// </summary>
     private readonly RadioButton network = new RadioButton { Text = "网络打印机（ZPL 原始数据，TCP 9100）", AutoSize = true };
 
     /// <summary>
-    /// 发到 Windows 打印机（ZPL 按 RAW 写入，PNG 按原尺寸打印）。
+    /// 发到 Windows 打印机，默认不修改驱动参数。
     /// </summary>
     private readonly RadioButton windows = new RadioButton { Text = "Windows 打印机", AutoSize = true };
 
@@ -58,15 +54,13 @@ internal sealed class PrintForm : Form
     /// 按结果的格式决定能选哪种打印方式，并给出说明。
     /// </summary>
     /// <param name="file">要打印的结果。</param>
-    /// <param name="image">预览中当前这张图片；不是 PNG 时可以为 null。</param>
-    public PrintForm(LabelFile file, Image? image)
+    public PrintForm(LabelFile file)
     {
         this.file = file;
-        this.image = image;
 
         // 和主窗口一样按屏幕缩放：下面的尺寸都是 100% 缩放时的像素
         FormScaling.Begin(this);
-        Text = "发送到打印机";
+        Text = "选择其他打印机";
         Font = new Font("Microsoft YaHei UI", 9f);
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = MinimizeBox = false;
@@ -82,19 +76,18 @@ internal sealed class PrintForm : Form
 
         if (printer.Items.Count > 0)
         {
-            printer.SelectedIndex = 0;
+            var defaultName = new PrinterSettings().PrinterName;
+            printer.SelectedIndex = Math.Max(0, printer.Items.IndexOf(defaultName));
         }
 
         var isZpl = file.Format == LabelFormat.Zpl && !file.IsZip;
-        var isPng = file.Format == LabelFormat.Png && !file.IsZip;
         network.Enabled = isZpl;
-        windows.Enabled = isZpl || isPng;
-        network.Checked = isZpl;
-        windows.Checked = !isZpl && isPng;
-        var note = isZpl ? "ZPL 用 WindowsRawPrinter 以 RAW 方式写入打印队列，适合 USB 连接的标签打印机。"
-            : isPng ? $"PNG 用 PrintDocument 按 {file.Dpi} dpi 原尺寸打印。"
-            : file.Format == LabelFormat.Pdf ? "PDF 不能直接发给标签打印机：用“用默认程序打开”，在 PDF 阅读器里打印。"
-            : "压缩包要先解开再逐张打印。";
+        windows.Enabled = printer.Items.Count > 0;
+        windows.Checked = windows.Enabled;
+        network.Checked = !windows.Enabled && isZpl;
+        var note = file.Format == LabelFormat.Zpl
+            ? "ZPL 直接提交原始指令，打印机必须支持 ZPL；DPI 和份数由生成请求决定。"
+            : "PNG、PDF 及多页 ZIP 按实际尺寸打印，沿用驱动已配置的纸张和方向。PDF 不需要阅读器。";
 
         var layout = new TableLayoutPanel { AutoSize = true, ColumnCount = 1, Dock = DockStyle.Fill };
         layout.Controls.Add(network);
@@ -137,50 +130,29 @@ internal sealed class PrintForm : Form
             {
                 await NetworkPrinter.SendAsync(host.Text.Trim(), (int)port.Value, file.Content, TimeSpan.FromSeconds(5));
             }
-            else if (file.Format == LabelFormat.Zpl)
-            {
-                WindowsRawPrinter.Send((string)printer.SelectedItem!, file.Content, file.FileName);
-            }
             else
             {
-                PrintImage((string)printer.SelectedItem!);
+                var name = (string)printer.SelectedItem!;
+                await Task.Run(() => WindowsLabelPrinter.Print(file, name));
             }
 
-            MessageBox.Show(this, "已发送到打印机。", Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
+            if (IsDisposed || Disposing)
+            {
+                return;
+            }
+
+            MessageBox.Show(this, "打印任务已提交，请在打印队列查看状态。", Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
             DialogResult = DialogResult.OK;
         }
-        catch (Exception ex) when (ex is SocketException or TimeoutException or Win32Exception or InvalidPrinterException or InvalidOperationException)
+        catch (Exception ex) when (ex is SocketException or TimeoutException or Win32Exception or InvalidPrinterException
+            or InvalidOperationException or COMException or IOException or ArgumentException or PlatformNotSupportedException)
         {
-            MessageBox.Show(this, "发送失败：" + ex.Message, Text, MessageBoxButtons.OK, MessageBoxIcon.Error);
-            send.Enabled = true;
+            if (!IsDisposed && !Disposing)
+            {
+                MessageBox.Show(this, "发送失败：" + ex.Message, Text, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                send.Enabled = true;
+            }
         }
-    }
-
-    /// <summary>
-    /// 按标签的实际尺寸打印 PNG：像素 ÷ DPI = 英寸，PrintDocument 的单位是百分之一英寸。
-    /// </summary>
-    /// <param name="printerName">Windows 打印机名称。</param>
-    /// <exception cref="InvalidOperationException">没有可打印的图片。</exception>
-    private void PrintImage(string printerName)
-    {
-        if (image is null)
-        {
-            throw new InvalidOperationException("没有可打印的图片");
-        }
-
-        var dpi = file.Dpi > 0 ? file.Dpi : 300;
-        var width = image.Width * 100 / dpi;
-        var height = image.Height * 100 / dpi;
-        using var document = new PrintDocument { DocumentName = file.FileName };
-        document.PrinterSettings.PrinterName = printerName;
-        document.DefaultPageSettings.PaperSize = new PaperSize("Label", width, height);
-        document.DefaultPageSettings.Margins = new Margins(0, 0, 0, 0);
-        document.PrintPage += (_, e) =>
-        {
-            e.Graphics!.DrawImage(image, new Rectangle(0, 0, width, height));
-            e.HasMorePages = false;
-        };
-        document.Print();
     }
 
     /// <summary>

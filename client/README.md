@@ -9,7 +9,8 @@ client/
 ├─ Directory.Packages.props       调用端的 NuGet 版本（只有演示程序 .NET Framework 版的模拟服务用 System.Text.Json，SDK 不依赖任何包）
 ├─ build/pack.ps1                打包：nupkg（含 snupkg）和 zip，可选强名称和 Authenticode 签名
 ├─ src/
-│  └─ LabelService.Client/        SDK：net461、netstandard2.0、net8.0；包里的 README.md、CHANGELOG.md 也在这里
+│  ├─ LabelService.Client/        SDK：net461、netstandard2.0、net8.0；包里的 README.md、CHANGELOG.md 也在这里
+│  └─ LabelService.Client.Windows/ 可选 Windows 静默打印：net461、net8.0-windows；PDF 使用系统引擎，不需要阅读器
 ├─ samples/
 │  └─ LabelService.Demo.WinForms/ 演示程序：net48、net10.0-windows
 └─ tests/
@@ -53,6 +54,19 @@ file.Save(Path.Combine(@"D:\Labels", file.FileName));
 
 完整的公开 API、重试和错误映射见设计书第 10 节和 `docs/contracts.md`；给第三方看的说明（快速开始、错误码、常见问题）在 `src/LabelService.Client/README.md`，会打进 NuGet 包。
 
+## Windows 静默打印
+
+客户的 Windows 打印机由实施人员提前配置好，引用可选的 `LabelService.Client.Windows` 后，三种格式使用一个入口：
+
+```csharp
+WindowsLabelPrinter.Print(file, printerName);
+WindowsLabelPrinter.Print(file); // 不传名称时使用 Windows 默认打印机
+```
+
+命名空间为 `LabelService.Client.Printing`。PNG、PDF 和相应的 ZIP 连续分页打印，保留实际尺寸，默认不覆盖驱动的纸张、方向、纸盒和份数。PDF 通过 Windows 自带引擎逐页渲染，需要 Windows 8.1+，不启动阅读器、不写临时文件。ZPL 原样提交，设备必须支持 ZPL，DPI 和份数在生成请求设置。
+
+特殊情况下，PNG、PDF 可用 `CreateDocument(file, printerName)` 取得标准 `PrintDocument`，先修改本次参数再调用 `Print()`，使用完释放。网络 ZPL 辅助方法继续保留。扩展只依赖原 HTTP SDK 和 Windows 桌面框架，不增加第三方 NuGet 包；详细说明见 [打印扩展 README](src/LabelService.Client.Windows/README.md)。
+
 ## 演示程序
 
 `samples/LabelService.Demo.WinForms` 生成 `LabelServiceDemo.exe`（net48 和 net10.0-windows 两个版本，界面相同），按设计书第 11 节和原型 `docs/prototypes/label-sdk-demo-prototype.html` 实现。
@@ -68,8 +82,9 @@ file.Save(Path.Combine(@"D:\Labels", file.FileName));
 | `MainForm.Results.cs` | 显示结果：PNG 预览、批量缩略图、ZPL 指令和黑白效果、PDF 交给默认程序；`LabelFile` / `LabelServiceException` 的全部属性 |
 | `ZplPreview.cs` | 把 ZPL 的 `^GFA` 位图（含 ASCII 压缩）还原成图片 |
 | `CodeGenerator.cs` | “调用代码”页签：按当前设置生成 C# 7.3 的 Program.cs，单张和批量两种写法 |
-| `CodeGenerator.Printing.cs` | 调用代码里的“发送到打印机”：ZPL 发网络标签打印机（或 USB 打印机 RAW），PNG 用 PrintDocument 按原尺寸打（批量 ZIP 逐张），PDF 交给 PDF 阅读器 |
-| `PrintForm.cs` | 发送到打印机：网络打印机（`NetworkPrinter`）、Windows 打印机（ZPL 用 `WindowsRawPrinter`，PNG 用 PrintDocument 按 DPI 原尺寸） |
+| `CodeGenerator.Printing.cs` | 调用代码里的统一静默打印入口；PNG、PDF、ZPL 共用一行，特殊参数和网络 ZPL 用法放在注释中 |
+| `MainForm.Printing.cs` | 默认静默打印当前完整结果到系统默认打印机；后台提交，避免重复点击，状态栏报告提交结果 |
+| `PrintForm.cs` | 特殊情况选择其他已安装打印机；使用相同入口，非 ZIP 的 ZPL 也可直接发网络打印机 |
 | `MainForm.Smoke.cs` | 自检（见下） |
 | `Mock/` | 内置模拟服务（`HttpMessageHandler`）：BOX_LABEL、A4_SHIPPING_MARK 两个模板，错误码和真实服务一致，可模拟首次 503 看 SDK 重试 |
 
@@ -96,6 +111,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\client\build\pack.ps1 -Ver
 - 版本：调用端独立于后端发版，语义化版本，写在 `client/Directory.Build.props`（`VersionPrefix` + 预览版的 `VersionSuffix`，如 `1.0.0-preview.1`）。改了公开 API 同步设计书第 10 节和 `CHANGELOG.md`。
 - 签名：强名称密钥（.snk）和代码签名证书（.pfx）都不进仓库；没给时脚本照样打包，只是不签名（会提示）。证书由谁申请见设计书第 12 节的待定问题。
 - 脚本最后核对 nupkg 里有三个目标框架的 DLL、XML 注释和 README。zip 里还有演示程序源码和依赖说明。
+- 打包同时生成 `LabelService.Client.Windows` 的 nupkg；zip 的 `windows/` 目录包含两个 Windows 目标的扩展 DLL、XML 注释和说明。原 HTTP SDK 保持原有独立包和目标框架。
 
 ## 要点
 

@@ -264,7 +264,7 @@ internal sealed partial class MainForm : Form
     /// <summary>
     /// 菜单：发送到打印机（有结果时可用）。
     /// </summary>
-    private readonly ToolStripMenuItem printMenu = new ToolStripMenuItem("发送到打印机…") { ShortcutKeys = Keys.Control | Keys.P, Enabled = false };
+    private readonly ToolStripMenuItem printMenu = new ToolStripMenuItem("静默打印到默认打印机") { ShortcutKeys = Keys.Control | Keys.P, Enabled = false };
 
     /// <summary>
     /// 状态栏：当前操作的进度和结果。

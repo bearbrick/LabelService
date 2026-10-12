@@ -111,6 +111,7 @@
 | 路径 | 职责 |
 | --- | --- |
 | `src/LabelService.Client/` | SDK 公开 API；`Internal/` 放协议副本和请求体生成；`Printing/` 放打印辅助类 |
+| `src/LabelService.Client.Windows/` | 可选桌面打印扩展：`WindowsLabelPrinter` 统一静默入口、PNG/PDF 连续分页，PDF 通过 Windows 系统原生接口渲染；依赖原 SDK 和桌面框架，原 SDK 不反向引用；见 ADR 0014 |
 | `samples/LabelService.Demo.WinForms/` | SDK 演示程序 |
 | `tests/LabelService.Client.Checks/` | 调用端检查程序：假服务端用例、协议解析、架构规则、端到端用例 |
 
