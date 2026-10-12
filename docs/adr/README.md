@@ -50,3 +50,4 @@
 | [0011](0011-customer-uploaded-fonts.md) | 字体由客户上传，发布包不再带字体 | 已采纳（发布包一条待确认） |
 | [0012](0012-field-auto-values.md) | 字段的自动值：调用方不传时由服务端算出来 | 已采纳 |
 | [0013](0013-sdk-own-json-net461.md) | SDK 自带 JSON 读写，最低支持 .NET Framework 4.6.1 | 已采纳 |
+| [0014](0014-windows-silent-print.md) | 可选 Windows 打印模块使用系统 PDF 引擎 | 已采纳 |
