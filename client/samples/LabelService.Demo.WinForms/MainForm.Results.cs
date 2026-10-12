@@ -79,9 +79,9 @@ internal sealed partial class MainForm
             var split = new SplitContainer { Dock = DockStyle.Fill, Orientation = Orientation.Vertical };
             split.Panel1.Controls.Add(new TextBox { Multiline = true, ReadOnly = true, ScrollBars = ScrollBars.Both, WordWrap = false, Dock = DockStyle.Fill, Font = Mono, Text = zplText.Length > 20000 ? zplText.Substring(0, 20000) + "\r\n…" : zplText.Replace("\n", "\r\n") });
             split.Panel2.Controls.Add(Picture());
-            split.Panel2.Controls.Add(new Label { Text = $"打印效果（{file.Dpi} dpi 黑白位图，^GFA 指令）", Dock = DockStyle.Bottom, Height = 22, TextAlign = ContentAlignment.MiddleCenter });
+            split.Panel2.Controls.Add(new Label { Text = $"打印效果（{file.Dpi} dpi 黑白位图，^GFA 指令）", Dock = DockStyle.Bottom, Height = Px(22), TextAlign = ContentAlignment.MiddleCenter });
             SetPreview(split);
-            split.SplitterDistance = Math.Max(120, split.Width / 3);
+            split.SplitterDistance = Math.Max(Px(120), split.Width / 3);
         }
         else if (images.Count > 0)
         {
@@ -190,7 +190,7 @@ internal sealed partial class MainForm
     private void BuildThumbnails()
     {
         ClearControls(thumbnails);
-        thumbnails.Height = images.Count > 1 ? 96 : 0;
+        thumbnails.Height = images.Count > 1 ? Px(96) : 0;
         if (images.Count <= 1)
         {
             return;
@@ -199,14 +199,14 @@ internal sealed partial class MainForm
         for (var i = 0; i < images.Count; i++)
         {
             var index = i;
-            var thumb = new PictureBox { Image = images[i], SizeMode = PictureBoxSizeMode.Zoom, Size = new Size(110, 70), BorderStyle = BorderStyle.FixedSingle, Cursor = Cursors.Hand, BackColor = Color.White, Margin = new Padding(4) };
+            var thumb = new PictureBox { Image = images[i], SizeMode = PictureBoxSizeMode.Zoom, Size = new Size(Px(110), Px(70)), BorderStyle = BorderStyle.FixedSingle, Cursor = Cursors.Hand, BackColor = Color.White, Margin = new Padding(Px(4)) };
             thumb.Click += (_, _) => ShowImage(index);
             thumbnails.Controls.Add(thumb);
         }
 
         if (result is { } file && file.LabelCount > images.Count)
         {
-            thumbnails.Controls.Add(new Label { Text = $"共 {file.LabelCount} 张，预览前 {images.Count} 张", AutoSize = true, Margin = new Padding(8, 30, 0, 0), ForeColor = SystemColors.GrayText });
+            thumbnails.Controls.Add(new Label { Text = $"共 {file.LabelCount} 张，预览前 {images.Count} 张", AutoSize = true, Margin = new Padding(Px(8), Px(30), 0, 0), ForeColor = SystemColors.GrayText });
         }
     }
 

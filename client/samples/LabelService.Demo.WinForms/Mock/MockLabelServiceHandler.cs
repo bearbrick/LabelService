@@ -72,8 +72,13 @@ internal sealed class MockLabelServiceHandler : HttpMessageHandler
             return Error(HttpStatusCode.Unauthorized, "UNAUTHORIZED", "API Key 缺失或无效");
         }
 
-        // 按路径分发：字段定义、单张生成、批量生成。
+        // 按路径分发：模板列表、字段定义、单张生成、批量生成。
         var path = request.RequestUri!.AbsolutePath;
+        if (request.Method == HttpMethod.Get && path == "/api/v1/templates")
+        {
+            return JsonResponse(HttpStatusCode.OK, MockTemplates.List());
+        }
+
         if (request.Method == HttpMethod.Get && path.StartsWith("/api/v1/templates/", StringComparison.Ordinal) && path.EndsWith("/schema", StringComparison.Ordinal))
         {
             var code = Uri.UnescapeDataString(path.Substring("/api/v1/templates/".Length, path.Length - "/api/v1/templates/".Length - "/schema".Length));

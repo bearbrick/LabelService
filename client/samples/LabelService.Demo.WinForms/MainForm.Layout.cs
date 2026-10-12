@@ -81,10 +81,10 @@ internal sealed partial class MainForm
         left.Controls.Add(Group("连接设置", connection), 0, 0);
 
         var data = Grid();
-        AddRow(data, "模板编码", Line(templateCode, readSchema));
+        AddRow(data, "模板编码", Line(templateCode, Flow(refreshTemplates, readSchema)));
         data.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-        data.Controls.Add(fields, 0, data.RowCount);
-        data.SetColumnSpan(fields, 2);
+        data.Controls.Add(dataTabs, 0, data.RowCount);
+        data.SetColumnSpan(dataTabs, 2);
         data.RowCount++;
         data.Controls.Add(schemaInfo, 0, data.RowCount);
         data.SetColumnSpan(schemaInfo, 2);
@@ -99,11 +99,15 @@ internal sealed partial class MainForm
         fields.Columns.Add(new DataGridViewTextBoxColumn { Name = "type", HeaderText = "类型", ReadOnly = true, AutoSizeMode = fitContent });
         fields.Columns.Add(new DataGridViewCheckBoxColumn { Name = "required", HeaderText = "必填", ReadOnly = true, AutoSizeMode = fitContent });
         fields.Columns.Add(new DataGridViewTextBoxColumn { Name = "value", HeaderText = "值", MinimumWidth = 100 });
+        singleTab.Controls.Add(fields);
+        batchTab.Controls.Add(batchRows);
+        batchTab.Controls.Add(Toolbar(addRow, removeRows, pasteRows, clearRows));
+        batchTab.Controls.Add(BatchHint());
+        dataTabs.TabPages.AddRange(new[] { singleTab, batchTab });
 
         var options = Grid();
         AddRow(options, "格式", Flow(png, pdf, zpl, new Label { Text = "DPI", AutoSize = true, Margin = new Padding(12, 6, 3, 0) }, dpi));
         AddRow(options, "份数", Flow(copies, new Label { Text = "单张生成时每张打几份（1–100）", AutoSize = true, ForeColor = SystemColors.GrayText, Margin = new Padding(6, 6, 3, 0) }));
-        AddRow(options, "批量条数", Flow(batchCount, new Label { Text = "递增字段", AutoSize = true, Margin = new Padding(12, 6, 3, 0) }, incrementKey));
         AddRow(options, "", Flow(renderSingle, renderBatch));
         left.Controls.Add(Group("生成选项", options), 0, 2);
 
@@ -154,9 +158,10 @@ internal sealed partial class MainForm
         codeTab.Controls.Add(codeText);
         codeTab.Controls.Add(Toolbar(copy, codeBatch, Hint("根据左侧当前设置生成，C# 7.3 起可用（.NET Framework 4.6.2+ / .NET 8+）")));
 
-        foreach (var (text, width) in new[] { ("时间", 70), ("操作", 90), ("模板", 120), ("结果", 140), ("总耗时", 70), ("服务端", 70), ("重试", 44), ("requestId", 90), ("traceId", 120), ("说明", 200) })
+        foreach (var (text, width) in new[] { ("时间", 70), ("操作", 100), ("模板", 120), ("结果", 140), ("总耗时", 70), ("服务端", 70), ("重试", 44), ("requestId", 90), ("traceId", 120), ("说明", 200) })
         {
-            logList.Columns.Add(text, width);
+            // 列宽不跟着窗口自动缩放，按屏幕缩放换算
+            logList.Columns.Add(text, Px(width));
         }
 
         var clear = new Button { Text = "清空", AutoSize = true };
@@ -164,13 +169,46 @@ internal sealed partial class MainForm
         logTab.Controls.Add(logList);
         logTab.Controls.Add(Toolbar(clear, Hint("来自 LabelServiceClient.CallCompleted 事件；单张服务端超过 100 ms 标为慢调用")));
 
-        responseList.Columns.Add("属性", 180);
-        responseList.Columns.Add("值", 560);
+        responseList.Columns.Add("属性", Px(180));
+        responseList.Columns.Add("值", Px(560));
         responseTab.Controls.Add(responseList);
 
         tabs.TabPages.AddRange(new[] { previewTab, codeTab, logTab, responseTab });
         return tabs;
     }
+
+    /// <summary>
+    /// 批量数据下方的说明，按宽度自动折行。
+    /// </summary>
+    /// <returns>说明文字。</returns>
+    private Label BatchHint()
+    {
+        var hint = new Label
+        {
+            Text = "一行一张标签，每行的数据都由调用方给全，SDK 原样发给服务端。可以在 Excel 里复制多行，选中起始格子后点“粘贴”或按 Ctrl+V；第一行是字段名时替换现有数据、按字段名对列。",
+            Dock = DockStyle.Bottom,
+            ForeColor = SystemColors.GrayText,
+            Padding = new Padding(2, 4, 2, 0),
+        };
+
+        // Label 停靠时不会自己折行算高度：宽度变了按文字重新算
+        hint.SizeChanged += (_, _) =>
+        {
+            var height = TextRenderer.MeasureText(hint.Text, hint.Font, new Size(Math.Max(hint.Width - hint.Padding.Horizontal, 1), 0), TextFormatFlags.WordBreak).Height + hint.Padding.Vertical;
+            if (hint.Height != height)
+            {
+                hint.Height = height;
+            }
+        };
+        return hint;
+    }
+
+    /// <summary>
+    /// 把 100% 缩放时的像素换成当前屏幕的像素。窗口创建时摆好的控件由自动缩放放大；之后新建的控件和列表的列宽要用它换算。
+    /// </summary>
+    /// <param name="value">100% 缩放时的像素。</param>
+    /// <returns>当前屏幕的像素。</returns>
+    private int Px(int value) => LogicalToDeviceUnits(value);
 
     /// <summary>
     /// 预览工具栏上的按钮：没有结果时禁用。
@@ -260,7 +298,7 @@ internal sealed partial class MainForm
     /// <returns>工具栏。</returns>
     private static FlowLayoutPanel Toolbar(params Control[] controls)
     {
-        var bar = new FlowLayoutPanel { Dock = DockStyle.Top, Height = 34, Padding = new Padding(4, 3, 4, 0), WrapContents = false };
+        var bar = new FlowLayoutPanel { Dock = DockStyle.Top, Height = 34, AutoSize = true, Padding = new Padding(4, 3, 4, 0), WrapContents = false };
         bar.Controls.AddRange(controls);
         return bar;
     }

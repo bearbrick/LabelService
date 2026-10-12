@@ -52,6 +52,12 @@ internal sealed partial class MainForm
             baseAddress.Enabled = !useMock.Checked;
             UpdateEndpoint();
             UpdateCode();
+
+            // 换了服务，能用的模板也不一样了（自检时由自检自己刷新）
+            if (IsHandleCreated && smokeDirectory is null)
+            {
+                BeginInvoke(new Action(async () => await RefreshTemplatesAsync()));
+            }
         };
         baseAddress.TextChanged += (_, _) => UpdateEndpoint();
         flaky.CheckedChanged += (_, _) => mock.Flaky = flaky.Checked;
@@ -60,11 +66,12 @@ internal sealed partial class MainForm
         templateCode.TextChanged += (_, _) => schema = null;
         renderSingle.Click += async (_, _) => await RenderSingleAsync();
         renderBatch.Click += async (_, _) => await RenderBatchAsync();
-        batchCount.ValueChanged += (_, _) => renderBatch.Text = $"批量生成 {batchCount.Value} 条";
         codeBatch.CheckedChanged += (_, _) => UpdateCode();
+        WireTemplateEvents();
+        WireBatchEvents();
         zoom.SelectedIndexChanged += (_, _) => LayoutPreview();
         // 左边任何设置变化都重新生成调用代码。
-        foreach (var control in new Control[] { baseAddress, timeout, retries, templateCode, dpi, copies, batchCount, incrementKey, png, pdf, zpl })
+        foreach (var control in new Control[] { baseAddress, timeout, retries, templateCode, dpi, copies, png, pdf, zpl })
         {
             control.TextChanged += (_, _) => UpdateCode();
         }
@@ -116,27 +123,34 @@ internal sealed partial class MainForm
     }
 
     /// <summary>
-    /// 测试连接：读一次当前模板的字段定义；模板不存在时也说明连接和 Key 是好的。
+    /// 测试连接：读一次当前模板的字段定义；模板不存在时也说明连接和 Key 是好的。连接正常时顺便刷新模板列表。
     /// </summary>
     /// <returns>测试结束时完成。</returns>
     private async Task TestConnectionAsync()
     {
+        var connected = false;
         await RunAsync("测试连接", async () =>
         {
             try
             {
                 var found = await Client().GetSchemaAsync(TemplateCodeText);
+                connected = true;
                 MessageBox.Show(this, $"连接正常，模板 {found.TemplateCode}（{found.Name}）v{found.Version} 可以调用。", "测试连接", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             catch (LabelServiceException ex) when (ex.ErrorCode == LabelErrorCodes.TemplateNotFound)
             {
+                connected = true;
                 MessageBox.Show(this, $"连接和 API Key 正常，但模板 {TemplateCodeText} 不存在或还没有发布。", "测试连接", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
         });
+        if (connected)
+        {
+            await RefreshTemplatesAsync();
+        }
     }
 
     /// <summary>
-    /// 读取字段定义填进表格：已经填过的值保留，没填的用样例值；猜一个递增字段。
+    /// 读取字段定义填进单张数据表格（已经填过的值保留，没填的用样例值），再按字段重建批量数据的列。
     /// </summary>
     /// <returns>读取结束时完成。</returns>
     private async Task ReadSchemaAsync()
@@ -146,18 +160,15 @@ internal sealed partial class MainForm
             schema = await Client().GetSchemaAsync(TemplateCodeText);
             var old = fields.Rows.Cast<DataGridViewRow>().ToDictionary(row => Cell(row, "key"), row => Cell(row, "value"));
             fields.Rows.Clear();
-            incrementKey.Items.Clear();
             foreach (var field in schema.Fields)
             {
                 var value = old.TryGetValue(field.Key, out var typed) && typed.Length > 0
                     ? typed
                     : schema.Sample.TryGetValue(field.Key, out var sample) ? (sample.ValueKind == System.Text.Json.JsonValueKind.String ? sample.GetString() ?? "" : sample.GetRawText()) : "";
                 fields.Rows.Add(field.Key, field.Name ?? "", field.Type, field.Required, value);
-                incrementKey.Items.Add(field.Key);
             }
 
-            incrementKey.SelectedItem = schema.Fields.Select(field => field.Key).FirstOrDefault(key => key.EndsWith("No", StringComparison.Ordinal) && key.Contains("box"))
-                ?? schema.Fields.LastOrDefault(field => field.Type == "string")?.Key;
+            RebuildBatchColumns(schema.Fields, schema.TemplateCode);
             schemaInfo.Text = $"{schema.Name} · v{schema.Version} · {schema.Page.Width}×{schema.Page.Height} mm · {schema.Page.Dpi} dpi · {schema.Fields.Count} 个字段";
             MarkRequired();
             UpdateCode();
@@ -175,6 +186,7 @@ internal sealed partial class MainForm
             return;
         }
 
+        dataTabs.SelectedTab = singleTab;
         await RunAsync("RenderAsync", async () =>
         {
             var request = new RenderRequest(TemplateCodeText, SelectedFormat) { Dpi = SelectedDpi, Copies = (int)copies.Value };
@@ -188,7 +200,7 @@ internal sealed partial class MainForm
     }
 
     /// <summary>
-    /// 批量生成：递增字段以外的值作为公共字段，每条只改递增字段；PNG 打包 ZIP，PDF、ZPL 合并成一个文件。
+    /// 批量生成：批量数据的一行是一条，每条的字段都按行给全（AddItem().Set），不用公共字段；PNG 打包 ZIP，PDF、ZPL 合并成一个文件。
     /// </summary>
     /// <returns>生成结束时完成。</returns>
     private async Task RenderBatchAsync()
@@ -198,6 +210,7 @@ internal sealed partial class MainForm
             return;
         }
 
+        dataTabs.SelectedTab = batchTab;
         await RunAsync("RenderBatchAsync", async () =>
         {
             var batch = new BatchRenderRequest(TemplateCodeText, SelectedFormat)
@@ -205,21 +218,14 @@ internal sealed partial class MainForm
                 Dpi = SelectedDpi,
                 Output = SelectedFormat == LabelFormat.Png ? BatchOutput.Zip : BatchOutput.Merge,
             };
-            // 递增字段以外的值都是公共字段；每条只设置递增后的值。
-            var increment = incrementKey.SelectedItem as string;
-            var values = FieldValues();
-            foreach (var (key, type, value) in values.Where(field => field.Key != increment))
-            {
-                batch.SetCommon(key, Convert(type, value));
-            }
 
-            var start = values.FirstOrDefault(field => field.Key == increment);
-            for (var i = 0; i < (int)batchCount.Value; i++)
+            // 每条标签的数据由调用方给全：一行加一条，SDK 原样发送；没有行时 SDK 本地就会拦下（批量为空）
+            foreach (var row in BatchValues())
             {
                 var item = batch.AddItem();
-                if (start.Key is not null)
+                foreach (var (key, type, value) in row)
                 {
-                    item.Set(start.Key, Convert(start.Type, CodeGenerator.Increment(start.Value, i)));
+                    item.Set(key, Convert(type, value));
                 }
             }
 
@@ -394,10 +400,12 @@ internal sealed partial class MainForm
             Dpi = SelectedDpi,
             Copies = (int)copies.Value,
             Batch = codeBatch.Checked,
-            BatchCount = (int)batchCount.Value,
-            IncrementKey = incrementKey.SelectedItem as string,
+            BatchTotal = batchRows.Rows.Count,
         };
         settings.Fields.AddRange(fields.Rows.Cast<DataGridViewRow>().Select(row => (Cell(row, "key"), Cell(row, "type"), Cell(row, "value").Trim())));
+
+        // 批量写法只写出前几条，几百行的数据不全塞进代码
+        settings.BatchRows.AddRange(BatchValues(endEdit: false).Take(CodeGenerator.MaxBatchRows));
         codeText.Text = CodeGenerator.Generate(settings).Replace("\n", "\r\n").Replace("\r\r\n", "\r\n");
 
         // 显式设置一次选区，否则文本框第一次获得焦点时会全选

@@ -14,6 +14,11 @@ namespace LabelService.Demo;
 internal static class CodeGenerator
 {
     /// <summary>
+    /// 批量写法最多写出几条数据（再多只在注释里写总条数）。
+    /// </summary>
+    public const int MaxBatchRows = 5;
+
+    /// <summary>
     /// 生成代码需要的设置。
     /// </summary>
     internal sealed class Settings
@@ -70,14 +75,14 @@ internal static class CodeGenerator
         }
 
         /// <summary>
-        /// 批量的条数。
+        /// 批量写法里写出的数据：每条的字段 key、类型和值（演示程序批量数据的前几行）；为空时用单张的值写一条。
         /// </summary>
-        public int BatchCount { get; set; } = 10;
+        public List<List<(string Key, string Type, string Value)>> BatchRows { get; } = new List<List<(string Key, string Type, string Value)>>();
 
         /// <summary>
-        /// 批量时每条递增的字段；null 表示每条都一样。
+        /// 批量数据一共几条（只写出前几条时在注释里写明）。
         /// </summary>
-        public string? IncrementKey
+        public int BatchTotal
         {
             get; set;
         }
@@ -171,87 +176,47 @@ internal static class CodeGenerator
     }
 
     /// <summary>
-    /// 写批量调用：公共字段用 SetCommon，循环 AddItem 并设置递增字段，PNG 时选 ZIP 输出。
+    /// 写批量调用：每条用 AddItem().Set(...) 把字段给全（调用方准备好每条的数据，不用公共字段），PNG 时选 ZIP 输出。
     /// </summary>
     /// <param name="code">正在生成的代码。</param>
     /// <param name="settings">当前设置。</param>
     /// <param name="format">LabelFormat 枚举的写法，如 LabelFormat.Pdf。</param>
     private static void AppendBatch(StringBuilder code, Settings settings, string format)
     {
-        var increment = settings.Fields.FirstOrDefault(field => field.Key == settings.IncrementKey);
-        code.AppendLine($"            var batch = new BatchRenderRequest({Literal(settings.TemplateCode)}, {format})");
-        if (settings.Format == LabelFormat.Png)
-        {
-            code.AppendLine("            {");
-            code.AppendLine("                Output = BatchOutput.Zip,   // PNG 一个文件只能放一张，批量要打包成 ZIP");
-            code.AppendLine("            }");
-        }
-
-        foreach (var (key, type, value) in settings.Fields.Where(field => field.Value.Length > 0 && field.Key != settings.IncrementKey))
-        {
-            code.AppendLine($"                .SetCommon({Literal(key)}, {Value(type, value)})");
-        }
-
-        code.Length -= Environment.NewLine.Length;
-        code.AppendLine(";");
+        code.Append($"            var batch = new BatchRenderRequest({Literal(settings.TemplateCode)}, {format})");
+        code.AppendLine(settings.Format == LabelFormat.Png ? " { Output = BatchOutput.Zip };   // PNG 一个文件只能放一张，批量要打包成 ZIP" : ";");
         if (settings.Dpi is { } dpi)
         {
             code.AppendLine($"            batch.Dpi = {dpi};");
         }
 
         code.AppendLine();
-        code.AppendLine($"            for (var i = 0; i < {settings.BatchCount}; i++)");
-        code.AppendLine("            {");
-        if (increment.Key is null)
+        code.AppendLine("            // 每条标签的数据都由调用方给全，要几张就加几条，SDK 原样发给服务端。");
+        code.AppendLine("            // 实际使用时循环业务系统的数据（装箱明细、订单行……）逐条添加；下面是演示程序批量数据里的数据。");
+        var rows = settings.BatchRows.Count > 0
+            ? settings.BatchRows
+            : new List<List<(string Key, string Type, string Value)>> { settings.Fields.Where(field => field.Value.Length > 0).ToList() };
+        foreach (var row in rows)
         {
-            code.AppendLine("                batch.AddItem();");
-        }
-        else
-        {
-            code.AppendLine($"                // 每条的 {increment.Key} 递增：{increment.Value}、{Increment(increment.Value, 1)}、{Increment(increment.Value, 2)}……");
-            code.AppendLine($"                batch.AddItem().Set({Literal(increment.Key)}, {IncrementExpression(increment.Value)});");
+            code.Append("            batch.AddItem()");
+            foreach (var (key, type, value) in row)
+            {
+                code.AppendLine();
+                code.Append($"                .Set({Literal(key)}, {Value(type, value)})");
+            }
+
+            code.AppendLine(";");
         }
 
-        code.AppendLine("            }");
+        if (settings.BatchTotal > rows.Count)
+        {
+            code.AppendLine($"            // ……演示程序的批量数据一共 {settings.BatchTotal} 条，这里只写出前 {rows.Count} 条");
+        }
+
         code.AppendLine();
         code.AppendLine("            LabelFile file = await client.RenderBatchAsync(batch);");
         code.AppendLine("            file.Save(Path.Combine(Path.GetTempPath(), file.FileName));");
         code.AppendLine("            Console.WriteLine(file.FileName + \"，\" + file.LabelCount + \" 张，服务端 \" + file.ServerDuration?.TotalMilliseconds + \" ms\");");
-    }
-
-    /// <summary>
-    /// 把末尾的数字加 <paramref name="step"/>，保持位数：C2610080001 → C2610080002；没有数字时在后面加序号。
-    /// </summary>
-    /// <param name="value">起始值，如箱号。</param>
-    /// <param name="step">加几；0 时原样返回。</param>
-    /// <returns>递增后的值。</returns>
-    public static string Increment(string value, long step)
-    {
-        var digits = value.Length - Enumerable.Reverse(value).TakeWhile(char.IsDigit).Count();
-        if (digits == value.Length || value.Length - digits > 18)
-        {
-            return step == 0 ? value : value + "-" + step.ToString(CultureInfo.InvariantCulture);
-        }
-
-        var number = long.Parse(value.Substring(digits), CultureInfo.InvariantCulture) + step;
-        return value.Substring(0, digits) + number.ToString(CultureInfo.InvariantCulture).PadLeft(value.Length - digits, '0');
-    }
-
-    /// <summary>
-    /// 生成代码里第 i 条的递增值表达式：保留前缀，末尾数字加 i 并补齐位数。
-    /// </summary>
-    /// <param name="value">起始值。</param>
-    /// <returns>C# 表达式，如 "C261008" + (1L + i).ToString("D4")。</returns>
-    private static string IncrementExpression(string value)
-    {
-        var digits = value.Length - Enumerable.Reverse(value).TakeWhile(char.IsDigit).Count();
-        if (digits == value.Length || value.Length - digits > 18)
-        {
-            return $"{Literal(value + "-")} + i";
-        }
-
-        var start = long.Parse(value.Substring(digits), CultureInfo.InvariantCulture);
-        return $"{Literal(value.Substring(0, digits))} + ({start}L + i).ToString(\"D{value.Length - digits}\")";
     }
 
     /// <summary>
