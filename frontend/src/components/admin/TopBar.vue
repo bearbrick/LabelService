@@ -104,13 +104,13 @@ onBeforeUnmount(() => document.removeEventListener('click', close))
     <span class="header-divider"></span>
     <div class="menu-wrap biz-wrap">
       <button class="project-select" type="button" aria-haspopup="menu" :aria-expanded="menu === 'biz'" @click.stop="toggle('biz')">
-        <span class="biz-name" :title="currentBiz ? currentBiz.name : '全部业务'">{{ currentBiz ? currentBiz.name : '全部业务' }}</span><AppIcon name="chevD" small />
+        <span class="project-name" :title="currentBiz ? currentBiz.name : '全部业务'">{{ currentBiz ? currentBiz.name : '全部业务' }}</span><AppIcon name="chevD" small />
       </button>
       <div v-if="menu === 'biz'" class="dropdown left" role="menu" @click.stop>
         <h4>切换业务<span>{{ catalog.businesses.length }} 个</span></h4>
         <button class="dd-item" type="button" :class="{ on: route.page === 'templates' && route.biz === 'all' }" @click="openBiz('all')"><AppIcon name="folder" />全部业务<span class="count">{{ catalog.templates.length }}</span></button>
         <button v-for="b in catalog.businesses" :key="b.id" class="dd-item" type="button" :class="{ on: route.biz === b.id }" @click="openBiz(b.id)">
-          <span class="biz-dot" :style="{ background: b.color }"></span>{{ b.name }}<span class="count">{{ templateCountByBusiness[b.id] || 0 }}</span>
+          <span class="biz-dot" :style="{ background: b.color }"></span><span class="menu-label" :title="b.name">{{ b.name }}</span><span class="count">{{ templateCountByBusiness[b.id] || 0 }}</span>
         </button>
         <small v-if="can('biz.manage')"><button class="link" type="button" @click="open('business')">管理业务分组</button></small>
       </div>
@@ -162,7 +162,7 @@ onBeforeUnmount(() => document.removeEventListener('click', close))
       </div>
       <div class="menu-wrap">
         <button class="top-btn" type="button" aria-haspopup="menu" :aria-expanded="menu === 'user'" @click.stop="toggle('user')">
-          <span class="avatar">{{ me.name.slice(0, 1) }}</span><span class="user-name">{{ me.name }}</span><AppIcon name="chevD" small />
+          <span class="avatar">{{ me.name.slice(0, 1) }}</span><span class="user-name" :title="me.name">{{ me.name }}</span><AppIcon name="chevD" small />
         </button>
         <div v-if="menu === 'user'" class="dropdown" role="menu" @click.stop>
           <h4>{{ me.name }}<span>{{ me.role.name }}</span></h4>

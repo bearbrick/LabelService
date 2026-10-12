@@ -25,11 +25,6 @@ public sealed class SystemInfoAppService(
     TimeProvider clock) : ISystemInfoAppService
 {
     /// <summary>
-    /// Logo 文件名的前缀，后面接内容摘要的前 12 位。
-    /// </summary>
-    private const string LogoPrefix = "company-logo-";
-
-    /// <summary>
     /// 操作日志里的类型。
     /// </summary>
     private const string LogType = "系统信息";
@@ -75,44 +70,79 @@ public sealed class SystemInfoAppService(
     }
 
     /// <inheritdoc />
-    public async Task<AssetFileDto> GetLogoAsync(CancellationToken cancellationToken = default)
-    {
-        var fileName = Value(await settings.ListAsync(cancellationToken), SystemInfoRules.CompanyLogo, "");
-        return fileName.Length > 0 && files.Find(fileName) is { } file ? file : throw AdminErrors.NotFoundError("还没有上传公司 Logo");
-    }
+    public async Task<AssetFileDto> GetLogoAsync(CancellationToken cancellationToken = default) =>
+        await GetImageAsync(BrandImage.Logo, cancellationToken);
 
     /// <inheritdoc />
-    public async Task<SystemInfoDto> UploadLogoAsync(UploadAssetInput? input)
+    public Task<SystemInfoDto> UploadLogoAsync(UploadAssetInput? input) => UploadImageAsync(BrandImage.Logo, input);
+
+    /// <inheritdoc />
+    public Task<SystemInfoDto> ResetLogoAsync() => ResetImageAsync(BrandImage.Logo);
+
+    /// <inheritdoc />
+    public async Task<AssetFileDto> GetIconAsync(CancellationToken cancellationToken = default) =>
+        await GetImageAsync(BrandImage.Icon, cancellationToken);
+
+    /// <inheritdoc />
+    public Task<SystemInfoDto> UploadIconAsync(UploadAssetInput? input) => UploadImageAsync(BrandImage.Icon, input);
+
+    /// <inheritdoc />
+    public Task<SystemInfoDto> ResetIconAsync() => ResetImageAsync(BrandImage.Icon);
+
+    /// <summary>
+    /// 取上传的完整 Logo 或图标文件。
+    /// </summary>
+    /// <param name="image">哪一张图。</param>
+    /// <param name="cancellationToken">取消令牌。</param>
+    /// <returns>图片文件。</returns>
+    /// <exception cref="UserFriendlyException">还没上传（NOT_FOUND）。</exception>
+    private async Task<AssetFileDto> GetImageAsync(BrandImage image, CancellationToken cancellationToken)
     {
-        var (bytes, extension) = await UploadedImages.ReadAsync(input);
+        var fileName = Value(await settings.ListAsync(cancellationToken), image.Key, "");
+        return fileName.Length > 0 && files.Find(fileName) is { } file ? file : throw AdminErrors.NotFoundError($"还没有上传{image.Label}");
+    }
+
+    /// <summary>
+    /// 上传完整 Logo 或图标（PNG、JPG、SVG、WebP，不超过 1 MB），替换原来的。
+    /// </summary>
+    /// <param name="image">哪一张图。</param>
+    /// <param name="input">上传的文件。</param>
+    /// <returns>修改后的系统信息。</returns>
+    private async Task<SystemInfoDto> UploadImageAsync(BrandImage image, UploadAssetInput? input)
+    {
+        var (bytes, extension) = await UploadedImages.ReadAsync(input, allowWebp: true);
 
         // 文件名带内容摘要：换了图地址就变，浏览器不会用缓存里的旧图。
-        var fileName = LogoPrefix + Convert.ToHexStringLower(SHA256.HashData(bytes))[..12] + extension;
+        var fileName = image.Prefix + Convert.ToHexStringLower(SHA256.HashData(bytes))[..12] + extension;
         await files.SaveAsync(fileName, bytes);
         var saved = await settings.ListAsync();
-        var old = Value(saved, SystemInfoRules.CompanyLogo, "");
-        Set(saved, SystemInfoRules.CompanyLogo, fileName);
+        var old = Value(saved, image.Key, "");
+        Set(saved, image.Key, fileName);
         await unitOfWork.SaveChangesAsync();
         if (old.Length > 0 && old != fileName)
         {
             files.Delete(old);
         }
 
-        await operationLog.WriteAsync(LogType, "公司 Logo", $"上传 {extension[1..].ToUpperInvariant()}，{bytes.Length / 1024.0:0.#} KB");
+        await operationLog.WriteAsync(LogType, image.Label, $"上传 {extension[1..].ToUpperInvariant()}，{bytes.Length / 1024.0:0.#} KB");
         return ToDto(await settings.ListAsync());
     }
 
-    /// <inheritdoc />
-    public async Task<SystemInfoDto> ResetLogoAsync()
+    /// <summary>
+    /// 删除上传的完整 Logo 或图标。
+    /// </summary>
+    /// <param name="image">哪一张图。</param>
+    /// <returns>修改后的系统信息。</returns>
+    private async Task<SystemInfoDto> ResetImageAsync(BrandImage image)
     {
         var saved = await settings.ListAsync();
-        var old = Value(saved, SystemInfoRules.CompanyLogo, "");
+        var old = Value(saved, image.Key, "");
         if (old.Length > 0)
         {
-            Set(saved, SystemInfoRules.CompanyLogo, "");
+            Set(saved, image.Key, "");
             await unitOfWork.SaveChangesAsync();
             files.Delete(old);
-            await operationLog.WriteAsync(LogType, "公司 Logo", "恢复成占位（删除上传的 Logo）");
+            await operationLog.WriteAsync(LogType, image.Label, $"恢复默认（删除上传的{image.Label}）");
         }
 
         return ToDto(await settings.ListAsync());
@@ -173,10 +203,14 @@ public sealed class SystemInfoAppService(
     private static SystemInfoDto ToDto(IReadOnlyList<SystemSettingEntity> saved)
     {
         string Text(string key) => Value(saved, key, SystemInfoRules.Fields.First(field => field.Key == key).Default);
-        var logo = Value(saved, SystemInfoRules.CompanyLogo, "");
 
-        // 版本取文件名里的摘要部分，前端拼在 Logo 地址后面。
-        var version = logo.Length == 0 ? null : Path.GetFileNameWithoutExtension(logo).Replace(LogoPrefix, "", StringComparison.Ordinal);
+        // 版本取文件名里的摘要部分，前端拼在图片地址后面；没上传时为 null。
+        string? Version(BrandImage image)
+        {
+            var file = Value(saved, image.Key, "");
+            return file.Length == 0 ? null : Path.GetFileNameWithoutExtension(file).Replace(image.Prefix, "", StringComparison.Ordinal);
+        }
+
         return new SystemInfoDto(
             Text(SystemInfoRules.SystemName),
             Text(SystemInfoRules.Subtitle),
@@ -185,6 +219,26 @@ public sealed class SystemInfoAppService(
             Text(SystemInfoRules.Support),
             Text(SystemInfoRules.LoginTitle),
             Text(SystemInfoRules.LoginIntro),
-            version);
+            Version(BrandImage.Logo),
+            Version(BrandImage.Icon));
+    }
+
+    /// <summary>
+    /// 系统信息里的一张图：完整 Logo 或图标。
+    /// </summary>
+    /// <param name="Key">存文件名的设置项键。</param>
+    /// <param name="Prefix">文件名前缀，后面接内容摘要的前 12 位。</param>
+    /// <param name="Label">中文名称，提示和操作日志里用。</param>
+    private sealed record BrandImage(string Key, string Prefix, string Label)
+    {
+        /// <summary>
+        /// 完整 Logo：登录页显示；没有图标时顶栏也用它。
+        /// </summary>
+        public static BrandImage Logo { get; } = new(SystemInfoRules.CompanyLogo, "company-logo-", "公司 Logo");
+
+        /// <summary>
+        /// Logo 图标：顶栏和浏览器标签页显示；没有完整 Logo 时登录页也用它。
+        /// </summary>
+        public static BrandImage Icon { get; } = new(SystemInfoRules.CompanyIcon, "company-icon-", "Logo 图标");
     }
 }

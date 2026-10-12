@@ -72,3 +72,18 @@ table.grid td select.sel, table.grid td select.sel:hover, table.grid td select.s
   select.sel option::checkmark { display: none; }
   select.sel option:disabled { color: var(--faint); }
 }
+
+/* 登录页和效果预览里的完整 Logo 显示得更大 */
+.brand-mark.full .company-logo { height: 60px; max-width: 300px; padding: 6px 12px; }
+.brand-mark.full .company-logo img { max-height: 48px; max-width: 276px; }
+.preview-login .brand-mark { margin-bottom: 6px; }
+
+/* 系统信息页：完整 Logo、Logo 图标两栏 */
+.logo-slot { border: 1px solid var(--line); border-radius: 6px; padding: 12px 14px; display: grid; gap: 8px; margin-bottom: 10px; }
+.logo-slot-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.logo-slot-head b { font-weight: 600; font-size: 13px; }
+.logo-slot-body { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; background: var(--navy); border-radius: 6px; padding: 12px 14px; }
+.logo-slot-body .logo-actions { margin-top: 0; margin-left: auto; }
+.logo-slot-body .btn.ghost { color: #fff; }
+.company-logo.big { height: 60px; max-width: 300px; padding: 6px 12px; }
+.company-logo.big img { max-height: 48px; max-width: 276px; }

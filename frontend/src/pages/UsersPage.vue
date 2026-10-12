@@ -206,8 +206,9 @@ async function toggle(u: User): Promise<void> {
         <select id="uf-status" v-model="filter.status" class="sel" aria-label="状态"><option value="">全部状态</option><option value="active">启用</option><option value="disabled">停用</option></select>
       </div>
       <div class="table-box">
-        <div class="tw">
-          <table class="dt">
+        <div class="tw" tabindex="0" role="region" aria-label="用户表格">
+          <table class="dt users-table">
+            <colgroup><col style="width: 240px" /><col style="width: 160px" /><col style="width: 260px" /><col style="width: 70px" /><col style="width: 100px" /><col style="width: 190px" /></colgroup>
             <thead><tr><th>用户</th><th>角色</th><th>业务范围</th><th>状态</th><th>最近登录</th><th class="actions">操作</th></tr></thead>
             <tbody>
               <tr v-for="u in list" :key="u.id">

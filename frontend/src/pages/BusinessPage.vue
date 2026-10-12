@@ -161,8 +161,9 @@ async function remove(b: Business): Promise<void> {
         <button class="btn primary" type="button" :disabled="!can('biz.manage')" @click="edit(null)"><AppIcon name="plus" small />新建业务</button>
       </div>
       <div class="table-box">
-        <div class="tw">
-          <table class="dt">
+        <div class="tw" tabindex="0" role="region" aria-label="业务分组表格">
+          <table class="dt business-table">
+            <colgroup><col style="width: 200px" /><col style="width: 110px" /><col style="width: 240px" /><col style="width: 70px" /><col style="width: 110px" /><col v-if="can('api.manage')" style="width: 200px" /><col style="width: 100px" /></colgroup>
             <thead>
               <tr><th>业务</th><th>编码</th><th>说明</th><th>模板</th><th>负责人</th><th v-if="can('api.manage')">可调用的系统</th><th class="actions">操作</th></tr>
             </thead>

@@ -140,7 +140,7 @@ function page(target: Page): void {
         <button class="module-row" type="button" :class="{ active: route.page === 'templates' && route.biz === folder.id }" :title="`${folder.name}（${folder.code}）`" @click="openFolder(folder.id)">
           <AppIcon :name="openFolders[folder.id] || query ? 'chevD' : 'chevR'" small class="chev" />
           <AppIcon :name="openFolders[folder.id] || query ? 'folderOpen' : 'folder'" />
-          <span class="nm">{{ folder.name }}（{{ folder.code }}）</span><span class="count">{{ templatesOf(folder.id).length }}</span>
+          <span class="nm" :title="folder.name + '（' + folder.code + '）'">{{ folder.name }}（{{ folder.code }}）</span><span class="count">{{ templatesOf(folder.id).length }}</span>
         </button>
         <template v-if="openFolders[folder.id] || query">
           <button
@@ -148,12 +148,13 @@ function page(target: Page): void {
             :key="t.code"
             class="table-item"
             type="button"
+            :aria-label="t.name + ' · ' + t.code"
             :class="{ active: route.page === 'workspace' && route.code === t.code }"
             :title="`${t.name}
 ${t.code} · ${sizeText(t)}`"
             @click="open(t)"
           >
-            <span><span class="state-dot" :class="templateState(t).key"></span>{{ t.name }}</span>
+            <span><span class="state-dot" :class="templateState(t).key"></span><span class="tree-template-name">{{ t.name }}</span></span>
             <small>{{ t.code }} · {{ sizeText(t) }}</small>
           </button>
         </template>

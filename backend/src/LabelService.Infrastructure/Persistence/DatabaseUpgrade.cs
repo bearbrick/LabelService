@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 namespace LabelService.Infrastructure.Persistence;
 
 /// <summary>
-/// 启动时升级数据库（执行迁移）。SQLite 保证失败可恢复：有待执行的迁移、库里已经有数据时，先用 VACUUM INTO 备份到数据目录的 backups/；
+/// 启动时初始化或升级数据库（执行迁移）。SQLite 保证失败可恢复：有待执行的迁移时，先用 VACUUM INTO 备份到数据目录的 backups/；
 /// 迁移或之后的数据转换出错时关闭连接、用备份覆盖回去，再抛出异常让服务不启动。
 /// </summary>
 /// <remarks>
@@ -115,7 +115,7 @@ public static class DatabaseUpgrade
     }
 
     /// <summary>
-    /// 新库（还没执行过迁移）直接升级；已有数据的库先备份，失败时恢复备份并抛出 <see cref="InvalidOperationException"/>。
+    /// 每次初始化或升级均先保存快照；没有迁移记录的文件也可能含有数据，失败时恢复快照并抛出 <see cref="InvalidOperationException"/>。
     /// </summary>
     /// <param name="database">库文件的完整路径。</param>
     /// <param name="directory">数据目录（备份放在它下面的 backups/）。</param>
@@ -127,19 +127,25 @@ public static class DatabaseUpgrade
     /// <exception cref="InvalidOperationException">升级失败，已恢复到升级前的备份。</exception>
     private static async Task GuardAsync(string database, string directory, IReadOnlyList<string> applied, IReadOnlyList<string> pending, ILogger logger, Func<Task> upgrade)
     {
-        if (applied.Count == 0 || !File.Exists(database))
-        {
-            await upgrade();
-            return;
-        }
-
         var backups = Path.Combine(directory, "backups");
         Directory.CreateDirectory(backups);
+        if (!File.Exists(database))
+        {
+            // 首次初始化也需要可恢复的起点；只创建空库，不在备份完成前执行迁移。
+            await using var empty = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = database, Mode = SqliteOpenMode.ReadWriteCreate, Pooling = false }.ToString());
+            await empty.OpenAsync();
+        }
+
         var stamp = DateTime.Now.ToString("yyyyMMdd-HHmmss-fff", CultureInfo.InvariantCulture);
-        var backup = Path.Combine(backups, $"{Path.GetFileNameWithoutExtension(database)}-before-upgrade-{stamp}.db");
+        var backup = Path.Combine(backups, $"{Path.GetFileNameWithoutExtension(database)}-before-upgrade-{stamp}-{Guid.NewGuid():N}.db");
         SqliteConnection.ClearAllPools();
         await SqliteSnapshot.CreateAsync(database, backup, CancellationToken.None);
-        logger.LogWarning("{Database} 有 {Count} 个待执行的迁移（{Pending}），升级前已备份到 {Backup}", Path.GetFileName(database), pending.Count, string.Join("、", pending), backup);
+        if (!File.Exists(backup))
+        {
+            throw new IOException($"迁移前快照未生成，拒绝初始化或升级：{backup}");
+        }
+
+        logger.LogWarning("{Database} 已执行 {Applied} 个迁移，有 {Count} 个待执行的迁移（{Pending}），初始化或升级前已备份到 {Backup}", Path.GetFileName(database), applied.Count, pending.Count, string.Join("、", pending), backup);
         try
         {
             await upgrade();

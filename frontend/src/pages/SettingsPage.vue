@@ -5,7 +5,7 @@
  */
 import { computed, reactive, ref } from 'vue'
 import { errorText } from '../api/http.ts'
-import { resetLogo, saveSystemInfo, SYSTEM_INFO_LIMITS, uploadLogo } from '../api/system.ts'
+import { iconUrl, logoUrl, resetIcon, resetLogo, saveSystemInfo, SYSTEM_INFO_LIMITS, uploadIcon, uploadLogo } from '../api/system.ts'
 import type { SaveSystemInfo, SystemInfo } from '../api/system.ts'
 import AppIcon from '../components/AppIcon.vue'
 import BrandMark from '../components/admin/BrandMark.vue'
@@ -54,6 +54,36 @@ const FIELDS: FieldSpec[] = [
 ]
 
 /**
+ * 系统信息里的一张图：完整 Logo 或 Logo 图标。
+ */
+interface ImageSlot {
+  /**
+   * 哪一张：logo 是完整 Logo，icon 是图标。
+   */
+  kind: 'logo' | 'icon'
+  /**
+   * 标题。
+   */
+  title: string
+  /**
+   * 用在哪里。
+   */
+  usage: string
+  /**
+   * 没上传时用什么代替。
+   */
+  fallback: string
+}
+
+/**
+ * 两张图，按页面上的顺序排列。
+ */
+const IMAGE_SLOTS: ImageSlot[] = [
+  { kind: 'logo', title: '完整 Logo', usage: '登录页左上角，显示得较大；可以带公司名称文字', fallback: '没上传时用 Logo 图标' },
+  { kind: 'icon', title: 'Logo 图标', usage: '顶栏左上角和浏览器标签页，显示很小；建议只用图形', fallback: '没上传时用完整 Logo' },
+]
+
+/**
  * 正在编辑的文字部分，打开页面时从当前系统信息复制。
  */
 const form = reactive<SaveSystemInfo>(copyText(system.info))
@@ -69,14 +99,18 @@ const busy = ref(false)
 const error = ref('')
 
 /**
- * 选择 Logo 文件的隐藏输入框。
+ * 已上传的图片地址；没上传时为空字符串。
+ * @param kind 哪一张图。
+ * @returns 图片地址。
  */
-const fileInput = ref<HTMLInputElement | null>(null)
+function imageUrl(kind: ImageSlot['kind']): string {
+  return kind === 'logo' ? logoUrl(system.info) : iconUrl(system.info)
+}
 
 /**
  * 预览用的系统信息：表单里还没保存的文字加上当前的 Logo。
  */
-const preview = computed<SystemInfo>(() => ({ ...form, systemName: form.systemName.trim() || '（系统名称）', logoVersion: system.info.logoVersion }))
+const preview = computed<SystemInfo>(() => ({ ...form, systemName: form.systemName.trim() || '（系统名称）', logoVersion: system.info.logoVersion, iconVersion: system.info.iconVersion }))
 
 /**
  * 表单和已保存的内容是否不同。
@@ -125,11 +159,12 @@ function revert(): void {
 }
 
 /**
- * 选好 Logo 文件后上传，成功后顶栏和登录页立即换成新 Logo。
+ * 选好图片后上传，成功后顶栏、登录页和浏览器标签页立即换成新图。
+ * @param slot 哪一张图。
  * @param event 文件输入框的 change 事件。
  * @returns 上传完成时结束。
  */
-async function onLogoPicked(event: Event): Promise<void> {
+async function onImagePicked(slot: ImageSlot, event: Event): Promise<void> {
   const input = event.target as HTMLInputElement
   const file = input.files?.[0]
   // 清空选择，同一个文件改过后还能再选一次
@@ -137,8 +172,8 @@ async function onLogoPicked(event: Event): Promise<void> {
   if (!file) return
   busy.value = true
   try {
-    applySystemInfo(await uploadLogo(file))
-    toast('公司 Logo 已更新')
+    applySystemInfo(await (slot.kind === 'logo' ? uploadLogo(file) : uploadIcon(file)))
+    toast(`${slot.title}已更新`)
   } catch (e) {
     toast(errorText(e), true)
   } finally {
@@ -147,15 +182,16 @@ async function onLogoPicked(event: Event): Promise<void> {
 }
 
 /**
- * 删除上传的 Logo，恢复成占位。
+ * 删除上传的图片（确认后）。
+ * @param slot 哪一张图。
  * @returns 操作完成时结束。
  */
-async function restoreLogo(): Promise<void> {
-  if (!(await confirmBox('恢复成占位', '删除上传的公司 Logo，顶栏和登录页改为显示“公司 LOGO”占位。', '恢复', true))) return
+async function restoreImage(slot: ImageSlot): Promise<void> {
+  if (!(await confirmBox(`删除${slot.title}`, `删除上传的${slot.title}，${slot.fallback}；两张都没有时显示“公司 LOGO”占位。`, '删除', true))) return
   busy.value = true
   try {
-    applySystemInfo(await resetLogo())
-    toast('已恢复成占位')
+    applySystemInfo(await (slot.kind === 'logo' ? resetLogo() : resetIcon()))
+    toast(`已删除${slot.title}`)
   } catch (e) {
     toast(errorText(e), true)
   } finally {
@@ -199,13 +235,24 @@ async function restoreLogo(): Promise<void> {
         <div class="stack">
           <div class="box">
             <h3><AppIcon name="image" small />公司 Logo</h3>
-            <div class="logo-stage"><BrandMark :info="preview" /></div>
-            <div class="logo-actions">
-              <button class="btn" type="button" :disabled="busy" @click="fileInput?.click()"><AppIcon name="upload" small />{{ system.info.logoVersion ? '更换 Logo' : '上传 Logo' }}</button>
-              <button v-if="system.info.logoVersion" class="btn ghost" type="button" :disabled="busy" @click="restoreLogo">恢复成占位</button>
-              <input ref="fileInput" type="file" accept=".png,.jpg,.jpeg,.svg,image/png,image/jpeg,image/svg+xml" hidden @change="onLogoPicked" />
+            <div v-for="slot in IMAGE_SLOTS" :key="slot.kind" class="logo-slot">
+              <div class="logo-slot-head"><b>{{ slot.title }}</b><span class="hint">{{ slot.usage }}</span></div>
+              <div class="logo-slot-body">
+                <span class="company-logo" :class="{ big: slot.kind === 'logo' }">
+                  <img v-if="imageUrl(slot.kind)" :src="imageUrl(slot.kind)" :alt="slot.title" />
+                  <span v-else class="logo-placeholder">未上传</span>
+                </span>
+                <div class="logo-actions">
+                  <label class="btn" :class="{ disabled: busy }">
+                    <AppIcon name="upload" small />{{ imageUrl(slot.kind) ? '更换' : '上传' }}
+                    <input type="file" accept=".png,.jpg,.jpeg,.svg,.webp,image/png,image/jpeg,image/svg+xml,image/webp" hidden :disabled="busy" @change="onImagePicked(slot, $event)" />
+                  </label>
+                  <button v-if="imageUrl(slot.kind)" class="btn ghost" type="button" :disabled="busy" @click="restoreImage(slot)">删除</button>
+                </div>
+              </div>
+              <div class="hint">{{ slot.fallback }}</div>
             </div>
-            <p class="hint" style="margin-top: 10px">PNG、JPG、SVG，不超过 1 MB。建议横向、透明背景，显示时高 28 像素、最宽 148 像素，放在白底圆角框里。</p>
+            <p class="hint" style="margin-top: 10px">PNG、JPG、SVG、WebP，不超过 1 MB。放在白底圆角框里显示，上传前把图片四周的空白裁掉，显示得更大更清楚。</p>
           </div>
           <div class="box">
             <h3><AppIcon name="preview" small />效果预览<span v-if="dirty" class="pill warn" style="margin-left: 8px">未保存</span></h3>
@@ -214,6 +261,7 @@ async function restoreLogo(): Promise<void> {
               <span v-if="preview.subtitle" class="brand-sub" :title="preview.subtitle">{{ preview.subtitle }}</span>
             </div>
             <div class="preview-login">
+              <BrandMark :info="preview" full />
               <span class="eyebrow">{{ preview.companyName || 'LABEL SERVICE' }}</span>
               <b>{{ preview.loginTitle }}</b>
               <p v-if="preview.loginIntro">{{ preview.loginIntro }}</p>
