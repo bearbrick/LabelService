@@ -57,6 +57,7 @@ Select-String -Path docs/tasks/T-*.md -Pattern '^(状态|负责人)：'
 | [T-038](T-038-auto-defaults.md) | 字段的自动值（当前日期、有效期、批量序号、调用方等） | 后端 + 前端 + 调用端 | 一期验收 | T-034 | `Rendering/Validation`、`src/model/autoValues.ts` |
 | [T-039](T-039-field-panel-insert-only.md) | 设计页的“字段”只负责放到画布上，字段统一在“数据源”页编辑 | 前端 | 一期验收 | T-038 | `src/components/FieldList.vue` |
 | [T-040](T-040-demo-print-code.md) | 演示程序的调用代码写全：生成之后发送到打印机 | 调用端 | 一期验收 | T-035 | `samples/LabelService.Demo.WinForms` |
+| [T-041](T-041-simpler-print-code.md) | 调用代码的打印写简单，PDF 加直接发文件的写法 | 调用端 | 一期验收 | T-040 | `samples/LabelService.Demo.WinForms` |
 
 “主要目录”是相对于对应部分（`frontend/`、`backend/`、`client/`）的路径；后端的 Rendering、Server 指 `backend/src/LabelService.Rendering`、`backend/src/LabelService.Server`（T-023 起 Server 改名为 `LabelService.Api`，原来的模板存储、鉴权、日志等拆到 Domain、Application、Infrastructure，见 ADR 0010；已完成任务的“主要目录”保留当时的写法）。跨两个部分的任务（T-014、T-016、T-018、T-020）建议按部分拆成子任务分别认领；T-018 是契约变更，后端和调用端的契约副本要在同一个提交里改齐。
 
