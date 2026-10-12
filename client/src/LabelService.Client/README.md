@@ -40,7 +40,7 @@ LabelFile zpl = await client.RenderBatchAsync(batch);
 await NetworkPrinter.SendAsync("192.168.1.50", 9100, zpl.Content);
 ```
 
-要先知道模板要哪些字段：`TemplateSchema schema = await client.GetSchemaAsync("BOX_LABEL");`，里面有字段 key、类型、是否必填和调用样例。
+要先知道模板要哪些字段：`TemplateSchema schema = await client.GetSchemaAsync("BOX_LABEL");`，里面有字段 key、类型、是否必填和调用样例。这把 Key 能用哪些模板：`IReadOnlyList<TemplateSummary> templates = await client.ListTemplatesAsync();`（编码、名称、最新版本、尺寸，按编码排序）。
 
 ### 拼版：多张标签排在 A4 上打
 

@@ -105,11 +105,23 @@ public sealed class LabelServiceClient : ILabelServiceClient, IDisposable
         }
 
         var path = "api/v1/templates/" + Uri.EscapeDataString(templateCode.Trim()) + "/schema";
-        return SendAsync("GetSchema", templateCode, HttpMethod.Get, path, null, ReadSchemaAsync, cancellationToken);
+        return SendAsync("GetSchema", templateCode, HttpMethod.Get, path, null,
+            (response, requestId) => ReadJsonAsync<TemplateSchema>(response, requestId, "字段定义"), cancellationToken);
     }
 
     /// <inheritdoc />
     public TemplateSchema GetSchema(string templateCode) => Task.Run(() => GetSchemaAsync(templateCode)).GetAwaiter().GetResult();
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<TemplateSummary>> ListTemplatesAsync(CancellationToken cancellationToken = default)
+    {
+        var body = await SendAsync("ListTemplates", "", HttpMethod.Get, "api/v1/templates", null,
+            (response, requestId) => ReadJsonAsync<TemplateListBody>(response, requestId, "模板列表"), cancellationToken).ConfigureAwait(false);
+        return body.Templates ?? new List<TemplateSummary>();
+    }
+
+    /// <inheritdoc />
+    public IReadOnlyList<TemplateSummary> ListTemplates() => Task.Run(() => ListTemplatesAsync()).GetAwaiter().GetResult();
 
     /// <summary>
     /// 释放内部的 HttpClient。
@@ -265,23 +277,26 @@ public sealed class LabelServiceClient : ILabelServiceClient, IDisposable
     }
 
     /// <summary>
-    /// 把成功的字段定义响应读成 <see cref="TemplateSchema"/>。
+    /// 把成功的 JSON 响应（字段定义、模板列表）反序列化。
     /// </summary>
+    /// <typeparam name="T">响应体的类型。</typeparam>
     /// <param name="response">成功的响应。</param>
     /// <param name="requestId">这次调用的链路 ID。</param>
-    /// <returns>字段定义。</returns>
+    /// <param name="what">响应的名称，写进解析失败的说明，如“字段定义”。</param>
+    /// <returns>响应体。</returns>
     /// <exception cref="LabelServiceException">响应体不是预期的 JSON（UNEXPECTED_RESPONSE）。</exception>
-    private static async Task<TemplateSchema> ReadSchemaAsync(HttpResponseMessage response, string requestId)
+    private static async Task<T> ReadJsonAsync<T>(HttpResponseMessage response, string requestId, string what)
+        where T : class
     {
         var content = await response.Content.ReadAsByteArrayAsync().ConfigureAwait(false);
         try
         {
-            return JsonSerializer.Deserialize<TemplateSchema>(content, ClientJson.Options)
+            return JsonSerializer.Deserialize<T>(content, ClientJson.Options)
                 ?? throw new JsonException("响应体为空");
         }
         catch (JsonException ex)
         {
-            throw new LabelServiceException(LabelErrorCodes.UnexpectedResponse, "无法解析字段定义：" + ex.Message, (int)response.StatusCode, ex)
+            throw new LabelServiceException(LabelErrorCodes.UnexpectedResponse, "无法解析" + what + "：" + ex.Message, (int)response.StatusCode, ex)
             {
                 RequestId = requestId,
                 TraceId = Header(response, HeaderNames.TraceId),

@@ -59,4 +59,18 @@ public interface ILabelServiceClient
     /// <param name="templateCode">模板编码。</param>
     /// <returns>字段定义。</returns>
     TemplateSchema GetSchema(string templateCode);
+
+    /// <summary>
+    /// 列出这把 API Key 有权使用的已发布模板（编码、名称、最新版本、尺寸），按编码排序。
+    /// </summary>
+    /// <param name="cancellationToken">取消令牌。</param>
+    /// <returns>模板列表；一个都没有时是空列表。</returns>
+    /// <exception cref="LabelServiceException">服务端返回错误或网络错误。</exception>
+    Task<IReadOnlyList<TemplateSummary>> ListTemplatesAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// 列出可用模板（同步）。
+    /// </summary>
+    /// <returns>模板列表。</returns>
+    IReadOnlyList<TemplateSummary> ListTemplates();
 }

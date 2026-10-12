@@ -39,6 +39,9 @@ internal static class LiveServerChecks
 
         var schema = await client.GetSchemaAsync("BOX_LABEL");
         check("端到端：SDK 读取字段定义", schema.Fields.Count == 6 && schema.Sample.ContainsKey("boxNo"));
+        var templates = await client.ListTemplatesAsync();
+        check("端到端：SDK 列出可用模板，有 BOX_LABEL 且版本和字段定义一致",
+            templates.Any(item => item.TemplateCode == "BOX_LABEL" && item.Version == schema.Version && item.Page.Width == 100));
 
         BatchRenderRequest Batch(LabelFormat format)
         {

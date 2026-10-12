@@ -42,6 +42,49 @@ public sealed class TemplateSchema
 }
 
 /// <summary>
+/// 模板列表的一项（<see cref="ILabelServiceClient.ListTemplatesAsync"/>）：编码、名称、最新发布版本和尺寸。
+/// </summary>
+public sealed class TemplateSummary
+{
+    /// <summary>
+    /// 模板编码。
+    /// </summary>
+    public string TemplateCode { get; set; } = "";
+
+    /// <summary>
+    /// 模板显示名。
+    /// </summary>
+    public string Name { get; set; } = "";
+
+    /// <summary>
+    /// 最新发布版本号。
+    /// </summary>
+    public int Version
+    {
+        get; set;
+    }
+
+    /// <summary>
+    /// 标签尺寸和默认 DPI。
+    /// </summary>
+    public TemplatePage Page { get; set; } = new TemplatePage();
+}
+
+/// <summary>
+/// GET /api/v1/templates 的响应体。
+/// </summary>
+internal sealed class TemplateListBody
+{
+    /// <summary>
+    /// 模板；服务端没返回时为 null。
+    /// </summary>
+    public List<TemplateSummary>? Templates
+    {
+        get; set;
+    }
+}
+
+/// <summary>
 /// 标签尺寸。
 /// </summary>
 public sealed class TemplatePage
