@@ -60,6 +60,7 @@ Select-String -Path docs/tasks/T-*.md -Pattern '^(状态|负责人)：'
 | [T-041](T-041-simpler-print-code.md) | 调用代码的打印写简单，PDF 加直接发文件的写法 | 调用端 | 一期验收 | T-040 | `samples/LabelService.Demo.WinForms` |
 | [T-042](T-042-sdk-net461.md) | SDK 正式支持 .NET Framework 4.6.1，去掉 System.Text.Json 依赖 | 调用端 | 一期验收 | T-034 | `src/LabelService.Client` |
 | [T-043](T-043-login-brand.md) | 登录页品牌区：Logo 单独一行，系统名称做标题 | 前端 | 一期验收 | T-033 | `src/components/admin/LoginBrand.vue` |
+| [T-044](T-044-login-align.md) | 登录页左右两栏对齐 | 前端 | 一期验收 | T-043 | `src/system.css` |
 
 “主要目录”是相对于对应部分（`frontend/`、`backend/`、`client/`）的路径；后端的 Rendering、Server 指 `backend/src/LabelService.Rendering`、`backend/src/LabelService.Server`（T-023 起 Server 改名为 `LabelService.Api`，原来的模板存储、鉴权、日志等拆到 Domain、Application、Infrastructure，见 ADR 0010；已完成任务的“主要目录”保留当时的写法）。跨两个部分的任务（T-014、T-016、T-018、T-020）建议按部分拆成子任务分别认领；T-018 是契约变更，后端和调用端的契约副本要在同一个提交里改齐。
 
