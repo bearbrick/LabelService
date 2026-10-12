@@ -43,7 +43,7 @@
 | `backend/samples/` | 示例模板（成品箱标、A4 出口唛头）、示例请求体 | 开发期服务启动时加载示例模板 |
 | `backend/assets/fonts/` | 思源黑体、思源宋体 | 文件不提交，按其 README 自己放；检查程序和基准需要 |
 | `client/LabelService.Client.slnx` | 调用端解决方案 | |
-| `client/src/LabelService.Client/` | 给第三方的 SDK（net462、netstandard2.0、net8.0） | 遵守 R4 |
+| `client/src/LabelService.Client/` | 给第三方的 SDK（net461、netstandard2.0、net8.0） | 遵守 R4 |
 | `client/samples/LabelService.Demo.WinForms/` | SDK 演示程序（net48、net10.0-windows） | |
 | `client/tests/LabelService.Client.Checks/` | 调用端检查程序 | 设置 `LABEL_SERVICE_URL` 时含端到端检查 |
 | `docs/design/`、`docs/prototypes/` | 评审过的设计书和高保真原型（HTML） | 只做同步性修改，见 R10 |
@@ -101,7 +101,7 @@ cd frontend; npm run build              # 类型检查 + 打包
 
 **R3 热路径。** 开放接口从收到请求到返回的代码（包括 Rendering 全部）：不访问数据库、磁盘、网络；不做一次性初始化；计时用 `Stopwatch.GetTimestamp()`。细则见 `docs/performance.md`。改 Rendering 必须附基准前后对比。
 
-**R4 SDK 兼容。** `client/src/LabelService.Client` 必须能编译到 net462：不用 record、init、required、Index/Range、`ToHexStringLower` 之类新 API；不加 Newtonsoft.Json 或日志框架依赖。公开 API 变化要同步设计书第 10 节，并遵守语义化版本。
+**R4 SDK 兼容。** `client/src/LabelService.Client` 必须能编译到 net461（.NET Framework 4.6.1，ADR 0013）：不用 record、init、required、Index/Range、`ToHexStringLower` 之类新 API；不依赖任何 NuGet 包（JSON 读写是自带的 `Internal/JsonText.cs`，不要再引入 System.Text.Json、Newtonsoft.Json 或日志框架）。公开 API 变化要同步设计书第 10 节，并遵守语义化版本。
 
 **R5 语言和注释。** 代码注释、XML 注释、文档、给用户看的错误消息用**中文**；标识符、提交信息用**英文**。每个类型、函数、属性、参数都写完整的注释（包括私有的、检查程序和演示程序里的）：C# 用三行写法的 `/// <summary>`，加上每个参数的 `<param>`、有返回值时的 `<returns>`、泛型参数的 `<typeparam>`，重写和接口实现可以用 `<inheritdoc />`；TypeScript / Vue 用多行的 `/** … */`，函数写 `@param`、`@returns`，接口和类型的属性、store 的状态、组件的 props 和 emits 都要写。函数里关键的步骤（分支的理由、算法、容易误解的地方）写行内注释。代码、项目文件和脚本里不写任务编号（任务号只出现在任务文件、提交信息和文档里）。三个部分的检查程序都会核对，漏写时失败并列出位置：只看注释时运行 `dotnet run --project backend/tests/LabelService.Backend.Checks -- docs`、`dotnet run --project client/tests/LabelService.Client.Checks -- docs`，前端在 `npm run check` 里（`tests/docs.ts`）。
 
