@@ -51,3 +51,4 @@
   - 公开 API 不兼容的地方：`TemplateSchema.Sample` → `Dictionary<string, object?>`，`TemplateField.Default` → `object?`；`Set` 传 JsonElement 改成按文本发送。都写进了还没发布的 1.0.0-preview.3 的 CHANGELOG。
   - 演示程序：样例值用 `System.Convert.ToString` 显示；net48 版的内置模拟服务还要用 System.Text.Json，原来是跟着 SDK 间接带进来的，现在演示程序自己引用（版本沿用 Directory.Packages.props 里的 8.0.6，不是新包）。顺手修了自检里一处偶发失败：“模拟网络抖动”那一项在调用日志异步加进列表之前就去看了，.NET 4.8 冷启动时偶尔读早了；改成先等这条日志出现（最多 1 秒）。修完 net48 连跑三次、net10 一次都通过。
   - 验证：调用端检查 65 项（新增 JSON 9 项、架构 1 项），带 LABEL_SERVICE_URL 跑真实服务全部通过；net461 探针项目 0 警告、能调通；`dotnet pack` 出的 nuspec 三个依赖组都是空的。只装 4.6.1 运行时的机器本机没有，没有实测（本机是 4.8，.NET 4.x 是原地升级）。
+  - 提交说明：共享文件 Protocol.cs 单独提交（f915e0e）时，其余 SDK 文件还在下一个提交里，所以 f915e0e 单独检出不能编译；改写分支历史要用户确认，没有动。`verify.ps1` 全量通过：后端 517、调用端 65、前端 104。
