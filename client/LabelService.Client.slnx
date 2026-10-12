@@ -1,6 +1,7 @@
 <Solution>
   <Folder Name="/src/">
     <Project Path="src/LabelService.Client/LabelService.Client.csproj" />
+    <Project Path="src/LabelService.Client.Windows/LabelService.Client.Windows.csproj" />
   </Folder>
   <Folder Name="/samples/">
     <Project Path="samples/LabelService.Demo.WinForms/LabelService.Demo.WinForms.csproj" />
