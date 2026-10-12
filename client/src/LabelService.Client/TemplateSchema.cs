@@ -151,6 +151,15 @@ public sealed class TemplateField
     }
 
     /// <summary>
+    /// 自动值：不传时服务端自动算出来，如 today（当前日期）、today+30d（30 天后）、index（批量里第几张）、client（调用方名称），
+    /// 写法见 docs/contracts.md；没有时为 null。有自动值的字段不用传，传了就用传的值。
+    /// </summary>
+    public string? Auto
+    {
+        get; set;
+    }
+
+    /// <summary>
     /// number、date 的显示格式。
     /// </summary>
     public string? Format

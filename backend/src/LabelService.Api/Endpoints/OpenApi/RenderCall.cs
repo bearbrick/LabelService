@@ -96,6 +96,7 @@ internal sealed class RenderCall : IDisposable
         this.endpoint = endpoint;
         this.renderLog = renderLog;
         Trace = new RenderTrace(Stopwatch.GetTimestamp());
+        Trace.RequestId = RequestId is { Length: > 0 } requestId ? requestId : ApiErrors.TraceId(http);
         metrics.RequestStarted();
         http.Response.OnCompleted(() =>
         {

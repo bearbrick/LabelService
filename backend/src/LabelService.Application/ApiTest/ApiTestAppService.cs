@@ -1,4 +1,5 @@
 using LabelService.Application.Identity;
+using LabelService.Application.Rendering;
 using LabelService.Application.Rendering.Dtos;
 using LabelService.Application.Shared;
 using LabelService.Application.Templates;
@@ -15,7 +16,8 @@ namespace LabelService.Application.ApiTest;
 /// <param name="cache">已发布模板的内存缓存。</param>
 /// <param name="renderer">渲染引擎。</param>
 /// <param name="currentAdmin">当前用户（业务范围）。</param>
-public sealed class ApiTestAppService(PublishedTemplateCache cache, ILabelRenderer renderer, ICurrentAdmin currentAdmin) : IApiTestAppService
+/// <param name="clock">字段自动值用的当前时间。</param>
+public sealed class ApiTestAppService(PublishedTemplateCache cache, ILabelRenderer renderer, ICurrentAdmin currentAdmin, AutoValueClock clock) : IApiTestAppService
 {
     /// <inheritdoc />
     public RenderedLabelDto Render(RenderApiRequest request)
@@ -44,7 +46,9 @@ public sealed class ApiTestAppService(PublishedTemplateCache cache, ILabelRender
             copies = 1;
         }
 
-        var validation = FieldValidator.Validate(published.Template.Fields, null, request.Data ?? []);
+        // 接口调试的自动值：调用方写“接口调试”，请求号现生成一个
+        var auto = clock.For(published.Template.Fields, 1, "接口调试", Guid.NewGuid().ToString("N"));
+        var validation = FieldValidator.Validate(published.Template.Fields, null, request.Data ?? [], null, auto);
         if (!validation.IsValid)
         {
             throw new UserFriendlyException(

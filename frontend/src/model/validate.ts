@@ -2,6 +2,7 @@
  * 模板的静态检查：字段 key 格式和唯一性、元素 ID 唯一、绑定是否引用了未定义的字段、哪些字段没被引用。
  * 规则和后端检查程序（ContractChecks）一致，导出 JSON 前也会检查。
  */
+import { isValidAuto } from './autoValues.ts'
 import { usedKeys } from './bindings.ts'
 import type { LabelTemplate } from './template.ts'
 
@@ -29,7 +30,7 @@ export interface TemplateReport {
 export const FIELD_KEY_PATTERN = /^[A-Za-z][A-Za-z0-9_]*$/
 
 /**
- * 检查模板：字段 key 格式和唯一性、元素 ID 唯一、画布尺寸、未定义的绑定、没被引用的字段。
+ * 检查模板：字段 key 格式和唯一性、自动值写法、元素 ID 唯一、画布尺寸、未定义的绑定、没被引用的字段。
  * @param template 模板。
  * @returns 检查结果；errors 为空时可以导出。
  */
@@ -42,6 +43,9 @@ export function checkTemplate(template: LabelTemplate): TemplateReport {
 
   const duplicateKeys = keys.filter((key, index) => keys.indexOf(key) !== index)
   for (const key of new Set(duplicateKeys)) errors.push(`字段 key“${key}”重复`)
+  for (const field of template.fields) {
+    if (field.auto && !isValidAuto(field.type, field.auto)) errors.push(`字段 ${field.key} 的自动值“${field.auto}”不认识，或者和类型 ${field.type} 不匹配`)
+  }
   const ids = template.elements.map((element) => element.id)
   const duplicateIds = ids.filter((id, index) => ids.indexOf(id) !== index)
   for (const id of new Set(duplicateIds)) errors.push(`元素 ID“${id}”重复`)

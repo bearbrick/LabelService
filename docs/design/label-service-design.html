@@ -651,8 +651,9 @@ footer { margin-top: 48px; font-size: 13px; color: var(--ink-3); }
             <tr><td><code>key</code></td><td>是</td><td>字母开头，只含字母、数字、下划线；模板内唯一，区分大小写</td></tr>
             <tr><td><code>type</code></td><td>是</td><td>string / number / date / image</td></tr>
             <tr><td><code>name</code></td><td>否</td><td>中文显示名，在设计器的字段列表里显示</td></tr>
-            <tr><td><code>required</code></td><td>否</td><td>默认 true，调用时不传就报错</td></tr>
+            <tr><td><code>required</code></td><td>否</td><td>默认 true，调用时不传（且没有自动值、默认值）就报错</td></tr>
             <tr><td><code>default</code></td><td>否</td><td>调用时不传则用默认值</td></tr>
+            <tr><td><code>auto</code></td><td>否</td><td>自动值，调用时不传由服务端算：date 用 today（当前日期）、now（当前日期和时间）、today+30d / today-1d / today+6m / today+1y（今天加减 N 天、月、年）；number 用 index（批量里第几张）、total（共几张）；string 用 client（调用方名称）、requestId（请求号）。优先于 default，传了值就用传的（ADR 0012）</td></tr>
             <tr><td><code>format</code></td><td>否</td><td>number、date 的默认显示格式</td></tr>
             <tr><td><code>sample</code></td><td>否</td><td>设计器预览和 JSON 样例用</td></tr>
           </tbody>

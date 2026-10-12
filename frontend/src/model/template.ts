@@ -120,13 +120,18 @@ export interface FieldDefinition {
    */
   type: FieldType
   /**
-   * 是否必填，默认 true；必填字段没传且没有默认值时返回 FIELD_REQUIRED。
+   * 是否必填，默认 true；必填字段没传、没有自动值也没有默认值时返回 FIELD_REQUIRED。
    */
   required?: boolean
   /**
    * 调用时没传就用这个值，类型要和 type 匹配。
    */
   default?: unknown
+  /**
+   * 自动值：调用方没传时由服务端算出来，优先于 default（ADR 0012）。date 用 today、now、today+30d、today-1d、today+6m、today+1y；
+   * number 用 index（第几条）、total（共几条）；string 用 client（调用方名称）、requestId（请求号）。
+   */
+  auto?: string
   /**
    * number、date 的默认显示格式（.NET 格式字符串）；绑定里写的格式优先。
    */

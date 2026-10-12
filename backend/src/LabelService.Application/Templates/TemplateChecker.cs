@@ -123,6 +123,11 @@ public sealed class TemplateChecker(ILabelRenderer renderer)
             {
                 errors.Add($"字段 key“{field.Key}”重复");
             }
+
+            if (field.Auto is { } auto && !AutoValues.IsValid(field.Type, auto))
+            {
+                errors.Add($"字段 {field.Key} 的自动值“{auto}”不认识，或者和类型 {field.Type.ToString().ToLowerInvariant()} 不匹配");
+            }
         }
 
         // 元素：ID 必填且不重复，绑定的字段都要定义，一维码只能转直角。

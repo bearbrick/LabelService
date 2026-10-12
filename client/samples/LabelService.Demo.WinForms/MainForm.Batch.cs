@@ -77,8 +77,8 @@ internal sealed partial class MainForm
             batchRows.Columns.Add(new DataGridViewTextBoxColumn
             {
                 Name = field.Key,
-                HeaderText = field.Required ? field.Key + " *" : field.Key,
-                ToolTipText = $"{field.Name ?? field.Key} · {field.Type}{(field.Required ? " · 必填" : "")}",
+                HeaderText = field.Required && field.Auto is null ? field.Key + " *" : field.Key,
+                ToolTipText = $"{field.Name ?? field.Key} · {field.Type}{(field.Auto is not null ? " · 不填时自动：" + field.Auto : field.Required ? " · 必填" : "")}",
                 Tag = field,
                 SortMode = DataGridViewColumnSortMode.NotSortable,
                 MinimumWidth = Px(60),
@@ -256,7 +256,7 @@ internal sealed partial class MainForm
 
         foreach (DataGridViewColumn column in batchRows.Columns)
         {
-            var required = column.Tag is TemplateField { Required: true };
+            var required = column.Tag is TemplateField { Required: true, Auto: null };
             foreach (DataGridViewRow row in batchRows.Rows)
             {
                 var cell = row.Cells[column.Index];

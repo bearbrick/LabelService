@@ -60,11 +60,13 @@ docker build -f deploy/Dockerfile -t label-service .
 docker volume create label-data
 docker run -d --name label-service -p 8080:8080 -v label-data:/data \
   -e LabelService__Admin__InitialPassword='首次登录后要改的密码' \
+  -e LabelService__Render__TimeZone=Asia/Shanghai \
   --restart unless-stopped label-service
 docker logs label-service          # 看启动日志、预热结果
 curl http://localhost:8080/health/ready
 ```
 
+- 时区：容器默认是 UTC，字段自动值里的“当前日期、时间”（ADR 0012）按 `LabelService:Render:TimeZone` 换算，所以要配上（如 `Asia/Shanghai`）；Windows 服务不配时用本机时区。配了不存在的时区时启动日志会有警告，并改用本机时区。
 - 容器以 `app` 用户运行；用绑定挂载（`-v /srv/label:/data`）时，宿主目录要给 UID 1654 写权限。
 - 不要用 `--scale` 或多个容器挂同一个卷（见上面的硬规定）。
 

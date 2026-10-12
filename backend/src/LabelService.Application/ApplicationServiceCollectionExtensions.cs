@@ -37,6 +37,7 @@ public static class ApplicationServiceCollectionExtensions
     public static IServiceCollection AddLabelApplication(this IServiceCollection services, IConfiguration configuration)
     {
         services.TryAddSingleton(TimeProvider.System);
+        services.AddSingleton<AutoValueClock>();
         services.Configure<ApiClientOptions>(configuration.GetSection(ApiClientOptions.SectionName));
         services.Configure<TemplateStoreOptions>(configuration.GetSection(TemplateStoreOptions.SectionName));
         services.Configure<RenderOptions>(configuration.GetSection(RenderOptions.SectionName));

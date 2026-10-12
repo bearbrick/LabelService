@@ -20,11 +20,13 @@ namespace LabelService.Application.OpenApi;
 /// <param name="layouts">版式的内存缓存。</param>
 /// <param name="renderer">渲染引擎。</param>
 /// <param name="gate">渲染并发限制。</param>
+/// <param name="clock">字段自动值用的当前时间。</param>
 public sealed partial class LabelRenderAppService(
     PublishedTemplateCache templates,
     SheetLayoutCache layouts,
     ILabelRenderer renderer,
-    RenderGate gate) : ILabelRenderAppService
+    RenderGate gate,
+    AutoValueClock clock) : ILabelRenderAppService
 {
     /// <summary>
     /// 格式不认识时的说明。
@@ -93,7 +95,8 @@ public sealed partial class LabelRenderAppService(
 
         // 第三步：校验数据，拿到并发名额后渲染。
         trace.Mark(TimingStages.Template);
-        var validation = FieldValidator.Validate(published.Template.Fields, null, request.Data);
+        var fields = published.Template.Fields;
+        var validation = FieldValidator.Validate(fields, null, request.Data, null, clock.For(fields, 1, client.Name, trace.RequestId));
         trace.Mark(TimingStages.Validate);
         if (!validation.IsValid)
         {
@@ -157,11 +160,13 @@ public sealed partial class LabelRenderAppService(
                 Type = field.Type,
                 Required = field.Required,
                 Default = field.Default,
+                Auto = field.Auto,
                 Format = field.Format,
                 MaxLength = field.MaxLength,
             }).ToList(),
+            // 有自动值的字段不放进样例：照着样例传反而会盖掉自动值。
             Sample = template.Fields
-                .Where(field => field.Sample is not null)
+                .Where(field => field.Sample is not null && field.Auto is null)
                 .ToDictionary(field => field.Key, field => field.Sample!.Value),
         };
     }

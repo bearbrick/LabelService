@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using LabelService.Application.Diagnostics;
+using LabelService.Application.Rendering;
 using LabelService.Application.Rendering.Dtos;
 using LabelService.Application.Templates.Dtos;
 using LabelService.Contracts.Protocol;
@@ -14,7 +15,8 @@ namespace LabelService.Application.Templates;
 /// </summary>
 /// <param name="renderer">渲染引擎。</param>
 /// <param name="metrics">指标（endpoint=preview）。</param>
-public sealed class TemplatePreviewAppService(ILabelRenderer renderer, LabelMetrics metrics) : ITemplatePreviewAppService
+/// <param name="clock">字段自动值用的当前时间。</param>
+public sealed class TemplatePreviewAppService(ILabelRenderer renderer, LabelMetrics metrics, AutoValueClock clock) : ITemplatePreviewAppService
 {
     /// <inheritdoc />
     public RenderedLabelDto Render(PreviewInput input)
@@ -35,7 +37,7 @@ public sealed class TemplatePreviewAppService(ILabelRenderer renderer, LabelMetr
 
         // 没传数据时用字段的样例值，和发布检查的试渲染一致。
         var data = input.Data ?? TemplateSampleData.Create(template.Fields, []);
-        var validation = FieldValidator.Validate(template.Fields, null, data);
+        var validation = FieldValidator.Validate(template.Fields, null, data, null, clock.For(template.Fields, 1, "示例调用方", "PREVIEW"));
         if (!validation.IsValid)
         {
             throw new UserFriendlyException(

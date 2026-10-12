@@ -7,6 +7,7 @@
 ### 新增
 
 - `ListTemplatesAsync` / `ListTemplates`：列出这把 API Key 有权使用的已发布模板（`TemplateSummary`：编码、名称、最新版本、尺寸），对应服务端新增的 `GET /api/v1/templates`。`CallCompleted` 的操作名是 `ListTemplates`。
+- `TemplateField.Auto`：字段的自动值（如 `today`、`today+30d`、`index`、`client`），有自动值的字段不传时服务端自动算（服务端 T-038）。
 
 ### 变更
 

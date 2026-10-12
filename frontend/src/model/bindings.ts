@@ -3,6 +3,7 @@
  * 规则和后端 BindingResolver 一致：绑定里的格式优先，其次字段的 format，再次默认格式。
  * 这里只支持常用的 .NET 格式写法，用于预览；最终效果以服务端预览为准。
  */
+import { autoPreview } from './autoValues.ts'
 import type { FieldDefinition, FieldType, LabelElement } from './template.ts'
 
 /**
@@ -76,7 +77,7 @@ export function usedKeys(elements: readonly LabelElement[]): Set<string> {
 /**
  * 按样例值或占位符替换文本里的绑定。样例值缺失时保留 `{{key}}`，方便看出哪里还没填样例。
  * @param text 文本。
- * @param fields 字段定义（取样例值、默认值和格式）。
+ * @param fields 字段定义（取自动值的预览、样例值、默认值和格式）。
  * @param mode 显示方式。
  * @returns 替换后的文本。
  */
@@ -84,7 +85,8 @@ export function resolveText(text: string, fields: readonly FieldDefinition[], mo
   if (mode === 'placeholder' || !text.includes('{{')) return text
   return text.replace(BINDING, (whole, key: string, format: string | undefined) => {
     const field = fields.find((item) => item.key === key)
-    const value = field?.sample ?? field?.default
+    // 有自动值的字段显示自动值算出来的样子（和实际打出来的一样），其次样例值、默认值
+    const value = (field?.auto ? autoPreview(field) : undefined) ?? field?.sample ?? field?.default
     if (value === undefined || value === null || value === '') return whole
     return formatValue(value, field?.type ?? 'string', format?.trim() || field?.format)
   })
