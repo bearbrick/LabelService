@@ -763,6 +763,7 @@ footer { margin-top: 48px; font-size: 13px; color: var(--ink-3); }
             <tr><td>POST</td><td><code>/api/v1/render</code></td><td>单张生成，返回文件流</td></tr>
             <tr><td>POST</td><td><code>/api/v1/render/batch</code></td><td>批量生成，返回合并后的文件或 ZIP</td></tr>
             <tr><td>GET</td><td><code>/api/v1/templates/{code}/schema</code></td><td>返回字段定义和 JSON 样例，给调用方对接用</td></tr>
+            <tr><td>GET</td><td><code>/api/v1/templates</code></td><td>列出这把 Key 有权使用的已发布模板（编码、名称、最新版本、尺寸），给调用方做模板选择</td></tr>
           </tbody>
         </table></div>
         <p>模板、版本、画布预设、素材、API Key 的增删改查，以及设计器用的服务端预览（<code>POST /api/admin/preview</code>：未保存的模板 JSON + 样例数据，返回 PNG，需要登录），属于管理 API，按 REST 设计，只给设计器用，不对外公开。开放接口只认 API Key，管理 API 只认登录令牌，两边互不通用。</p>
@@ -1029,12 +1030,13 @@ X-Api-Key: ********
         <div class="tw"><table>
           <thead><tr><th>类型</th><th>主要成员</th><th>说明</th></tr></thead>
           <tbody>
-            <tr><td><code>LabelServiceClient</code></td><td>RenderAsync / Render、RenderBatchAsync / RenderBatch、GetSchemaAsync / GetSchema、CallCompleted 事件</td><td>入口类，实现 ILabelServiceClient，调用方写单元测试时可以替换</td></tr>
+            <tr><td><code>LabelServiceClient</code></td><td>RenderAsync / Render、RenderBatchAsync / RenderBatch、GetSchemaAsync / GetSchema、ListTemplatesAsync / ListTemplates、CallCompleted 事件</td><td>入口类，实现 ILabelServiceClient，调用方写单元测试时可以替换</td></tr>
             <tr><td><code>LabelServiceClientOptions</code></td><td>BaseAddress、ApiKey、Timeout（默认 30 秒）、MaxRetries（默认 2）、RetryDelay（默认 0.5 秒）、MaxLabelsPerRequest（默认 500）、UserAgent</td><td>构造客户端时传入</td></tr>
             <tr><td><code>RenderRequest</code></td><td>TemplateCode、Version、Format、Dpi、Mono、Copies、Layout、StartSlot、Data、Set(key, value)</td><td>单张请求，Set 可以链式调用</td></tr>
             <tr><td><code>BatchRenderRequest</code></td><td>TemplateCode、Version、Format、Dpi、Output（Merge / Zip）、Layout、StartSlot、Common、Items、SetCommon()、AddItem()</td><td>批量请求，公共字段只传一次</td></tr>
             <tr><td><code>LabelFile</code></td><td>Content、ContentType、FileName、Format、IsZip、TemplateVersion、LabelCount、PageCount、Dpi、TraceId、RequestId、ServerDuration、ServerTiming、Warnings、Save()、SaveAsync()、OpenRead()、GetZplText()</td><td>生成结果，属性来自响应头</td></tr>
             <tr><td><code>TemplateSchema</code></td><td>TemplateCode、Name、Version、Page、Fields、Sample</td><td>字段定义，演示程序用它生成录入表格</td></tr>
+            <tr><td><code>TemplateSummary</code></td><td>TemplateCode、Name、Version、Page</td><td>模板列表的一项，演示程序用它刷新模板编码下拉框</td></tr>
             <tr><td><code>LabelServiceException</code></td><td>StatusCode、ErrorCode、Message、TraceId、Errors、IsTransient</td><td>服务端错误和网络错误都转成它</td></tr>
             <tr><td><code>LabelErrorCodes</code></td><td>FieldRequired、TemplateNotFound 等常量</td><td>和第 8 节的错误码一一对应</td></tr>
             <tr><td><code>Printing.NetworkPrinter</code></td><td>SendAsync(host, port, bytes)</td><td>通过 TCP 9100 把 ZPL 直接发给网络标签打印机</td></tr>
