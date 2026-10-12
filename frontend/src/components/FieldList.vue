@@ -4,6 +4,7 @@
  * 点击字段展开编辑名称、类型、样例值等（完整的字段表在模板工作区的“数据源”页）。
  */
 import { computed, reactive, ref } from 'vue'
+import { describeAuto } from '../model/autoValues.ts'
 import { usedKeys } from '../model/bindings.ts'
 import type { FieldDefinition, FieldType } from '../model/template.ts'
 import { addField, commit, commitSoon, designer, insertFieldIntoSelection, removeField, report, toast } from '../stores/designer.ts'
@@ -133,13 +134,14 @@ function remove(field: FieldDefinition): void {
         class="field-row"
         :class="{ open: openKey === field.key }"
         draggable="true"
-        :title="`样例值：${sampleText(field) || '无'}`"
+        :title="field.auto ? `自动值：${describeAuto(field.auto)}（调用方不用传）` : `样例值：${sampleText(field) || '无'}`"
         @dragstart="startDrag($event, { kind: 'field', key: field.key })"
         @dragend="endDrag()"
         @click="openKey = openKey === field.key ? null : field.key"
         @dblclick.stop="insertFieldIntoSelection(field.key)"
       >
         <span class="k">{{ field.key }}</span><span class="n">{{ field.name }}</span>
+        <span v-if="field.auto" class="pill accent" :title="`调用方没传时服务端自动算：${describeAuto(field.auto)}`">自动</span>
         <span v-if="!used.has(field.key)" class="pill" title="没有元素引用这个字段">未用</span>
         <span class="tpill">{{ field.type }}</span>
       </div>

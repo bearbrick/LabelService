@@ -1,9 +1,10 @@
 <script setup lang="ts">
 /**
- * 数据源：声明模板需要的字段（key、名称、类型、必填、默认值、格式、样例值）。
+ * 数据源：声明模板需要的字段（key、名称、类型、必填、默认值或自动值、格式、样例值）。
  * 扫描元素里的 {{key}}：未定义的一键添加，没被引用的给出提示；右边按字段自动生成调用样例。
  */
 import { computed, reactive } from 'vue'
+import { AUTO_PRESETS, buildAuto, isValidAuto, parseAuto } from '../../model/autoValues.ts'
 import { sampleRequest } from '../../model/request.ts'
 import type { FieldDefinition, FieldType } from '../../model/template.ts'
 import { addField, commit, designer, removeField, renameField, report, toast } from '../../stores/designer.ts'
@@ -84,12 +85,49 @@ function setValue(field: FieldDefinition, prop: 'default' | 'sample', value: str
 }
 
 /**
- * 改字段类型：图片、字符串没有格式，图片的样例值清掉（类型不再匹配）。
+ * 改字段类型：图片、字符串没有格式，图片的样例值清掉（类型不再匹配）；自动值和新类型不匹配时去掉。
  * @param field 字段。
  */
 function onTypeChange(field: FieldDefinition): void {
   if (field.type === 'image' || field.type === 'string') delete field.format
   if (field.type === 'image') delete field.sample
+  if (field.auto && !isValidAuto(field.type, field.auto)) delete field.auto
+  commit()
+}
+
+/**
+ * 默认值一栏下拉框的当前选项：空字符串是“固定值”，否则是自动值预设的 kind。
+ * @param field 字段。
+ * @returns 选项值。
+ */
+function autoKind(field: FieldDefinition): string {
+  return field.auto ? (parseAuto(field.auto)?.kind ?? '') : ''
+}
+
+/**
+ * 换默认值的方式：选固定值去掉自动值；选自动值去掉固定默认值，并取消必填（有自动值时调用方不用传）。
+ * @param field 字段。
+ * @param kind 选项值。
+ */
+function onAutoKind(field: FieldDefinition, kind: string): void {
+  if (!kind) {
+    delete field.auto
+  } else {
+    field.auto = buildAuto(kind, parseAuto(field.auto ?? '')?.n)
+    delete field.default
+    field.required = false
+  }
+
+  commit()
+}
+
+/**
+ * 改“N 天后”等预设里的 N。
+ * @param field 字段。
+ * @param value 输入的文本。
+ */
+function onAutoN(field: FieldDefinition, value: string): void {
+  field.auto = buildAuto(autoKind(field), Number(value))
   commit()
 }
 
@@ -149,7 +187,7 @@ async function remove(field: FieldDefinition): Promise<void> {
                         <th style="min-width: 100px">名称</th>
                         <th style="min-width: 100px">类型</th>
                         <th>必填</th>
-                        <th style="min-width: 100px">默认值</th>
+                        <th style="min-width: 220px">默认值</th>
                         <th style="min-width: 110px">格式</th>
                         <th style="min-width: 140px">样例值</th>
                         <th></th>
@@ -167,9 +205,30 @@ async function remove(field: FieldDefinition): Promise<void> {
                             <option v-for="type in FIELD_TYPES" :key="type" :value="type">{{ type }}</option>
                           </select>
                         </td>
-                        <td style="text-align: center"><input v-model="field.required" type="checkbox" aria-label="必填" @change="commit()" /></td>
+                        <td style="text-align: center">
+                          <input v-model="field.required" type="checkbox" aria-label="必填" :disabled="!!field.auto" :title="field.auto ? '有自动值，调用方不用传' : ''" @change="commit()" />
+                        </td>
                         <td>
-                          <input class="inp" :value="text(field.default)" :placeholder="field.required === false ? '可选' : '—'" aria-label="默认值" @change="setValue(field, 'default', ($event.target as HTMLInputElement).value)" />
+                          <div class="default-cell">
+                            <select v-if="AUTO_PRESETS[field.type].length" class="sel" :value="autoKind(field)" aria-label="默认值方式" @change="onAutoKind(field, ($event.target as HTMLSelectElement).value)">
+                              <option value="">固定值</option>
+                              <optgroup label="自动值（调用方没传时服务端算）">
+                                <option v-for="preset in AUTO_PRESETS[field.type]" :key="preset.kind" :value="preset.kind">{{ preset.label }}</option>
+                              </optgroup>
+                            </select>
+                            <input v-if="!field.auto" class="inp" :value="text(field.default)" :placeholder="field.required === false ? '可选' : '—'" aria-label="默认值" @change="setValue(field, 'default', ($event.target as HTMLInputElement).value)" />
+                            <input
+                              v-else-if="autoKind(field).includes('N')"
+                              class="inp num n-input"
+                              type="number"
+                              min="1"
+                              max="9999"
+                              :value="parseAuto(field.auto)?.n"
+                              aria-label="N"
+                              title="N：天数、月数或年数（1～9999）"
+                              @change="onAutoN(field, ($event.target as HTMLInputElement).value)"
+                            />
+                          </div>
                         </td>
                         <td>
                           <input v-model="field.format" class="inp mono" :disabled="field.type === 'string' || field.type === 'image'" :placeholder="formatHint(field.type)" aria-label="格式" @change="commit()" />

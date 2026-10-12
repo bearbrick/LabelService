@@ -1,6 +1,6 @@
 /**
  * 调用样例：按字段定义生成开放接口的请求体，数据源页和接口调试用。
- * 取值规则和后端发布检查的样例数据一致：有样例值用样例值；非必填或有默认值的字段不传；其余按类型给占位值。
+ * 取值规则和后端发布检查的样例数据一致：有自动值的字段不传（照着样例传会盖掉自动值）；有样例值用样例值；非必填或有默认值的字段不传；其余按类型给占位值。
  */
 import type { FieldDefinition, LabelTemplate } from './template.ts'
 
@@ -15,6 +15,7 @@ export const PLACEHOLDER_IMAGE = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA
  * @returns 样例值、按类型的占位值，或 undefined（不传）。
  */
 export function sampleValue(field: FieldDefinition): unknown {
+  if (field.auto) return undefined
   if (field.sample !== undefined && field.sample !== null && field.sample !== '') return field.sample
   const hasDefault = field.default !== undefined && field.default !== null && field.default !== ''
   if (field.required === false || hasDefault) return undefined

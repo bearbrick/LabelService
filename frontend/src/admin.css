@@ -660,3 +660,12 @@ td.warn { color: var(--warn); }
 .preview-pair img { display: block; width: 100%; }
 .preview-pair .preview-overlay { position: absolute; inset: 0; opacity: .5; mix-blend-mode: multiply; box-shadow: none; }
 .bar-row .fill.over { background: var(--chart-fail); }
+
+/* 数据源页的默认值一栏：固定值或自动值的下拉框，加上默认值输入框或“N 天后”的 N */
+.default-cell { display: flex; gap: 6px; align-items: center; }
+
+.default-cell .sel { flex: 1 1 auto; min-width: 0; white-space: nowrap; }
+
+.default-cell .inp { flex: 1 1 80px; min-width: 0; }
+
+.default-cell .n-input { flex: 0 0 72px; }

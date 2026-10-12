@@ -9,7 +9,8 @@ import { encode, moduleDots } from '../src/editor/barcode.ts'
 import { readClipboard, writeClipboard } from '../src/editor/clipboard.ts'
 import { contains, elementBounds, intersects } from '../src/editor/geometry.ts'
 import { History } from '../src/editor/history.ts'
-import { PLACEHOLDER_IMAGE, sampleRequest } from '../src/model/request.ts'
+import { PLACEHOLDER_IMAGE, sampleData, sampleRequest } from '../src/model/request.ts'
+import { addMonths, autoPreview, buildAuto, describeAuto, isValidAuto, parseAuto } from '../src/model/autoValues.ts'
 import { fileSize, fmtTime, sizeText } from '../src/model/format.ts'
 import { barChart, niceStep } from '../src/model/chart.ts'
 import { gridStep, transformRules } from '../src/editor/overlays.ts'
@@ -305,6 +306,39 @@ function checkFonts(): void {
 }
 
 /**
+ * 字段自动值（ADR 0012）：写法解析和拼接、和类型是否匹配、说明文字、预览值、调用样例不放自动值字段、模板检查。
+ */
+function checkAutoValues(): void {
+  check('自动值写法：today+30d 解析成预设 today+Nd 和 N=30，拼回去一样', JSON.stringify(parseAuto('today+30d')) === '{"kind":"today+Nd","n":30}' && buildAuto('today+Nd', 30) === 'today+30d')
+  check('自动值写法：N 不在 1～9999 时用预设的默认值', buildAuto('today+Nd', 0) === 'today+30d' && buildAuto('today+Ny', 10000) === 'today+1y' && buildAuto('index') === 'index')
+  check('自动值写法：和后端一样按类型认，区分大小写',
+    isValidAuto('date', 'today') && isValidAuto('date', 'today-9999d') && isValidAuto('number', 'total') && isValidAuto('string', 'requestId')
+    && !isValidAuto('number', 'today') && !isValidAuto('date', 'Today') && !isValidAuto('date', 'today+0d') && !isValidAuto('date', 'today+10000d') && !isValidAuto('image', 'today'))
+  check('自动值说明：预设的名称，带 N 的写成“今天 + 30 天”', describeAuto('today+30d') === '今天 + 30 天' && describeAuto('today-1y') === '今天 - 1 年' && describeAuto('client') === '调用方名称')
+
+  /**
+   * 固定的“现在”：2026 年 1 月 31 日 10:20:30（本地时间）。
+   */
+  const now = new Date(2026, 0, 31, 10, 20, 30)
+  check('自动值预览：today、now、today+30d；1 月 31 日加 1 个月是 2 月 28 日（和 .NET 一样）',
+    autoPreview({ type: 'date', auto: 'today' }, now) === '2026-01-31' && autoPreview({ type: 'date', auto: 'now' }, now) === '2026-01-31T10:20:30'
+    && autoPreview({ type: 'date', auto: 'today+30d' }, now) === '2026-03-02' && autoPreview({ type: 'date', auto: 'today+1m' }, now) === '2026-02-28'
+    && addMonths(new Date(2024, 1, 29), 12).getDate() === 28)
+  check('自动值预览：序号、总数是 1，调用方、请求号用示意文字，写法不对时没有预览值',
+    autoPreview({ type: 'number', auto: 'index' }, now) === 1 && autoPreview({ type: 'string', auto: 'client' }, now) === '示例调用方' && autoPreview({ type: 'number', auto: 'today' }, now) === undefined)
+
+  const fields: FieldDefinition[] = [
+    { key: 'day', type: 'date', auto: 'today', sample: '2020-01-01', format: 'yyyy年MM月dd日' },
+    { key: 'boxNo', type: 'string', sample: 'C1' },
+    { key: 'seq', type: 'number', auto: 'oops' },
+  ]
+  const shown = resolveText('{{day}} {{boxNo}}', fields, 'sample')
+  check('设计器预览：有自动值的字段显示自动值算出来的样子（不用样例值）', shown.endsWith(' C1') && !shown.includes('2020') && shown.includes('年'))
+  check('调用样例：有自动值的字段不放进去', JSON.stringify(sampleData(fields)) === '{"boxNo":"C1"}')
+  check('模板检查：拦下和类型不匹配的自动值', checkTemplate({ ...(sampleJson as unknown as LabelTemplate), fields }).errors.some((error) => error.includes('seq') && error.includes('自动值')))
+}
+
+/**
  * 模板多了以后的列表逻辑：分组排序和截取、搜索排序、最近打开、分页。
  */
 function checkTemplateList(): void {
@@ -379,6 +413,7 @@ checkSampleTemplate()
 checkLayouts()
 checkFonts()
 checkTemplateList()
+checkAutoValues()
 checkSource()
 
 await checkAvailableLayouts(check)
