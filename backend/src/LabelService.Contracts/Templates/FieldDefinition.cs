@@ -26,7 +26,7 @@ public sealed class FieldDefinition
     public FieldType Type { get; set; } = FieldType.String;
 
     /// <summary>
-    /// 是否必填，默认 true。必填字段没传且没有默认值时返回 FIELD_REQUIRED。
+    /// 是否必填，默认 true。必填字段没传、没有自动值也没有默认值时返回 FIELD_REQUIRED。
     /// </summary>
     public bool Required { get; set; } = true;
 
@@ -34,6 +34,16 @@ public sealed class FieldDefinition
     /// 调用时没传则用这个值。类型必须和 <see cref="Type"/> 匹配。
     /// </summary>
     public JsonElement? Default
+    {
+        get; set;
+    }
+
+    /// <summary>
+    /// 自动值：调用方没传时由服务端算出来，优先于 <see cref="Default"/>。按类型只认这些写法（ADR 0012）：
+    /// date 用 today、now、today+30d、today-1d、today+6m、today+1y；number 用 index（第几条，从 1 开始）、total（共几条）；
+    /// string 用 client（调用方名称）、requestId（请求号）。
+    /// </summary>
+    public string? Auto
     {
         get; set;
     }

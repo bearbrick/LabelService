@@ -38,11 +38,28 @@
 | `key` | 必填 | 字母开头，只含字母、数字、下划线；模板内唯一，区分大小写 |
 | `type` | `string` | `string` / `number` / `date` / `image` |
 | `name` | — | 中文显示名 |
-| `required` | `true` | 必填字段没传且没有默认值时返回 `FIELD_REQUIRED` |
+| `required` | `true` | 必填字段没传、没有自动值也没有默认值时返回 `FIELD_REQUIRED` |
 | `default` | — | 没传时用的值 |
+| `auto` | — | 自动值：没传时由服务端算出来，优先于 `default`，写法见下表（T-038，ADR 0012） |
 | `format` | — | number、date 的默认显示格式（.NET 格式字符串） |
 | `sample` | — | 样例值，用于预览和 JSON 样例 |
 | `maxLength` | — | string 的最大字符数，超出返回 `FIELD_TYPE_INVALID` |
+
+自动值 `auto` 只认下面这些写法，要和字段类型对应（发布前检查会拦下不认识或类型不匹配的写法）：
+
+| 类型 | `auto` | 含义 |
+| --- | --- | --- |
+| `date` | `today` | 当前日期 |
+| `date` | `now` | 当前日期和时间（到秒） |
+| `date` | `today+30d`、`today-1d`、`today+6m`、`today+1y` | 今天加减 N 天（d）、月（m）、年（y），N 为 1～9999；加月、加年遇到月底取当月最后一天 |
+| `number` | `index` | 这一张在本次请求里是第几条，从 1 开始（同一条的多份是同一个序号） |
+| `number` | `total` | 本次请求一共几条 |
+| `string` | `client` | 调用方名称 |
+| `string` | `requestId` | 请求号：X-Request-Id，没带时是服务端的跟踪号（X-Trace-Id） |
+
+- 取值顺序：条目数据 → 批量公共字段 → 自动值 → `default`。调用方传了就用传的。
+- 同一次请求只取一次当前时间，批量里每张一样；时间按 `LabelService:Render:TimeZone` 配置的时区（如 `Asia/Shanghai`），不配时用服务器本机时区。
+- 字段定义接口（`/schema`）返回 `auto`；它的 `sample` 里不放有自动值的字段（照着样例传会盖掉自动值）。
 
 数据校验规则（`FieldValidator`）：
 
