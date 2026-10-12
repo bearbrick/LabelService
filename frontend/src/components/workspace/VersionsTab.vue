@@ -49,13 +49,13 @@ async function restore(version: number): Promise<void> {
 </script>
 
 <template>
-  <div class="page-scroll">
+  <div class="page-scroll fixed-head">
     <div class="page-inner">
       <div class="section-title">
         <h2>版本记录<span>{{ workspace.versions.length }} 个已发布版本</span></h2>
         <span class="hint">接口默认使用最新发布的版本，请求里也可以用 version 指定历史版本。</span>
       </div>
-      <div class="table-box">
+      <div class="table-box fill">
         <div class="tw">
           <table class="dt">
             <thead>

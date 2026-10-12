@@ -168,7 +168,7 @@ async function reset(c: ApiClient): Promise<void> {
 </script>
 
 <template>
-  <div class="page-scroll">
+  <div class="page-scroll fixed-head">
     <div class="page-inner">
       <div class="page-head">
         <div>
@@ -179,7 +179,7 @@ async function reset(c: ApiClient): Promise<void> {
         <div class="spacer"></div>
         <button class="btn primary" type="button" @click="edit(null)"><AppIcon name="plus" small />新建调用方</button>
       </div>
-      <div class="table-box">
+      <div class="table-box fill">
         <div class="tw" tabindex="0" role="region" aria-label="调用方表格">
           <table class="dt clients-table">
             <colgroup><col style="width: 220px" /><col style="width: 120px" /><col style="width: 160px" /><col style="width: 240px" /><col style="width: 120px" /><col style="width: 100px" /><col style="width: 60px" /><col style="width: 160px" /></colgroup>

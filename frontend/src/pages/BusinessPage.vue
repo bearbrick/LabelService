@@ -149,7 +149,7 @@ async function remove(b: Business): Promise<void> {
 </script>
 
 <template>
-  <div class="page-scroll">
+  <div class="page-scroll fixed-head">
     <div class="page-inner">
       <div class="page-head">
         <div>
@@ -160,7 +160,7 @@ async function remove(b: Business): Promise<void> {
         <div class="spacer"></div>
         <button class="btn primary" type="button" :disabled="!can('biz.manage')" @click="edit(null)"><AppIcon name="plus" small />新建业务</button>
       </div>
-      <div class="table-box">
+      <div class="table-box fill">
         <div class="tw" tabindex="0" role="region" aria-label="业务分组表格">
           <table class="dt business-table">
             <colgroup><col style="width: 200px" /><col style="width: 110px" /><col style="width: 240px" /><col style="width: 70px" /><col style="width: 110px" /><col v-if="can('api.manage')" style="width: 200px" /><col style="width: 100px" /></colgroup>

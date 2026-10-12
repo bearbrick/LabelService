@@ -32,7 +32,7 @@ watch(
 </script>
 
 <template>
-  <div class="page-scroll">
+  <div class="page-scroll fixed-head">
     <div class="page-inner">
       <div class="page-head">
         <div>
@@ -49,7 +49,7 @@ watch(
           </select>
         </div>
       </div>
-      <ApiTestPanel v-if="code" :code="code" />
+      <div v-if="code" class="page-body fill"><ApiTestPanel :code="code" /></div>
       <div v-else class="empty box"><AppIcon name="api" /><span>先在右上角选择一个模板</span></div>
     </div>
   </div>

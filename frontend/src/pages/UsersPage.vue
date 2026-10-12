@@ -186,7 +186,7 @@ async function toggle(u: User): Promise<void> {
 </script>
 
 <template>
-  <div class="page-scroll">
+  <div class="page-scroll fixed-head">
     <div class="page-inner">
       <div class="page-head">
         <div>
@@ -205,7 +205,7 @@ async function toggle(u: User): Promise<void> {
         </select>
         <select id="uf-status" v-model="filter.status" class="sel" aria-label="状态"><option value="">全部状态</option><option value="active">启用</option><option value="disabled">停用</option></select>
       </div>
-      <div class="table-box">
+      <div class="table-box fill">
         <div class="tw" tabindex="0" role="region" aria-label="用户表格">
           <table class="dt users-table">
             <colgroup><col style="width: 240px" /><col style="width: 160px" /><col style="width: 260px" /><col style="width: 70px" /><col style="width: 100px" /><col style="width: 190px" /></colgroup>

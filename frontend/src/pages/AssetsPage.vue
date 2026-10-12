@@ -160,7 +160,7 @@ async function removeFont(file: FontFile): Promise<void> {
 </script>
 
 <template>
-  <div class="page-scroll">
+  <div class="page-scroll fixed-head">
     <div class="page-inner">
       <div class="page-head">
         <div>
@@ -186,19 +186,21 @@ async function removeFont(file: FontFile): Promise<void> {
         <span v-if="tab === 'images'" class="hint">PNG、JPG、SVG，不超过 1 MB；SVG 上传时会去掉脚本和外部引用。</span>
         <span v-else class="hint">TTF、OTF、TTC、OTC，不超过 50 MB；上传后不用重启，设计器和生成标签立即可用。</span>
       </div>
-      <div v-if="tab === 'images'" class="cards">
-        <div v-for="a in assets" :key="a.key" class="card">
-          <div class="thumb" style="background: #ffffff"><img v-if="a.src" :src="a.src" :alt="a.name" style="box-shadow: none; max-height: 120px" /></div>
-          <div class="card-body">
-            <div class="card-title">
-              <input v-if="renaming === a.key" v-model="draftName" class="inp" aria-label="素材名称" @blur="finishRename(a)" @keydown.enter="($event.target as HTMLInputElement).blur()" />
-              <b v-else>{{ a.name }}</b>
-              <span v-if="a.builtin" class="pill">内置</span>
-            </div>
-            <div class="card-meta"><span class="mono">asset:{{ a.key }}</span><span>{{ a.builtin ? '随服务发布' : fileSize(a.size) }}</span></div>
-            <div v-if="!a.builtin && can('res.manage')" class="card-actions">
-              <button class="btn sm" type="button" @click="startRename(a)">重命名</button>
-              <button class="btn sm danger" type="button" @click="remove(a)">删除</button>
+      <div v-if="tab === 'images'" class="page-body fill">
+        <div class="cards">
+          <div v-for="a in assets" :key="a.key" class="card">
+            <div class="thumb" style="background: #ffffff"><img v-if="a.src" :src="a.src" :alt="a.name" style="box-shadow: none; max-height: 120px" /></div>
+            <div class="card-body">
+              <div class="card-title">
+                <input v-if="renaming === a.key" v-model="draftName" class="inp" aria-label="素材名称" @blur="finishRename(a)" @keydown.enter="($event.target as HTMLInputElement).blur()" />
+                <b v-else>{{ a.name }}</b>
+                <span v-if="a.builtin" class="pill">内置</span>
+              </div>
+              <div class="card-meta"><span class="mono">asset:{{ a.key }}</span><span>{{ a.builtin ? '随服务发布' : fileSize(a.size) }}</span></div>
+              <div v-if="!a.builtin && can('res.manage')" class="card-actions">
+                <button class="btn sm" type="button" @click="startRename(a)">重命名</button>
+                <button class="btn sm danger" type="button" @click="remove(a)">删除</button>
+              </div>
             </div>
           </div>
         </div>
@@ -208,7 +210,7 @@ async function removeFont(file: FontFile): Promise<void> {
           <AppIcon name="alert" />
           <div>还没有默认字体（思源黑体）：模板里没指定字体或字体找不到时会用系统自带字体，中文可能显示成方框。请上传思源黑体（Noto Sans SC，SIL OFL 1.1，可免费商用，在 Google Fonts 或 GitHub 的 noto-cjk 下载）。</div>
         </div>
-        <div class="table-box">
+        <div class="table-box fill">
           <div class="tw">
             <table class="dt">
               <thead><tr><th>字体</th><th>模板里写</th><th>预览</th><th>文件</th><th>来源</th><th></th></tr></thead>

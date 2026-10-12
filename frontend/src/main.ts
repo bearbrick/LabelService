@@ -5,6 +5,7 @@ import './style.css'
 import './admin.css'
 import './system.css'
 import './layout-recovery.css'
+import './page-frame.css'
 
 createApp(App).mount('#app')
 

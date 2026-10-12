@@ -128,7 +128,7 @@ async function remove(p: Preset): Promise<void> {
 </script>
 
 <template>
-  <div class="page-scroll">
+  <div class="page-scroll fixed-head">
     <div class="page-inner">
       <div class="page-head">
         <div>
@@ -144,7 +144,7 @@ async function remove(p: Preset): Promise<void> {
           <button v-for="k in ['全部', ...KINDS]" :key="k" type="button" :class="{ on: kind === k }" @click="kind = k">{{ k }}</button>
         </div>
       </div>
-      <div class="table-box">
+      <div class="table-box fill">
         <div class="tw" tabindex="0" role="region" aria-label="画布预设表格">
           <table class="dt presets-table">
             <colgroup><col style="width: 240px" /><col style="width: 90px" /><col style="width: 170px" /><col style="width: 80px" /><col style="width: 120px" /><col style="width: 90px" /><col style="width: 100px" /></colgroup>
