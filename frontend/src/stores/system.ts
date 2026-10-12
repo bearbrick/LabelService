@@ -1,8 +1,9 @@
 /**
- * 系统信息（系统名称、公司、Logo、版权信息）：打开页面时读一次（登录页也要用），系统信息页保存后更新；浏览器标签页标题跟着系统名称变。
+ * 系统信息（系统名称、公司、Logo、版权信息）：打开页面时读一次（登录页也要用），系统信息页保存后更新；
+ * 浏览器标签页的标题跟着系统名称变，小图标用上传的 Logo 图标（没有时用完整 Logo）。
  */
 import { reactive } from 'vue'
-import { DEFAULT_SYSTEM_INFO, getSystemInfo } from '../api/system.ts'
+import { DEFAULT_SYSTEM_INFO, getSystemInfo, iconUrl, logoUrl } from '../api/system.ts'
 import type { SystemInfo } from '../api/system.ts'
 
 /**
@@ -16,12 +17,34 @@ export const system = reactive({
 })
 
 /**
- * 换成新的系统信息，同时更新浏览器标签页的标题。
+ * 换成新的系统信息，同时更新浏览器标签页的标题和小图标。
  * @param info 系统信息。
  */
 export function applySystemInfo(info: SystemInfo): void {
   system.info = info
   document.title = info.systemName
+  applyFavicon(iconUrl(info) || logoUrl(info))
+}
+
+/**
+ * 设置浏览器标签页的小图标；没有上传图片时去掉，浏览器显示默认图标。
+ * @param url 图片地址；空字符串表示没有。
+ */
+function applyFavicon(url: string): void {
+  let link = document.querySelector<HTMLLinkElement>('link[rel="icon"][data-system]')
+  if (!url) {
+    link?.remove()
+    return
+  }
+
+  if (!link) {
+    link = document.createElement('link')
+    link.rel = 'icon'
+    link.dataset.system = 'true'
+    document.head.appendChild(link)
+  }
+
+  link.href = url
 }
 
 /**

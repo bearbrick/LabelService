@@ -75,7 +75,7 @@ function forgotText(): string {
   <div class="login-page">
     <div class="login-shell">
       <div class="login-intro">
-        <BrandMark :info="system.info" />
+        <BrandMark :info="system.info" full />
         <span class="eyebrow">{{ system.info.companyName || 'LABEL SERVICE' }}</span>
         <h1 class="login-title">{{ system.info.loginTitle }}</h1>
         <p v-if="system.info.loginIntro" class="login-intro-text">{{ system.info.loginIntro }}</p>
