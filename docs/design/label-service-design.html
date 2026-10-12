@@ -1203,7 +1203,7 @@ catch (LabelServiceException ex) when (ex.IsTransient)
             <tr><td>生成选项</td><td>格式、DPI、份数；批量按批量数据的行数生成，每条的数据都由调用方给全（不用公共字段，也不在客户端推算递增值）</td><td>RenderRequest、BatchRenderRequest</td></tr>
             <tr><td>预览</td><td>PNG 直接显示，批量显示缩略图，ZPL 显示指令和黑白效果，PDF 用默认程序打开</td><td>LabelFile</td></tr>
             <tr><td>发送到打印机</td><td>网络打印机（TCP 9100）或 Windows 打印机；PNG 按 DPI 原尺寸打印</td><td>NetworkPrinter、WindowsRawPrinter、PrintDocument</td></tr>
-            <tr><td>调用代码</td><td>按当前设置生成可以直接复制的 C# 代码，有单张和批量两种写法</td><td>—</td></tr>
+            <tr><td>调用代码</td><td>按当前设置生成可以直接复制的 C# 代码，有单张和批量两种写法；生成之后接着发送到打印机（ZPL 发网络或 USB 标签打印机，PNG 按原尺寸打印，PDF 交给 PDF 阅读器），打印出错单独处理</td><td>NetworkPrinter、WindowsRawPrinter</td></tr>
             <tr><td>调用日志</td><td>每次调用的总耗时、服务端耗时、重试次数、requestId 和 traceId；单张超过 100 ms 标为慢调用</td><td>CallCompleted 事件</td></tr>
             <tr><td>响应信息</td><td>成功时显示 LabelFile 的属性和响应头，失败时显示 LabelServiceException 的全部字段</td><td>LabelFile、LabelServiceException</td></tr>
             <tr><td>内置模拟服务</td><td>不连服务器也能演示；可以模拟 503 抖动，看 SDK 自动重试</td><td>自定义 HttpMessageHandler</td></tr>

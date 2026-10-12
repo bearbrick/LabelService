@@ -162,7 +162,33 @@ internal sealed partial class MainForm
             codeText.Text.Contains("new BatchRenderRequest(\"BOX_LABEL\", LabelFormat.Zpl)") && codeText.Text.Contains("batch.AddItem()") && codeText.Text.Contains(".Set(\"boxNo\"")
             && !codeText.Text.Contains("SetCommon") && !codeText.Text.Contains("ToString(\"D"));
         File.WriteAllText(Path.Combine(directory, "Program.Batch.cs.txt"), codeText.Text, Encoding.UTF8);
+        Check("调用代码：ZPL 发给网络标签打印机（TCP 9100），也写了 USB 打印机的 RAW 写法和打印机连不上时的处理",
+            codeText.Text.Contains("await NetworkPrinter.SendAsync(PrinterHost, NetworkPrinter.DefaultPort, file.Content)") && codeText.Text.Contains("WindowsRawPrinter.Send(PrinterName")
+            && codeText.Text.Contains("ex is SocketException"));
         Shot("6-code");
+
+        // 三种格式、单张和批量的调用代码各存一份，放进新建的 net48 / net8.0-windows 控制台项目编译
+        foreach (var radio in new[] { png, pdf, zpl })
+        {
+            radio.Checked = true;
+            foreach (var batchCode in new[] { false, true })
+            {
+                codeBatch.Checked = batchCode;
+                File.WriteAllText(Path.Combine(directory, $"Program.{radio.Text}.{(batchCode ? "Batch" : "Single")}.cs.txt"), codeText.Text, Encoding.UTF8);
+                if (radio == png)
+                {
+                    Check($"调用代码：PNG {(batchCode ? "批量（ZIP 逐张）" : "单张")}用 PrintDocument 按原尺寸打印",
+                        codeText.Text.Contains("new PaperSize(\"Label\", width, height)") && codeText.Text.Contains(batchCode ? "new ZipArchive(file.OpenRead()" : "Image.FromStream(new MemoryStream(file.Content))"));
+                }
+                else if (radio == pdf)
+                {
+                    Check($"调用代码：PDF {(batchCode ? "批量" : "单张")}交给 PDF 阅读器打印", codeText.Text.Contains("Verb = \"print\"") && codeText.Text.Contains("Print(path);"));
+                }
+            }
+        }
+
+        zpl.Checked = true;
+        codeBatch.Checked = false;
 
         report.AppendLine(failures == 0 ? "自检通过" : $"自检不通过：{failures} 项");
         File.WriteAllText(reportPath, report.ToString(), Encoding.UTF8);
