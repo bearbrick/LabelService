@@ -20,6 +20,7 @@ import { useAvailableLayouts } from '../composables/useAvailableLayouts.ts'
 import { businessOf, catalog, templateState } from '../stores/catalog.ts'
 import { designer, exportTemplate, importTemplate, saveDraft, toast } from '../stores/designer.ts'
 import { confirmBox } from '../stores/dialogs.ts'
+import { rememberTemplate } from '../stores/recentTemplates.ts'
 import { go, goBiz, openWorkspace, route } from '../stores/router.ts'
 import type { WorkspaceView } from '../stores/router.ts'
 import { can, inScope } from '../stores/session.ts'
@@ -51,6 +52,9 @@ const moveTarget = ref(0)
 const fileInput = ref<HTMLInputElement>()
 
 watch(() => route.code, (code) => code && loadWorkspace(code), { immediate: true })
+
+// 打开成功后记进模板树的“最近打开”（打不开的编码不记）
+watch(() => workspace.detail?.code, (code) => code && rememberTemplate(code))
 onBeforeUnmount(() => void saveDraft())
 
 /**

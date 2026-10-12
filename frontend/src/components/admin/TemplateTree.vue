@@ -1,17 +1,22 @@
 <script setup lang="ts">
 /**
- * 左侧模板树：按业务分组列出模板，可搜索；窄屏时还放功能菜单。右边缘可以拖动改宽度（名称很长时拖宽看全）。
+ * 左侧模板树：只做导航，模板多了也不会长得翻不动。顶部是最近打开；业务分组每组最多列 20 个最近修改的模板，再多进模板库看；
+ * 搜索时平铺列出匹配的模板。窄屏时还放功能菜单。右边缘可以拖动改宽度（名称很长时拖宽看全）。
  */
 import { computed, reactive, ref, watch } from 'vue'
 import type { TemplateItem } from '../../api/admin.ts'
 import { sizeText } from '../../model/format.ts'
-import { catalog, templateState } from '../../stores/catalog.ts'
+import { EXPAND_ALL_LIMIT, GROUP_LIMIT, groupTemplates, SEARCH_LIMIT, searchTemplates, visibleInGroup } from '../../model/templateList.ts'
+import { businessOf, catalog } from '../../stores/catalog.ts'
 import { dialogs } from '../../stores/dialogs.ts'
+import { library } from '../../stores/library.ts'
+import { loadRecentTemplates, recentTemplates } from '../../stores/recentTemplates.ts'
 import { go, goBiz, openWorkspace, route } from '../../stores/router.ts'
 import type { Page } from '../../stores/router.ts'
-import { can } from '../../stores/session.ts'
+import { can, session } from '../../stores/session.ts'
 import { useSidebarWidth } from '../../composables/useSidebarWidth.ts'
 import AppIcon from '../AppIcon.vue'
+import TreeTemplateItem from './TreeTemplateItem.vue'
 
 /**
  * 组件参数。
@@ -44,51 +49,104 @@ const sidebar = useSidebarWidth()
 const query = ref('')
 
 /**
- * 每个业务分组是否展开（分组 ID → 展开），新出现的分组默认展开。
+ * 每个业务分组是否展开（分组 ID → 展开；0 是未分组）。
  */
 const openFolders = reactive<Record<number, boolean>>({})
 
-watch(
-  () => catalog.businesses.map((b) => b.id),
-  (ids) => ids.forEach((id) => (openFolders[id] ??= true)),
-  { immediate: true },
-)
+/**
+ * 当前打开的模板编码；不在模板工作区时为空。
+ */
+const currentCode = computed(() => (route.page === 'workspace' ? route.code : ''))
 
 /**
- * 树的第一层：业务分组，有不属于任何分组的模板时加一个“未分组”。
+ * 认识的业务分组 ID；模板的分组不在里面时归到“未分组”。
  */
-const folders = computed(() => {
-  const ids = new Set(catalog.businesses.map((b) => b.id))
-  const list = catalog.businesses.map((b) => ({ id: b.id, name: b.name, code: b.code }))
-  if (catalog.templates.some((t) => t.businessId === null || !ids.has(t.businessId))) list.push({ id: 0, name: '未分组', code: '-' })
-  return list
-})
+const knownIds = computed(() => new Set(catalog.businesses.map((b) => b.id)))
 
 /**
- * 某个分组下符合搜索条件的模板，按名称排序。
- * @param id 分组 ID；0 是未分组。
- * @returns 模板。
+ * 模板归到哪个分组。
+ * @param template 模板。
+ * @returns 分组 ID；0 是未分组。
  */
-function templatesOf(id: number): TemplateItem[] {
-  const q = query.value.toLowerCase()
-  return catalog.templates
-    .filter((t) => (t.businessId ?? 0) === id || (id === 0 && !catalog.businesses.some((b) => b.id === t.businessId)))
-    .filter((t) => !q || t.name.toLowerCase().includes(q) || t.code.toLowerCase().includes(q))
-    .sort((a, b) => a.name.localeCompare(b.name, 'zh'))
+function groupOf(template: TemplateItem): number {
+  return template.businessId !== null && knownIds.value.has(template.businessId) ? template.businessId : 0
 }
 
 /**
- * 搜索没有任何结果。
+ * 按分组归类、最近修改在前的模板。
  */
-const noMatch = computed(() => !!query.value && folders.value.every((folder) => !templatesOf(folder.id).length))
+const grouped = computed(() => groupTemplates(catalog.templates, groupOf))
 
 /**
- * 展开或收起分组，并在模板库里打开它。
+ * 树的第一层：业务分组，有不属于任何分组的模板时加一个“未分组”。每个分组带上要显示的模板和总数。
+ */
+const folders = computed(() => {
+  const list = catalog.businesses.map((b) => ({ id: b.id, name: b.name, code: b.code }))
+  if (grouped.value.has(0)) list.push({ id: 0, name: '未分组', code: '-' })
+  return list.map((folder) => ({ ...folder, ...visibleInGroup(grouped.value.get(folder.id) ?? [], GROUP_LIMIT, currentCode.value) }))
+})
+
+// 加载完以后定每个分组默认展不展开：模板少时全部展开（和以前一样），多了收起
+watch(
+  () => [catalog.loaded, folders.value.map((folder) => folder.id)] as const,
+  ([loaded, ids]) => {
+    if (loaded) ids.forEach((id) => (openFolders[id] ??= catalog.templates.length <= EXPAND_ALL_LIMIT))
+  },
+  { immediate: true },
+)
+
+// 打开模板时展开它所在的分组，在树里能看到它
+watch(
+  () => [currentCode.value, catalog.loaded] as const,
+  ([code]) => {
+    const template = code ? catalog.templates.find((t) => t.code === code) : undefined
+    if (template) openFolders[groupOf(template)] = true
+  },
+  { immediate: true },
+)
+
+// 换账号时读取那个账号的最近打开
+watch(() => session.me?.account ?? '', loadRecentTemplates, { immediate: true })
+
+/**
+ * 最近打开的模板（已删除、看不到的不显示）。
+ */
+const recent = computed(() => {
+  const byCode = new Map(catalog.templates.map((t) => [t.code, t]))
+  return recentTemplates.codes.map((code) => byCode.get(code)).filter((t): t is TemplateItem => !!t)
+})
+
+/**
+ * 搜索结果：平铺，最多 30 个。
+ */
+const results = computed(() => searchTemplates(catalog.templates, query.value, SEARCH_LIMIT))
+
+/**
+ * 展开或收起分组，并在模板库里打开它（清掉模板库的筛选关键字，看整个分组）。
  * @param id 分组 ID；0 是未分组（只展开收起）。
  */
 function openFolder(id: number): void {
   openFolders[id] = !openFolders[id]
-  if (id) goBiz(id)
+  if (id) showGroup(id)
+  else emit('navigate')
+}
+
+/**
+ * 在模板库里看一个分组（或全部）的模板，清掉模板库的筛选关键字。
+ * @param id 分组 ID；0（未分组）或 all 时看全部。
+ */
+function showGroup(id: number | 'all'): void {
+  library.query = ''
+  goBiz(id || 'all')
+  emit('navigate')
+}
+
+/**
+ * 在模板库里看全部搜索结果（把关键字带过去）。
+ */
+function showAllResults(): void {
+  library.query = query.value
+  goBiz('all')
   emit('navigate')
 }
 
@@ -133,33 +191,33 @@ function page(target: Page): void {
     </div>
     <div class="search-box"><AppIcon name="search" small /><input id="tree-q" v-model.trim="query" placeholder="搜索模板名称或编码" aria-label="搜索模板" /></div>
     <div class="table-tree">
-      <button class="module-row" type="button" :class="{ active: route.page === 'templates' && route.biz === 'all' }" @click="goBiz('all'), emit('navigate')">
-        <AppIcon name="folder" /><span class="nm">全部模板</span><span class="count">{{ catalog.templates.length }}</span>
-      </button>
-      <template v-for="folder in folders" :key="folder.id">
-        <button class="module-row" type="button" :class="{ active: route.page === 'templates' && route.biz === folder.id }" :title="`${folder.name}（${folder.code}）`" @click="openFolder(folder.id)">
-          <AppIcon :name="openFolders[folder.id] || query ? 'chevD' : 'chevR'" small class="chev" />
-          <AppIcon :name="openFolders[folder.id] || query ? 'folderOpen' : 'folder'" />
-          <span class="nm" :title="folder.name + '（' + folder.code + '）'">{{ folder.name }}（{{ folder.code }}）</span><span class="count">{{ templatesOf(folder.id).length }}</span>
+      <template v-if="query">
+        <div class="tree-caption">搜索结果<span>{{ results.total }}</span></div>
+        <TreeTemplateItem v-for="t in results.items" :key="t.code" :template="t" :sub="`${t.code} · ${businessOf(t.businessId).name}`" :active="currentCode === t.code" flat @open="open(t)" />
+        <button v-if="results.total > results.items.length" class="tree-more flat" type="button" @click="showAllResults">在模板库里查看全部 {{ results.total }} 个结果<AppIcon name="chevR" small /></button>
+        <div v-if="!results.total" class="hint" style="padding: 16px 8px">没有找到“{{ query }}”</div>
+      </template>
+      <template v-else>
+        <template v-if="recent.length">
+          <div class="tree-caption">最近打开</div>
+          <TreeTemplateItem v-for="t in recent" :key="'recent-' + t.code" :template="t" :sub="`${t.code} · ${sizeText(t)}`" :active="currentCode === t.code" flat @open="open(t)" />
+          <div class="tree-caption">业务分组</div>
+        </template>
+        <button class="module-row" type="button" :class="{ active: route.page === 'templates' && route.biz === 'all' }" @click="showGroup('all')">
+          <AppIcon name="folder" /><span class="nm">全部模板</span><span class="count">{{ catalog.templates.length }}</span>
         </button>
-        <template v-if="openFolders[folder.id] || query">
-          <button
-            v-for="t in templatesOf(folder.id)"
-            :key="t.code"
-            class="table-item"
-            type="button"
-            :aria-label="t.name + ' · ' + t.code"
-            :class="{ active: route.page === 'workspace' && route.code === t.code }"
-            :title="`${t.name}
-${t.code} · ${sizeText(t)}`"
-            @click="open(t)"
-          >
-            <span><span class="state-dot" :class="templateState(t).key"></span><span class="tree-template-name">{{ t.name }}</span></span>
-            <small>{{ t.code }} · {{ sizeText(t) }}</small>
+        <template v-for="folder in folders" :key="folder.id">
+          <button class="module-row" type="button" :class="{ active: route.page === 'templates' && route.biz === folder.id }" :title="`${folder.name}（${folder.code}）`" @click="openFolder(folder.id)">
+            <AppIcon :name="openFolders[folder.id] ? 'chevD' : 'chevR'" small class="chev" />
+            <AppIcon :name="openFolders[folder.id] ? 'folderOpen' : 'folder'" />
+            <span class="nm">{{ folder.name }}（{{ folder.code }}）</span><span class="count">{{ folder.total }}</span>
           </button>
+          <template v-if="openFolders[folder.id]">
+            <TreeTemplateItem v-for="t in folder.items" :key="t.code" :template="t" :sub="`${t.code} · ${sizeText(t)}`" :active="currentCode === t.code" @open="open(t)" />
+            <button v-if="folder.total > GROUP_LIMIT" class="tree-more" type="button" :title="`这里只列最近修改的 ${GROUP_LIMIT} 个`" @click="showGroup(folder.id)">查看全部 {{ folder.total }} 个<AppIcon name="chevR" small /></button>
+          </template>
         </template>
       </template>
-      <div v-if="noMatch" class="hint" style="padding: 16px 8px">没有找到“{{ query }}”</div>
     </div>
     <div class="mobile-nav">
       <div class="nav-title">功能</div>
