@@ -24,6 +24,7 @@ import { cloneElements, makeElement, normalizeElement } from '../src/model/eleme
 import type { FieldDefinition, LabelElement, LabelTemplate, RectElement } from '../src/model/template.ts'
 import { normalizeRotation, roundMm } from '../src/model/units.ts'
 import { checkTemplate } from '../src/model/validate.ts'
+import { groupTemplates, pageButtons, paginate, pushRecent, searchTemplates, visibleInGroup } from '../src/model/templateList.ts'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -304,6 +305,45 @@ function checkFonts(): void {
 }
 
 /**
+ * 模板多了以后的列表逻辑：分组排序和截取、搜索排序、最近打开、分页。
+ */
+function checkTemplateList(): void {
+  /**
+   * 2000 个模拟模板：两个分组轮流放，越往后修改时间越新。
+   */
+  const many = Array.from({ length: 2000 }, (_, i) => ({
+    code: `T${String(i).padStart(4, '0')}`,
+    name: `模板 ${i}`,
+    businessId: i % 2 === 0 ? 1 : 2,
+    updatedAt: new Date(Date.UTC(2026, 0, 1) + i * 60e3).toISOString(),
+  }))
+  const groups = groupTemplates(many, (t) => t.businessId)
+  const first = groups.get(1)!
+  check('分组：每组按最近修改排在前面', groups.size === 2 && first.length === 1000 && first[0].code === 'T1998' && first[999].code === 'T0000')
+
+  const shown = visibleInGroup(first, 20, '')
+  check('分组截取：只列前 20 个，总数照实', shown.items.length === 20 && shown.total === 1000)
+  const withCurrent = visibleInGroup(first, 20, 'T0000')
+  check('分组截取：当前打开的模板排在后面时加在最后', withCurrent.items.length === 21 && withCurrent.items[20].code === 'T0000')
+  check('分组截取：当前模板已经在前 20 个里时不重复', visibleInGroup(first, 20, 'T1998').items.length === 20)
+
+  const searched = searchTemplates(many, 't1', 30)
+  check('搜索：最多 30 个，总数照实，开头匹配的按最近修改', searched.items.length === 30 && searched.total === 1000 && searched.items[0].code === 'T1999')
+  const extra = [{ code: 'BOX', name: '旧箱标', businessId: 1, updatedAt: '2020-01-01T00:00:00Z' }, { code: 'XBOX', name: 'BOX 新版', businessId: 1, updatedAt: '2030-01-01T00:00:00Z' }]
+  const exact = searchTemplates([...many, ...extra], ' box ', 30)
+  check('搜索：编码完全相同的排第一，名称开头匹配的其次，不区分大小写、去掉首尾空白', exact.total === 2 && exact.items[0].code === 'BOX' && exact.items[1].code === 'XBOX')
+  check('搜索：空关键字没有结果', searchTemplates(many, '  ', 30).total === 0)
+
+  check('最近打开：新的放最前、去重、最多 5 个', pushRecent(['A', 'B', 'C', 'D', 'E'], 'C', 5).join() === 'C,A,B,D,E' && pushRecent(['A', 'B', 'C', 'D', 'E'], 'F', 5).join() === 'F,A,B,C,D')
+
+  const page = paginate(many, 3, 48)
+  check('分页：第 3 页从第 97 个开始，共 42 页', page.items.length === 48 && page.items[0].code === 'T0096' && page.pages === 42)
+  check('分页：页码超出范围时取最后一页，空列表也有 1 页', paginate(many, 99, 48).page === 42 && paginate(many, 99, 48).items.length === 32 && paginate([], 1, 48).pages === 1)
+  check('分页条：首尾页、当前页前后两页，中间断开处放省略号',
+    pageButtons(10, 42).join() === '1,0,8,9,10,11,12,0,42' && pageButtons(2, 5).join() === '1,2,3,4,5' && pageButtons(1, 1).join() === '1')
+}
+
+/**
  * 源码规范：注释完整（tests/docs.ts）、文件不超过 500 行。
  */
 function checkSource(): void {
@@ -338,6 +378,7 @@ checkCompare()
 checkSampleTemplate()
 checkLayouts()
 checkFonts()
+checkTemplateList()
 checkSource()
 
 await checkAvailableLayouts(check)
