@@ -80,6 +80,14 @@ internal static class ServerChecks
         check("字段定义接口返回字段和样例，字段里不重复带 sample",
             schema is { TemplateCode: "BOX_LABEL", Version: 1, Fields.Count: 6, Sample.Count: 6 } && schema.Fields.All(field => field.Sample is null));
 
+        var listed = await ListTemplatesAsync(http, Fixtures.DevApiKey);
+        var box = listed.Response?.Templates.FirstOrDefault(item => item.TemplateCode == "BOX_LABEL");
+        check("模板列表接口列出已发布的示例模板，按编码排序，带名称、版本和尺寸",
+            listed.Status == 200 && box is { Name: "成品箱标", Version: 1, Page.Width: 100, Page.Height: 60 }
+            && listed.Response!.Templates.Any(item => item.TemplateCode == "A4_SHIPPING_MARK")
+            && listed.Response.Templates.Select(item => item.TemplateCode).SequenceEqual(listed.Response.Templates.Select(item => item.TemplateCode).Order(StringComparer.Ordinal)));
+        check("模板列表接口没有 Key 返回 401", (await ListTemplatesAsync(http, null)).Status == 401);
+
     }
 
     /// <summary>
@@ -98,6 +106,24 @@ internal static class ServerChecks
         }
 
         return await http.SendAsync(request);
+    }
+
+    /// <summary>
+    /// 调模板列表接口。
+    /// </summary>
+    /// <param name="http">调用服务的客户端。</param>
+    /// <param name="apiKey">API Key；null 表示不带 Key。</param>
+    /// <returns>状态码和成功时的响应体（失败时为 null）。</returns>
+    internal static async Task<(int Status, TemplateListResponse? Response)> ListTemplatesAsync(HttpClient http, string? apiKey)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/templates");
+        if (apiKey is not null)
+        {
+            request.Headers.Add(HeaderNames.ApiKey, apiKey);
+        }
+
+        using var response = await http.SendAsync(request);
+        return ((int)response.StatusCode, response.IsSuccessStatusCode ? await response.Content.ReadFromJsonAsync<TemplateListResponse>(LabelJson.Options) : null);
     }
 
     /// <summary>

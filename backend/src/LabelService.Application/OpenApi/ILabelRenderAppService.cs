@@ -4,7 +4,7 @@ using LabelService.Contracts.Protocol;
 namespace LabelService.Application.OpenApi;
 
 /// <summary>
-/// 开放接口 /api/v1 的用例：单张生成、批量生成、查模板的字段定义。请求、响应格式见 docs/contracts.md。
+/// 开放接口 /api/v1 的用例：单张生成、批量生成、列出可用模板、查模板的字段定义。请求、响应格式见 docs/contracts.md。
 /// </summary>
 /// <remarks>
 /// 在热路径上（AGENTS.md R3）：只用内存缓存（模板、版式），不访问数据库和磁盘。
@@ -39,4 +39,11 @@ public interface ILabelRenderAppService
     /// <param name="code">模板编码。</param>
     /// <returns>字段定义，或错误（模板不存在、没有权限）。</returns>
     OpenApiOutcome<TemplateSchemaResponse> GetSchema(AuthenticatedClient client, string code);
+
+    /// <summary>
+    /// 调用方有权使用的已发布模板（GET /api/v1/templates），按编码排序。
+    /// </summary>
+    /// <param name="client">已通过鉴权的调用方。</param>
+    /// <returns>模板列表；一个都没有时是空列表。</returns>
+    TemplateListResponse ListTemplates(AuthenticatedClient client);
 }
