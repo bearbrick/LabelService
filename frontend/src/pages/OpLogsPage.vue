@@ -148,7 +148,7 @@ function reset(): void {
 </script>
 
 <template>
-  <div class="page-scroll">
+  <div class="page-scroll fixed-head">
     <div class="page-inner">
       <div class="page-head">
         <div>
@@ -172,7 +172,7 @@ function reset(): void {
         <input id="of-q" v-model.trim="filter.q" class="inp grow" placeholder="搜索用户、对象或详情" aria-label="搜索" />
         <button class="btn ghost" type="button" @click="reset">重置</button>
       </div>
-      <div class="table-box">
+      <div class="table-box fill">
         <div class="tw" tabindex="0" role="region" aria-label="操作日志表格">
           <table class="dt audit-table">
             <colgroup><col style="width: 180px" /><col style="width: 130px" /><col style="width: 120px" /><col style="width: 280px" /><col style="width: 280px" /><col style="width: 140px" /></colgroup>

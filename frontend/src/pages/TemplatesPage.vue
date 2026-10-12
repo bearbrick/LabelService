@@ -120,7 +120,8 @@ watch([() => route.biz, () => filter.status, () => filter.sort, () => library.qu
  */
 function goPage(target: number): void {
   page.value = target
-  document.querySelector('.page-scroll')?.scrollTo({ top: 0 })
+  // 列表自己滚动时滚的是列表，窗口矮时滚的是整页：都回到顶部
+  document.querySelectorAll('.page-scroll, .page-body.fill, .table-box.fill > .tw').forEach((el) => el.scrollTo({ top: 0 }))
 }
 
 /**
@@ -191,7 +192,7 @@ async function remove(t: TemplateItem): Promise<void> {
 </script>
 
 <template>
-  <div class="page-scroll">
+  <div class="page-scroll fixed-head">
     <div class="page-inner">
       <div class="page-head">
         <div>
@@ -229,29 +230,31 @@ async function remove(t: TemplateItem): Promise<void> {
         <button v-if="can('tpl.edit') && !library.query" class="btn primary" type="button" @click="dialogs.newTemplate = true">新建模板</button>
       </div>
 
-      <div v-else-if="filter.mode === 'cards'" class="cards">
-        <div v-for="t in paged.items" :key="t.code" class="card">
-          <div class="thumb" @click="openWorkspace(t.code)"><TemplateThumb :code="t.code" :updated-at="t.updatedAt" :alt="`${t.name} 缩略图`" /></div>
-          <div class="card-body">
-            <div class="card-title"><b :title="t.name">{{ t.name }}</b><span class="pill" :class="templateState(t).cls">{{ templateState(t).short }}</span></div>
-            <div class="card-meta"><span class="mono" :title="t.code">{{ t.code }}</span><span>{{ sizeText(t) }} · {{ t.dpi }} dpi</span></div>
-            <div class="card-meta">
-              <span class="mini-chip" :title="businessOf(t.businessId).name"><span class="biz-dot" :style="{ background: businessOf(t.businessId).color }"></span><span class="tx">{{ businessOf(t.businessId).name }}</span></span>
-              <span>{{ t.updatedBy || '—' }} · {{ fmtTime(t.updatedAt) }}</span>
-            </div>
-            <div class="card-actions">
-              <button class="btn sm primary" type="button" @click="openWorkspace(t.code)">{{ canEditTemplate(t) ? '设计' : '查看' }}</button>
-              <button class="btn sm" type="button" @click="openWorkspace(t.code, 'fields')">数据源</button>
-              <button v-if="can('api.test')" class="btn sm" type="button" @click="openWorkspace(t.code, 'api')">接口调试</button>
-              <div class="spacer"></div>
-              <button v-if="can('tpl.edit')" class="icon-btn xs" type="button" data-tip="复制模板" aria-label="复制模板" @click="startCopy(t)"><AppIcon name="copy" small /></button>
-              <button v-if="can('tpl.delete')" class="icon-btn xs" type="button" data-tip="删除模板" aria-label="删除模板" @click="remove(t)"><AppIcon name="trash" small /></button>
+      <div v-else-if="filter.mode === 'cards'" class="page-body fill">
+        <div class="cards">
+          <div v-for="t in paged.items" :key="t.code" class="card">
+            <div class="thumb" @click="openWorkspace(t.code)"><TemplateThumb :code="t.code" :updated-at="t.updatedAt" :alt="`${t.name} 缩略图`" /></div>
+            <div class="card-body">
+              <div class="card-title"><b :title="t.name">{{ t.name }}</b><span class="pill" :class="templateState(t).cls">{{ templateState(t).short }}</span></div>
+              <div class="card-meta"><span class="mono" :title="t.code">{{ t.code }}</span><span>{{ sizeText(t) }} · {{ t.dpi }} dpi</span></div>
+              <div class="card-meta">
+                <span class="mini-chip" :title="businessOf(t.businessId).name"><span class="biz-dot" :style="{ background: businessOf(t.businessId).color }"></span><span class="tx">{{ businessOf(t.businessId).name }}</span></span>
+                <span>{{ t.updatedBy || '—' }} · {{ fmtTime(t.updatedAt) }}</span>
+              </div>
+              <div class="card-actions">
+                <button class="btn sm primary" type="button" @click="openWorkspace(t.code)">{{ canEditTemplate(t) ? '设计' : '查看' }}</button>
+                <button class="btn sm" type="button" @click="openWorkspace(t.code, 'fields')">数据源</button>
+                <button v-if="can('api.test')" class="btn sm" type="button" @click="openWorkspace(t.code, 'api')">接口调试</button>
+                <div class="spacer"></div>
+                <button v-if="can('tpl.edit')" class="icon-btn xs" type="button" data-tip="复制模板" aria-label="复制模板" @click="startCopy(t)"><AppIcon name="copy" small /></button>
+                <button v-if="can('tpl.delete')" class="icon-btn xs" type="button" data-tip="删除模板" aria-label="删除模板" @click="remove(t)"><AppIcon name="trash" small /></button>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      <div v-else class="table-box">
+      <div v-else class="table-box fill">
         <div class="tw">
           <table class="dt">
             <thead>

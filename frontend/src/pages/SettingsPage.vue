@@ -201,7 +201,7 @@ async function restoreImage(slot: ImageSlot): Promise<void> {
 </script>
 
 <template>
-  <div class="page-scroll">
+  <div class="page-scroll fixed-head">
     <div class="page-inner">
       <div class="page-head">
         <div>
@@ -210,71 +210,73 @@ async function restoreImage(slot: ImageSlot): Promise<void> {
           <p>系统名称、公司 Logo 和版权信息显示在顶栏、登录页和浏览器标签页上，保存后所有人立即看到。</p>
         </div>
       </div>
-      <div class="grid-2">
-        <div class="box">
-          <h3><AppIcon name="edit" small />基本信息</h3>
-          <form @submit.prevent="save">
-            <div v-for="field in FIELDS" :key="field.key" class="form-row top">
-              <label :for="`si-${field.key}`">{{ field.label }}</label>
-              <div>
-                <div class="with-count">
-                  <textarea v-if="field.multiline" :id="`si-${field.key}`" v-model="form[field.key]" class="inp" rows="2" :maxlength="SYSTEM_INFO_LIMITS[field.key]" :placeholder="field.placeholder" @input="error = ''"></textarea>
-                  <input v-else :id="`si-${field.key}`" v-model="form[field.key]" class="inp" :maxlength="SYSTEM_INFO_LIMITS[field.key]" :placeholder="field.placeholder" @input="error = ''" />
-                  <span class="field-count">{{ form[field.key].length }}/{{ SYSTEM_INFO_LIMITS[field.key] }}</span>
-                </div>
-                <div class="hint" style="margin-top: 4px">{{ field.hint }}</div>
-              </div>
-            </div>
-            <div v-if="error" class="form-err" role="alert" style="margin-bottom: 10px">{{ error }}</div>
-            <div style="display: flex; justify-content: flex-end; gap: 8px">
-              <button class="btn" type="button" :disabled="busy || !dirty" @click="revert">放弃修改</button>
-              <button class="btn primary" type="submit" :disabled="busy || !dirty"><AppIcon name="check" small />保存</button>
-            </div>
-          </form>
-        </div>
-        <div class="stack">
+      <div class="page-body fill">
+        <div class="grid-2">
           <div class="box">
-            <h3><AppIcon name="image" small />公司 Logo</h3>
-            <div v-for="slot in IMAGE_SLOTS" :key="slot.kind" class="logo-slot">
-              <div class="logo-slot-head"><b>{{ slot.title }}</b><span class="hint">{{ slot.usage }}</span></div>
-              <div class="logo-slot-body">
-                <span class="company-logo" :class="{ big: slot.kind === 'logo' }">
-                  <img v-if="imageUrl(slot.kind)" :src="imageUrl(slot.kind)" :alt="slot.title" />
-                  <span v-else class="logo-placeholder">未上传</span>
-                </span>
-                <div class="logo-actions">
-                  <label class="btn" :class="{ disabled: busy }">
-                    <AppIcon name="upload" small />{{ imageUrl(slot.kind) ? '更换' : '上传' }}
-                    <input type="file" accept=".png,.jpg,.jpeg,.svg,.webp,image/png,image/jpeg,image/svg+xml,image/webp" hidden :disabled="busy" @change="onImagePicked(slot, $event)" />
-                  </label>
-                  <button v-if="imageUrl(slot.kind)" class="btn ghost" type="button" :disabled="busy" @click="restoreImage(slot)">删除</button>
+            <h3><AppIcon name="edit" small />基本信息</h3>
+            <form @submit.prevent="save">
+              <div v-for="field in FIELDS" :key="field.key" class="form-row top">
+                <label :for="`si-${field.key}`">{{ field.label }}</label>
+                <div>
+                  <div class="with-count">
+                    <textarea v-if="field.multiline" :id="`si-${field.key}`" v-model="form[field.key]" class="inp" rows="2" :maxlength="SYSTEM_INFO_LIMITS[field.key]" :placeholder="field.placeholder" @input="error = ''"></textarea>
+                    <input v-else :id="`si-${field.key}`" v-model="form[field.key]" class="inp" :maxlength="SYSTEM_INFO_LIMITS[field.key]" :placeholder="field.placeholder" @input="error = ''" />
+                    <span class="field-count">{{ form[field.key].length }}/{{ SYSTEM_INFO_LIMITS[field.key] }}</span>
+                  </div>
+                  <div class="hint" style="margin-top: 4px">{{ field.hint }}</div>
                 </div>
               </div>
-              <div class="hint">{{ slot.fallback }}</div>
-            </div>
-            <p class="hint" style="margin-top: 10px">PNG、JPG、SVG、WebP，不超过 1 MB。放在白底圆角框里显示，上传前把图片四周的空白裁掉，显示得更大更清楚。</p>
+              <div v-if="error" class="form-err" role="alert" style="margin-bottom: 10px">{{ error }}</div>
+              <div style="display: flex; justify-content: flex-end; gap: 8px">
+                <button class="btn" type="button" :disabled="busy || !dirty" @click="revert">放弃修改</button>
+                <button class="btn primary" type="submit" :disabled="busy || !dirty"><AppIcon name="check" small />保存</button>
+              </div>
+            </form>
           </div>
-          <div class="box">
-            <h3><AppIcon name="preview" small />效果预览<span v-if="dirty" class="pill warn" style="margin-left: 8px">未保存</span></h3>
-            <div class="preview-bar">
-              <BrandMark :info="preview" />
-              <span v-if="preview.subtitle" class="brand-sub" :title="preview.subtitle">{{ preview.subtitle }}</span>
-            </div>
-            <div class="preview-login">
-              <BrandMark :info="preview" full />
-              <span class="eyebrow">{{ preview.companyName || 'LABEL SERVICE' }}</span>
-              <b>{{ preview.loginTitle }}</b>
-              <p v-if="preview.loginIntro">{{ preview.loginIntro }}</p>
-            </div>
-            <div class="preview-foot">
-              <div class="hint" style="margin-bottom: 6px">登录页下方</div>
-              <div v-if="preview.copyright || preview.support" class="login-foot">
-                <span v-if="preview.copyright">{{ preview.copyright }}</span>
-                <span v-if="preview.support">技术支持：{{ preview.support }}</span>
+          <div class="stack">
+            <div class="box">
+              <h3><AppIcon name="image" small />公司 Logo</h3>
+              <div v-for="slot in IMAGE_SLOTS" :key="slot.kind" class="logo-slot">
+                <div class="logo-slot-head"><b>{{ slot.title }}</b><span class="hint">{{ slot.usage }}</span></div>
+                <div class="logo-slot-body">
+                  <span class="company-logo" :class="{ big: slot.kind === 'logo' }">
+                    <img v-if="imageUrl(slot.kind)" :src="imageUrl(slot.kind)" :alt="slot.title" />
+                    <span v-else class="logo-placeholder">未上传</span>
+                  </span>
+                  <div class="logo-actions">
+                    <label class="btn" :class="{ disabled: busy }">
+                      <AppIcon name="upload" small />{{ imageUrl(slot.kind) ? '更换' : '上传' }}
+                      <input type="file" accept=".png,.jpg,.jpeg,.svg,.webp,image/png,image/jpeg,image/svg+xml,image/webp" hidden :disabled="busy" @change="onImagePicked(slot, $event)" />
+                    </label>
+                    <button v-if="imageUrl(slot.kind)" class="btn ghost" type="button" :disabled="busy" @click="restoreImage(slot)">删除</button>
+                  </div>
+                </div>
+                <div class="hint">{{ slot.fallback }}</div>
               </div>
-              <div v-else class="hint">没有填版权信息和技术支持，登录页下方不显示。</div>
+              <p class="hint" style="margin-top: 10px">PNG、JPG、SVG、WebP，不超过 1 MB。放在白底圆角框里显示，上传前把图片四周的空白裁掉，显示得更大更清楚。</p>
             </div>
-            <p class="hint" style="margin-top: 10px">浏览器标签页标题：{{ preview.systemName }}</p>
+            <div class="box">
+              <h3><AppIcon name="preview" small />效果预览<span v-if="dirty" class="pill warn" style="margin-left: 8px">未保存</span></h3>
+              <div class="preview-bar">
+                <BrandMark :info="preview" />
+                <span v-if="preview.subtitle" class="brand-sub" :title="preview.subtitle">{{ preview.subtitle }}</span>
+              </div>
+              <div class="preview-login">
+                <BrandMark :info="preview" full />
+                <span class="eyebrow">{{ preview.companyName || 'LABEL SERVICE' }}</span>
+                <b>{{ preview.loginTitle }}</b>
+                <p v-if="preview.loginIntro">{{ preview.loginIntro }}</p>
+              </div>
+              <div class="preview-foot">
+                <div class="hint" style="margin-bottom: 6px">登录页下方</div>
+                <div v-if="preview.copyright || preview.support" class="login-foot">
+                  <span v-if="preview.copyright">{{ preview.copyright }}</span>
+                  <span v-if="preview.support">技术支持：{{ preview.support }}</span>
+                </div>
+                <div v-else class="hint">没有填版权信息和技术支持，登录页下方不显示。</div>
+              </div>
+              <p class="hint" style="margin-top: 10px">浏览器标签页标题：{{ preview.systemName }}</p>
+            </div>
           </div>
         </div>
       </div>

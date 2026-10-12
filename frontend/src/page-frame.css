@@ -1,0 +1,27 @@
+/*
+ * 页面框架：带面包屑的列表页、表单页，上面的面包屑、标题、筛选、统计固定，下面的列表或内容自己滚动，不再整页滚动。
+ * 用法：外层 .page-scroll 加 fixed-head；要滚动的那一块加 fill（表格用 .table-box.fill，卡片、表单等用 .page-body.fill）。
+ * 窗口矮（不到 641px）或窄（不到 901px）时固定的部分会把列表挤得太小，退回原来的整页滚动。
+ */
+@media (min-height: 641px) and (min-width: 901px) {
+  .page-scroll.fixed-head { overflow: hidden; display: flex; flex-direction: column; }
+
+  .page-scroll.fixed-head > .page-inner { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; padding-bottom: 20px; }
+
+  /* 固定的部分按内容高度；滚动的那一块内容少时按内容高度，放不下时缩到剩余高度再滚动 */
+  .page-scroll.fixed-head > .page-inner > * { flex: none; }
+
+  .page-scroll.fixed-head > .page-inner > .fill { flex: 0 1 auto; min-height: 0; }
+
+  /* 表格：表头钉在上面，表身滚动，表格底部（加载更多）留在下面 */
+  .table-box.fill { display: flex; flex-direction: column; }
+
+  .table-box.fill > .tw { flex: 1 1 auto; min-height: 0; overflow: auto; }
+
+  .table-box.fill thead th { position: sticky; top: 0; z-index: 1; }
+
+  .table-box.fill > .table-foot { flex: none; }
+
+  /* 卡片、表单等：整块滚动；左右留一点，卡片的阴影和输入框的焦点框不被裁掉 */
+  .page-body.fill { overflow: auto; margin-inline: -6px; padding: 2px 6px 6px; }
+}

@@ -192,7 +192,7 @@ function csv(): void {
 </script>
 
 <template>
-  <div class="page-scroll">
+  <div class="page-scroll fixed-head">
     <div class="page-inner">
       <div class="page-head">
         <div>
@@ -225,7 +225,7 @@ function csv(): void {
         <div class="kpi"><span class="k">生成张数</span><span class="v">{{ summary.labels.toLocaleString() }}<small>张</small></span></div>
         <div class="kpi"><span class="k">平均耗时</span><span class="v">{{ summary.ms }}<small>ms</small></span><span class="d">成功的调用</span></div>
       </div>
-      <div class="table-box">
+      <div class="table-box fill">
         <div class="tw" tabindex="0" role="region" aria-label="调用日志表格">
           <table class="dt call-table">
             <colgroup><col style="width: 180px" /><col style="width: 200px" /><col style="width: 70px" /><col style="width: 300px" /><col style="width: 70px" /><col style="width: 60px" /><col style="width: 100px" /><col style="width: 170px" /><col style="width: 150px" /></colgroup>

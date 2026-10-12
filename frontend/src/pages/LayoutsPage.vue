@@ -271,7 +271,7 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', onBeforeUnload)
     </template>
   </section>
 
-  <div v-else class="page-scroll">
+  <div v-else class="page-scroll fixed-head">
     <div class="page-inner">
       <div class="page-head">
         <div>
@@ -283,7 +283,7 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', onBeforeUnload)
         <button class="btn primary" type="button" :disabled="!canEdit" @click="startNew"><AppIcon name="plus" small />新建版式</button>
       </div>
       <div v-if="error" class="empty box"><AppIcon name="alert" /><span>{{ error }}</span></div>
-      <div class="table-box">
+      <div class="table-box fill">
         <div class="tw">
           <table class="dt">
             <thead>

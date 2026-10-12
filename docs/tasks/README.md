@@ -53,6 +53,7 @@ Select-String -Path docs/tasks/T-*.md -Pattern '^(状态|负责人)：'
 | [T-034](T-034-template-list-api.md) | 开放接口列出可用模板，SDK 增加 ListTemplatesAsync | 后端 + 调用端 | 一期验收 | T-009、T-011 | `Application/OpenApi`、`src/LabelService.Client` |
 | [T-035](T-035-demo-batch-rows.md) | 演示程序：高分屏显示、刷新模板列表、批量数据由调用方给全 | 调用端 | 一期验收 | T-034 | `samples/LabelService.Demo.WinForms` |
 | [T-036](T-036-template-tree-scale.md) | 模板多了以后的模板树和模板库：分组截取、搜索平铺、最近打开、分页 | 前端 | 一期验收 | T-027 | `src/components/admin/TemplateTree.vue`、`src/pages/TemplatesPage.vue` |
+| [T-037](T-037-fixed-page-head.md) | 页面框架：标题和筛选固定，列表自己滚动 | 前端 | 一期验收 | T-036 | `src/page-frame.css`、`src/pages/` |
 
 “主要目录”是相对于对应部分（`frontend/`、`backend/`、`client/`）的路径；后端的 Rendering、Server 指 `backend/src/LabelService.Rendering`、`backend/src/LabelService.Server`（T-023 起 Server 改名为 `LabelService.Api`，原来的模板存储、鉴权、日志等拆到 Domain、Application、Infrastructure，见 ADR 0010；已完成任务的“主要目录”保留当时的写法）。跨两个部分的任务（T-014、T-016、T-018、T-020）建议按部分拆成子任务分别认领；T-018 是契约变更，后端和调用端的契约副本要在同一个提交里改齐。
 
