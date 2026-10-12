@@ -172,6 +172,8 @@ internal sealed partial class MainForm
         Check("调用代码：ZPL 发给网络标签打印机（TCP 9100），也写了 USB 打印机的 RAW 写法和打印机连不上时的处理",
             codeText.Text.Contains("await NetworkPrinter.SendAsync(PrinterHost, NetworkPrinter.DefaultPort, file.Content)") && codeText.Text.Contains("WindowsRawPrinter.Send(PrinterName")
             && codeText.Text.Contains("ex is SocketException"));
+        Check("调用代码：直接用内存里的结果打印，不先存文件（另存一份写成注释）",
+            !codeText.Text.Contains("var path") && codeText.Text.Contains("// file.Save(Path.Combine(Path.GetTempPath(), file.FileName));"));
         Shot("6-code");
 
         // 三种格式、单张和批量的调用代码各存一份，放进新建的 net48 / net8.0-windows 控制台项目编译
@@ -189,7 +191,7 @@ internal sealed partial class MainForm
                 }
                 else if (radio == pdf)
                 {
-                    Check($"调用代码：PDF {(batchCode ? "批量" : "单张")}交给 PDF 阅读器打印，也写了打印机支持 PDF 直接打印时的写法", codeText.Text.Contains("Verb = \"print\"") && codeText.Text.Contains("Print(path);") && codeText.Text.Contains("WindowsRawPrinter.Send("));
+                    Check($"调用代码：PDF {(batchCode ? "批量" : "单张")}交给 PDF 阅读器打印，也写了打印机支持 PDF 直接打印时的写法", codeText.Text.Contains("Verb = \"print\"") && codeText.Text.Contains("Print(file);") && codeText.Text.Contains("WindowsRawPrinter.Send(\"打印机名称\", file.Content"));
                 }
             }
         }
