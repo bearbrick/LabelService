@@ -24,6 +24,12 @@ public static class TemplateSampleData
         var data = new Dictionary<string, JsonElement>(StringComparer.Ordinal);
         foreach (var field in fields)
         {
+            // 有自动值的字段不给：试渲染和预览显示自动值算出来的样子（和实际打出来的一样）。
+            if (field.Auto is not null)
+            {
+                continue;
+            }
+
             // 有样例值就用样例值。
             if (field.Sample is { ValueKind: not (JsonValueKind.Null or JsonValueKind.Undefined) } sample)
             {

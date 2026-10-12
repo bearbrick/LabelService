@@ -97,9 +97,12 @@ public sealed partial class LabelRenderAppService
         var labels = new List<LabelInstance>(items.Count);
         var errors = new List<ErrorDetail>();
         var empty = new Dictionary<string, JsonElement>();
+
+        // 自动值：整批共用一个当前时间，index 是条目序号，total 是条目数
+        var auto = clock.For(template.Fields, items.Count, client.Name, trace.RequestId);
         for (var index = 0; index < items.Count; index++)
         {
-            var validation = FieldValidator.Validate(template.Fields, request.Common, items[index]?.Data ?? empty, index);
+            var validation = FieldValidator.Validate(template.Fields, request.Common, items[index]?.Data ?? empty, index, auto);
             errors.AddRange(validation.Errors);
             labels.Add(new LabelInstance(validation.Values, items[index]?.Copies ?? 1));
         }

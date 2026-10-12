@@ -152,7 +152,12 @@ internal static class AutoValueChecks
         // 数据里不带 prodDate（必填，但有自动值）和 boxSeq
         var data = Fixtures.Data(Fixtures.BoxLabelData);
         data.Remove("prodDate");
-        var body = JsonSerializer.Serialize(new { templateCode = Code, format = "png", data }, LabelJson.Options);
+        var body = JsonSerializer.Serialize(new
+        {
+            templateCode = Code,
+            format = "png",
+            data
+        }, LabelJson.Options);
         using var render = new HttpRequestMessage(HttpMethod.Post, "/api/v1/render") { Content = new StringContent(body, Encoding.UTF8, "application/json") };
         render.Headers.Add(HeaderNames.ApiKey, Fixtures.DevApiKey);
         render.Headers.Add(HeaderNames.RequestId, "AUTO-REQ-1");

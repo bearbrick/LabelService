@@ -49,6 +49,7 @@ internal static class Program
         ZplChecks.Run(backendRoot, Check);
         LayoutRenderChecks.Run(backendRoot, Check);
         await ServerChecks.RunAsync(backendRoot, Check);
+        await AutoValueChecks.RunAsync(backendRoot, Check);
         await DatabaseProviderChecks.RunAsync(backendRoot, Check);
         await StorageChecks.RunAsync(backendRoot, Check);
         await UpgradeChecks.RunAsync(backendRoot, Check);

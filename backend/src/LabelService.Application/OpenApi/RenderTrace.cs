@@ -23,6 +23,11 @@ public sealed class RenderTrace
     }
 
     /// <summary>
+    /// 请求号：调用方的 X-Request-Id；没带时是服务端的跟踪号（和响应头 X-Trace-Id 一样）。字段自动值 requestId 用它。
+    /// </summary>
+    public string RequestId { get; set; } = "";
+
+    /// <summary>
     /// 收到请求时的时间戳。
     /// </summary>
     public long Started
