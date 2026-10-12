@@ -5,7 +5,7 @@
  */
 import { computed, reactive, ref } from 'vue'
 import { errorText } from '../api/http.ts'
-import { iconUrl, logoUrl, resetIcon, resetLogo, saveSystemInfo, SYSTEM_INFO_LIMITS, uploadIcon, uploadLogo } from '../api/system.ts'
+import { iconUrl, logoDarkUrl, logoUrl, resetIcon, resetLogo, resetLogoDark, saveSystemInfo, SYSTEM_INFO_LIMITS, uploadIcon, uploadLogo, uploadLogoDark } from '../api/system.ts'
 import type { SaveSystemInfo, SystemInfo } from '../api/system.ts'
 import AppIcon from '../components/AppIcon.vue'
 import BrandMark from '../components/admin/BrandMark.vue'
@@ -55,13 +55,13 @@ const FIELDS: FieldSpec[] = [
 ]
 
 /**
- * 系统信息里的一张图：完整 Logo 或 Logo 图标。
+ * 系统信息里的一张图：完整 Logo、Logo 图标或深色背景 Logo。
  */
 interface ImageSlot {
   /**
-   * 哪一张：logo 是完整 Logo，icon 是图标。
+   * 哪一张：logo 是完整 Logo，icon 是图标，logoDark 是深色背景 Logo。
    */
-  kind: 'logo' | 'icon'
+  kind: 'logo' | 'icon' | 'logoDark'
   /**
    * 标题。
    */
@@ -77,12 +77,22 @@ interface ImageSlot {
 }
 
 /**
- * 两张图，按页面上的顺序排列。
+ * 三张图，按页面上的顺序排列。
  */
 const IMAGE_SLOTS: ImageSlot[] = [
   { kind: 'logo', title: '完整 Logo', usage: '登录页左上角，显示得较大；可以带公司名称文字', fallback: '没上传时用 Logo 图标' },
   { kind: 'icon', title: 'Logo 图标', usage: '顶栏左上角和浏览器标签页，显示很小；建议只用图形', fallback: '没上传时用完整 Logo' },
+  { kind: 'logoDark', title: '深色背景 Logo', usage: '登录页左上角深蓝底上直接显示（不加白框）；用白色或浅色、透明背景的 PNG', fallback: '没上传时登录页用白底卡片放完整 Logo' },
 ]
+
+/**
+ * 每张图的地址、上传和删除。
+ */
+const IMAGE_API: Record<ImageSlot['kind'], { url: (info: SystemInfo) => string; upload: (file: File) => Promise<SystemInfo>; reset: () => Promise<SystemInfo> }> = {
+  logo: { url: logoUrl, upload: uploadLogo, reset: resetLogo },
+  icon: { url: iconUrl, upload: uploadIcon, reset: resetIcon },
+  logoDark: { url: logoDarkUrl, upload: uploadLogoDark, reset: resetLogoDark },
+}
 
 /**
  * 正在编辑的文字部分，打开页面时从当前系统信息复制。
@@ -105,13 +115,13 @@ const error = ref('')
  * @returns 图片地址。
  */
 function imageUrl(kind: ImageSlot['kind']): string {
-  return kind === 'logo' ? logoUrl(system.info) : iconUrl(system.info)
+  return IMAGE_API[kind].url(system.info)
 }
 
 /**
  * 预览用的系统信息：表单里还没保存的文字加上当前的 Logo。
  */
-const preview = computed<SystemInfo>(() => ({ ...form, systemName: form.systemName.trim() || '（系统名称）', logoVersion: system.info.logoVersion, iconVersion: system.info.iconVersion }))
+const preview = computed<SystemInfo>(() => ({ ...form, systemName: form.systemName.trim() || '（系统名称）', logoVersion: system.info.logoVersion, iconVersion: system.info.iconVersion, logoDarkVersion: system.info.logoDarkVersion }))
 
 /**
  * 表单和已保存的内容是否不同。
@@ -173,7 +183,7 @@ async function onImagePicked(slot: ImageSlot, event: Event): Promise<void> {
   if (!file) return
   busy.value = true
   try {
-    applySystemInfo(await (slot.kind === 'logo' ? uploadLogo(file) : uploadIcon(file)))
+    applySystemInfo(await IMAGE_API[slot.kind].upload(file))
     toast(`${slot.title}已更新`)
   } catch (e) {
     toast(errorText(e), true)
@@ -188,10 +198,10 @@ async function onImagePicked(slot: ImageSlot, event: Event): Promise<void> {
  * @returns 操作完成时结束。
  */
 async function restoreImage(slot: ImageSlot): Promise<void> {
-  if (!(await confirmBox(`删除${slot.title}`, `删除上传的${slot.title}，${slot.fallback}；两张都没有时显示“公司 LOGO”占位。`, '删除', true))) return
+  if (!(await confirmBox(`删除${slot.title}`, `删除上传的${slot.title}，${slot.fallback}。`, '删除', true))) return
   busy.value = true
   try {
-    applySystemInfo(await (slot.kind === 'logo' ? resetLogo() : resetIcon()))
+    applySystemInfo(await IMAGE_API[slot.kind].reset())
     toast(`已删除${slot.title}`)
   } catch (e) {
     toast(errorText(e), true)
@@ -240,7 +250,7 @@ async function restoreImage(slot: ImageSlot): Promise<void> {
               <div v-for="slot in IMAGE_SLOTS" :key="slot.kind" class="logo-slot">
                 <div class="logo-slot-head"><b>{{ slot.title }}</b><span class="hint">{{ slot.usage }}</span></div>
                 <div class="logo-slot-body">
-                  <span class="company-logo" :class="{ big: slot.kind === 'logo' }">
+                  <span class="company-logo" :class="{ big: slot.kind !== 'icon', dark: slot.kind === 'logoDark' }">
                     <img v-if="imageUrl(slot.kind)" :src="imageUrl(slot.kind)" :alt="slot.title" />
                     <span v-else class="logo-placeholder">未上传</span>
                   </span>
@@ -254,7 +264,7 @@ async function restoreImage(slot: ImageSlot): Promise<void> {
                 </div>
                 <div class="hint">{{ slot.fallback }}</div>
               </div>
-              <p class="hint" style="margin-top: 10px">PNG、JPG、SVG、WebP，不超过 1 MB。放在白底圆角框里显示，上传前把图片四周的空白裁掉，显示得更大更清楚。</p>
+              <p class="hint" style="margin-top: 10px">PNG、JPG、SVG、WebP，不超过 1 MB。完整 Logo 和图标放在白底圆角框里显示；深色背景 Logo 直接放在深蓝底上，要用白色或浅色、透明背景的图。上传前把图片四周的空白裁掉，显示得更大更清楚。</p>
             </div>
             <div class="box">
               <h3><AppIcon name="preview" small />效果预览<span v-if="dirty" class="pill warn" style="margin-left: 8px">未保存</span></h3>

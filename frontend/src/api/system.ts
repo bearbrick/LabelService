@@ -44,12 +44,16 @@ export interface SystemInfo {
    * Logo 图标（顶栏、浏览器标签页用）的版本；没上传时没有这个属性，界面改用完整 Logo。
    */
   iconVersion?: string | null
+  /**
+   * 深色背景 Logo（登录页深蓝底上直接显示）的版本；没上传时没有这个属性，登录页用白底卡片放完整 Logo。
+   */
+  logoDarkVersion?: string | null
 }
 
 /**
  * 修改系统信息的文字部分（PUT /system-info）。
  */
-export type SaveSystemInfo = Omit<SystemInfo, 'logoVersion' | 'iconVersion'>
+export type SaveSystemInfo = Omit<SystemInfo, 'logoVersion' | 'iconVersion' | 'logoDarkVersion'>
 
 /**
  * 每项最长多少字，和服务端的校验一致（Domain/SystemSettings/SystemInfoRules.cs）。
@@ -123,6 +127,30 @@ export function uploadIcon(file: File): Promise<SystemInfo> {
  * @returns 修改后的系统信息。
  */
 export const resetIcon = () => api<SystemInfo>('DELETE', '/system-info/icon')
+
+/**
+ * 上传深色背景 Logo（登录页深蓝底上直接显示，用白色或浅色、透明背景的图）：PNG、JPG、SVG、WebP，不超过 1 MB。
+ * @param file 图片文件。
+ * @returns 修改后的系统信息（深色背景 Logo 的版本变了）。
+ */
+export function uploadLogoDark(file: File): Promise<SystemInfo> {
+  const form = new FormData()
+  form.append('file', file)
+  return api<SystemInfo>('POST', '/system-info/logo-dark', form)
+}
+
+/**
+ * 删除深色背景 Logo，登录页改回白底卡片放完整 Logo。
+ * @returns 修改后的系统信息。
+ */
+export const resetLogoDark = () => api<SystemInfo>('DELETE', '/system-info/logo-dark')
+
+/**
+ * 深色背景 Logo 的图片地址（不用登录就能取）；没上传时为空字符串。
+ * @param info 系统信息。
+ * @returns 带版本参数的地址。
+ */
+export const logoDarkUrl = (info: SystemInfo) => (info.logoDarkVersion ? `/api/admin/system-info/logo-dark?v=${encodeURIComponent(info.logoDarkVersion)}` : '')
 
 /**
  * Logo 图标的图片地址（不用登录就能取）；没上传时为空字符串。

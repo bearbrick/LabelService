@@ -1,10 +1,10 @@
 <script setup lang="ts">
 /**
- * 登录页左上角的品牌区：公司 Logo 单独一行（白底圆角卡片，深色背景上也看得清），下面是系统名称和副标题。
- * 有 Logo 时不再重复写公司名称（Logo 里已经有了），没有 Logo 时用公司名称代替。登录页和系统信息页的效果预览共用。
+ * 登录页左上角的品牌区：公司 Logo 单独一行，下面是系统名称和副标题。上传了深色背景 Logo（白色透明的反白图）时直接放在深蓝底上，
+ * 没有时用白底圆角卡片放完整 Logo。有 Logo 时不再重复写公司名称（Logo 里已经有了），没有 Logo 时用公司名称代替。登录页和系统信息页的效果预览共用。
  */
 import { computed } from 'vue'
-import { iconUrl, logoUrl } from '../../api/system.ts'
+import { iconUrl, logoDarkUrl, logoUrl } from '../../api/system.ts'
 import type { SystemInfo } from '../../api/system.ts'
 
 /**
@@ -22,14 +22,20 @@ const props = defineProps<{
 }>()
 
 /**
- * Logo 地址：先用完整 Logo，没有时用图标；都没上传时为空字符串。
+ * 深色背景 Logo 的地址；没上传时为空字符串。
+ */
+const darkLogo = computed(() => logoDarkUrl(props.info))
+
+/**
+ * 白底卡片里的 Logo 地址：先用完整 Logo，没有时用图标；都没上传时为空字符串。
  */
 const logo = computed(() => logoUrl(props.info) || iconUrl(props.info))
 </script>
 
 <template>
   <div class="login-brand" :class="{ compact: props.compact }">
-    <span v-if="logo" class="login-logo"><img :src="logo" :alt="info.companyName || '公司 Logo'" /></span>
+    <img v-if="darkLogo" class="login-logo-dark" :src="darkLogo" :alt="info.companyName || '公司 Logo'" />
+    <span v-else-if="logo" class="login-logo"><img :src="logo" :alt="info.companyName || '公司 Logo'" /></span>
     <span v-else-if="info.companyName" class="eyebrow">{{ info.companyName }}</span>
     <div class="login-product">
       <b :title="info.systemName">{{ info.systemName }}</b>
