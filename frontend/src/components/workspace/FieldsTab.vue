@@ -85,6 +85,39 @@ function setValue(field: FieldDefinition, prop: 'default' | 'sample', value: str
 }
 
 /**
+ * 图片字段的样例图：不超过 1 MB，读成 data URL 存为样例值（设计器预览、试渲染和调用样例用）。
+ * @param field 图片字段。
+ * @param event 文件输入框的 change 事件。
+ */
+function onImageSample(field: FieldDefinition, event: Event): void {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = ''
+  if (!file) return
+  if (file.size > 1024 * 1024) {
+    toast('图片超过 1 MB', true)
+    return
+  }
+
+  const reader = new FileReader()
+  reader.onload = () => {
+    field.sample = String(reader.result)
+    commit()
+  }
+  reader.readAsDataURL(file)
+}
+
+/**
+ * 样例图的地址：存的是 data URL 就直接用，只存了 base64 时补上前缀。
+ * @param sample 样例值。
+ * @returns 图片地址。
+ */
+function imageSrc(sample: unknown): string {
+  const text = String(sample)
+  return text.startsWith('data:') ? text : `data:image/png;base64,${text}`
+}
+
+/**
  * 改字段类型：图片、字符串没有格式，图片的样例值清掉（类型不再匹配）；自动值和新类型不匹配时去掉。
  * @param field 字段。
  */
@@ -235,7 +268,11 @@ async function remove(field: FieldDefinition): Promise<void> {
                         </td>
                         <td>
                           <input v-if="field.type !== 'image'" class="inp" :value="text(field.sample)" aria-label="样例值" @change="setValue(field, 'sample', ($event.target as HTMLInputElement).value)" />
-                          <span v-else class="hint">在设计页的字段面板选择样例图</span>
+                          <span v-else class="img-sample">
+                            <img v-if="field.sample" :src="imageSrc(field.sample)" alt="样例图" />
+                            <label class="btn sm">{{ field.sample ? '换图片' : '选择图片' }}<input type="file" accept="image/png,image/jpeg" hidden @change="onImageSample(field, $event)" /></label>
+                            <button v-if="field.sample" class="link" type="button" @click="setValue(field, 'sample', '')">清除</button>
+                          </span>
                         </td>
                         <td><button class="icon-btn xs" type="button" aria-label="删除字段" @click="remove(field)"><AppIcon name="trash" small /></button></td>
                       </tr>

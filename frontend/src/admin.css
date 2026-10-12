@@ -669,3 +669,8 @@ td.warn { color: var(--warn); }
 .default-cell .inp { flex: 1 1 80px; min-width: 0; }
 
 .default-cell .n-input { flex: 0 0 72px; }
+
+/* 数据源页图片字段的样例图：缩略图、选择或更换、清除 */
+.img-sample { display: flex; align-items: center; gap: 8px; }
+
+.img-sample img { height: 28px; max-width: 64px; object-fit: contain; border: 1px solid var(--line); border-radius: 3px; background: #fff; }
