@@ -43,13 +43,15 @@ public static class FieldValidator
     /// <param name="fields">模板字段定义。</param>
     /// <param name="common">批量请求的公共字段；单张请求传 null。</param>
     /// <param name="data">这张标签的字段，同名时覆盖 <paramref name="common"/>。</param>
-    /// <param name="index">批量条目序号（从 0 开始），写进错误明细；单张请求传 null。</param>
+    /// <param name="index">批量条目序号（从 0 开始），写进错误明细，也是自动值 index 的来源；单张请求传 null。</param>
+    /// <param name="auto">算自动值用的请求信息（当前时间、总条数、调用方、请求号）；传 null 时用 <see cref="AutoValueContext.ForPreview"/>。</param>
     /// <returns>转换后的值和全部错误，不会因为第一个错误就停止。</returns>
     public static FieldValidationResult Validate(
         IReadOnlyList<FieldDefinition> fields,
         IReadOnlyDictionary<string, JsonElement>? common,
         IReadOnlyDictionary<string, JsonElement>? data,
-        int? index = null)
+        int? index = null,
+        AutoValueContext? auto = null)
     {
         var values = new Dictionary<string, object?>(fields.Count, StringComparer.Ordinal);
         var errors = new List<ErrorDetail>();
@@ -57,7 +59,13 @@ public static class FieldValidator
         {
             try
             {
-                ValidateField(field, common, data, index, values, errors);
+                // 有自动值的字段才需要上下文；调用方没给就按预览的取一次（整次校验共用）
+                if (field.Auto is not null)
+                {
+                    auto ??= AutoValueContext.ForPreview();
+                }
+
+                ValidateField(field, common, data, index, auto, values, errors);
             }
             catch (InvalidOperationException)
             {
@@ -70,12 +78,13 @@ public static class FieldValidator
     }
 
     /// <summary>
-    /// 校验一个字段：取值（条目 → 公共字段 → 默认值），没值时检查必填，有值时转换类型。
+    /// 校验一个字段：取值（条目 → 公共字段 → 自动值 → 默认值），没值时检查必填，有值时转换类型。
     /// </summary>
     /// <param name="field">字段定义。</param>
     /// <param name="common">批量请求的公共字段。</param>
     /// <param name="data">这张标签的字段。</param>
     /// <param name="index">批量条目序号。</param>
+    /// <param name="auto">算自动值用的请求信息；字段没有自动值或调用方传了值时可以为 null。</param>
     /// <param name="values">转换后的值，往里写。</param>
     /// <param name="errors">错误，往里追加。</param>
     private static void ValidateField(
@@ -83,10 +92,20 @@ public static class FieldValidator
         IReadOnlyDictionary<string, JsonElement>? common,
         IReadOnlyDictionary<string, JsonElement>? data,
         int? index,
+        AutoValueContext? auto,
         Dictionary<string, object?> values,
         List<ErrorDetail> errors)
     {
-        var raw = Pick(field.Key, data) ?? Pick(field.Key, common) ?? NotEmpty(field.Default);
+        var raw = Pick(field.Key, data) ?? Pick(field.Key, common);
+
+        // 调用方没传：自动值优先于固定默认值；写法不认识（发布前检查会拦）时当作没有自动值
+        if (raw is null && field.Auto is { } rule && auto is not null && AutoValues.TryResolve(field.Type, rule, auto, index, out var autoValue))
+        {
+            values[field.Key] = autoValue;
+            return;
+        }
+
+        raw ??= NotEmpty(field.Default);
         if (raw is null)
         {
             if (field.Required)
