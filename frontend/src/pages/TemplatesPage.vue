@@ -1,8 +1,8 @@
 <script setup lang="ts">
 /**
- * 模板库：按业务分组的模板列表（卡片或表格），可筛选状态、排序；复制、删除模板。
+ * 模板库：按业务分组的模板列表（卡片或表格），可筛选状态、排序；复制、删除模板。模板多时分页，每页 48 个。
  */
-import { computed, reactive } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 import { createTemplate, deleteTemplate, getTemplate } from '../api/admin.ts'
 import type { TemplateItem } from '../api/admin.ts'
 import { errorText } from '../api/http.ts'
@@ -10,10 +10,12 @@ import AppIcon from '../components/AppIcon.vue'
 import ModalDialog from '../components/admin/ModalDialog.vue'
 import TemplateThumb from '../components/admin/TemplateThumb.vue'
 import { fmtTime, sizeText } from '../model/format.ts'
+import { LIBRARY_PAGE_SIZE, pageButtons, paginate } from '../model/templateList.ts'
 import { businessOf, catalog, reloadTemplates, templateState } from '../stores/catalog.ts'
 import type { TemplateState } from '../stores/catalog.ts'
 import { toast } from '../stores/designer.ts'
 import { confirmBox, dialogs } from '../stores/dialogs.ts'
+import { library } from '../stores/library.ts'
 import { go, goBiz, openWorkspace, route } from '../stores/router.ts'
 import { can, inScope } from '../stores/session.ts'
 
@@ -43,11 +45,12 @@ const filter = reactive({
    * 显示方式：卡片或表格。
    */
   mode: 'cards' as 'cards' | 'table',
-  /**
-   * 搜索：名称或编码。
-   */
-  query: '',
 })
+
+/**
+ * 要看的页码（从 1 开始）。
+ */
+const page = ref(1)
 
 /**
  * 复制模板的对话框。
@@ -93,7 +96,7 @@ const base = computed(() => catalog.templates.filter((t) => route.biz === 'all' 
  * 过滤并排序后的模板。
  */
 const list = computed(() => {
-  const q = filter.query.trim().toLowerCase()
+  const q = library.query.trim().toLowerCase()
   const items = base.value.filter((t) => (filter.status === 'all' || templateState(t).key === filter.status) && (!q || t.name.toLowerCase().includes(q) || t.code.toLowerCase().includes(q)))
   const sorters: Record<string, (a: TemplateItem, b: TemplateItem) => number> = {
     updated: (a, b) => b.updatedAt.localeCompare(a.updatedAt),
@@ -102,6 +105,23 @@ const list = computed(() => {
   }
   return [...items].sort(sorters[filter.sort])
 })
+
+/**
+ * 当前页的模板和页数。
+ */
+const paged = computed(() => paginate(list.value, page.value, LIBRARY_PAGE_SIZE))
+
+// 换分组、筛选、排序后回到第一页
+watch([() => route.biz, () => filter.status, () => filter.sort, () => library.query], () => (page.value = 1))
+
+/**
+ * 翻到某一页并回到列表顶部。
+ * @param target 页码。
+ */
+function goPage(target: number): void {
+  page.value = target
+  document.querySelector('.page-scroll')?.scrollTo({ top: 0 })
+}
 
 /**
  * 某个状态的模板个数（筛选按钮上显示）。
@@ -194,7 +214,7 @@ async function remove(t: TemplateItem): Promise<void> {
             {{ s.label }} <span class="num" style="opacity: 0.6">{{ count(s.value) }}</span>
           </button>
         </div>
-        <input id="tpl-search" v-model="filter.query" class="inp grow" placeholder="按名称或编码筛选" aria-label="筛选模板" />
+        <input id="tpl-search" v-model="library.query" class="inp grow" placeholder="按名称或编码筛选" aria-label="筛选模板" />
         <select id="tpl-sort" v-model="filter.sort" class="sel" aria-label="排序"><option value="updated">最近更新</option><option value="name">按名称</option><option value="code">按编码</option></select>
         <div class="spacer"></div>
         <div class="seg" role="group" aria-label="显示方式">
@@ -205,12 +225,12 @@ async function remove(t: TemplateItem): Promise<void> {
 
       <div v-if="!list.length" class="empty box">
         <AppIcon name="folder" />
-        <span>{{ filter.query || filter.status !== 'all' ? '没有符合条件的模板' : '这个业务下还没有模板' }}</span>
-        <button v-if="can('tpl.edit') && !filter.query" class="btn primary" type="button" @click="dialogs.newTemplate = true">新建模板</button>
+        <span>{{ library.query || filter.status !== 'all' ? '没有符合条件的模板' : '这个业务下还没有模板' }}</span>
+        <button v-if="can('tpl.edit') && !library.query" class="btn primary" type="button" @click="dialogs.newTemplate = true">新建模板</button>
       </div>
 
       <div v-else-if="filter.mode === 'cards'" class="cards">
-        <div v-for="t in list" :key="t.code" class="card">
+        <div v-for="t in paged.items" :key="t.code" class="card">
           <div class="thumb" @click="openWorkspace(t.code)"><TemplateThumb :code="t.code" :updated-at="t.updatedAt" :alt="`${t.name} 缩略图`" /></div>
           <div class="card-body">
             <div class="card-title"><b :title="t.name">{{ t.name }}</b><span class="pill" :class="templateState(t).cls">{{ templateState(t).short }}</span></div>
@@ -238,7 +258,7 @@ async function remove(t: TemplateItem): Promise<void> {
               <tr><th>模板</th><th>编码</th><th>业务</th><th>画布</th><th>状态</th><th>字段 / 元素</th><th>更新</th><th class="actions">操作</th></tr>
             </thead>
             <tbody>
-              <tr v-for="t in list" :key="t.code" class="click" @click="openWorkspace(t.code)">
+              <tr v-for="t in paged.items" :key="t.code" class="click" @click="openWorkspace(t.code)">
                 <td class="nowrap"><b style="font-weight: 600; color: #172236">{{ t.name }}</b></td>
                 <td class="code-chip">{{ t.code }}</td>
                 <td><span class="mini-chip" :title="businessOf(t.businessId).name"><span class="biz-dot" :style="{ background: businessOf(t.businessId).color }"></span><span class="tx">{{ businessOf(t.businessId).name }}</span></span></td>
@@ -255,6 +275,18 @@ async function remove(t: TemplateItem): Promise<void> {
             </tbody>
           </table>
         </div>
+      </div>
+
+      <div v-if="paged.pages > 1" class="list-pager">
+        <span class="hint">共 {{ list.length }} 个 · 第 {{ paged.page }} / {{ paged.pages }} 页</span>
+        <nav class="pager" aria-label="翻页">
+          <button type="button" :disabled="paged.page <= 1" aria-label="上一页" @click="goPage(paged.page - 1)"><AppIcon name="chevL" small /></button>
+          <template v-for="(p, i) in pageButtons(paged.page, paged.pages)" :key="i">
+            <span v-if="p === 0" class="gap">…</span>
+            <button v-else type="button" :class="{ on: p === paged.page }" :aria-current="p === paged.page ? 'page' : undefined" @click="goPage(p)">{{ p }}</button>
+          </template>
+          <button type="button" :disabled="paged.page >= paged.pages" aria-label="下一页" @click="goPage(paged.page + 1)"><AppIcon name="chevR" small /></button>
+        </nav>
       </div>
     </div>
     <ModalDialog v-if="copy.open" title="复制模板" width="min(460px, 100%)" @close="copy.open = false">

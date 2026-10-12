@@ -38,6 +38,7 @@ frontend/
    │  ├─ validate.ts                 模板检查（字段 key、重复 ID、未定义的绑定）
    │  ├─ request.ts                  调用样例（和后端发布检查的样例数据规则一致）
    │  ├─ format.ts  chart.ts         时间、尺寸、文件大小的显示；工作台柱状图几何
+   │  ├─ templateList.ts             模板多了以后：模板树每组列哪些、搜索排序、最近打开、模板库分页
    │  └─ fonts.ts  icons.ts
    ├─ editor/                        画布引擎
    │  ├─ stage.ts                    设计画布：节点同步、选择框、框选、拖动吸附、变换
@@ -60,6 +61,7 @@ frontend/
    │  ├─ session.ts                  登录状态、权限点 can()、业务范围 inScope()
    │  ├─ router.ts                   hash 路由（#/templates/3、#/t/编码/fields…）
    │  ├─ catalog.ts                  共用列表：业务分组、模板、画布预设、角色
+   │  ├─ recentTemplates.ts  library.ts   最近打开的模板（按账号记在浏览器本地）；模板库的筛选关键字
    │  ├─ dialogs.ts                  确认框、一次性密钥框、新建模板对话框、复制
    │  ├─ assets.ts                   图片素材（服务端素材库，按需下载成 blob URL）
    │  ├─ system.ts                   系统信息（系统名称、公司 Logo、版权信息）：打开页面时读一次，登录页也用；跟着改浏览器标签页标题
@@ -103,6 +105,7 @@ npm run build     # 类型检查（vue-tsc）+ 打包
 - 窗口大小：管理页面在 768px 宽以上都能用（900px 以下模板树收进顶栏左边的按钮）；设计器和拼版设计器要大于 1100px（1101px 起可编辑），更窄时显示“窗口太窄”的提示。窗口窄于 1440px 时打开设计器会自动收起模板树（面包屑前的按钮可以再展开）；画布停在“适应窗口”的状态时随窗口大小重新适应，手动缩放或平移过就保持不变。名称太长时省略显示，鼠标停在上面看完整名称。
 - 系统信息：顶栏“系统管理”菜单的“系统信息”页（`pages/SettingsPage.vue`，权限点 `sys.settings`）设置系统名称、副标题、所属公司、版权信息、技术支持和公司 Logo。读取不用登录，登录页左上角、下方的版权信息和“忘记密码”提示都用它；公司 Logo 分两张：完整 Logo（登录页，显示得较大）和 Logo 图标（顶栏、浏览器标签页小图标），没有时互相代替，都没上传时显示“公司 LOGO”占位（`components/admin/BrandMark.vue`，`full` 表示完整样式）；登录页左栏的标语和说明也在这里改，所属公司显示在标语上方。样式在 `src/system.css`。
 - 左侧模板树的右边缘可以拖动改宽度（220～560px，双击恢复 280px，记在浏览器本地，`composables/useSidebarWidth.ts`）。
+- 模板多了以后（`model/templateList.ts`）：模板树只做导航。顶部“最近打开”5 个（按账号记在浏览器本地）；模板不超过 30 个时分组全部展开，多了只展开当前模板所在的分组；每组列最近修改的 20 个，再多显示“查看全部 N 个”进模板库；搜索时平铺列出最多 30 个（编码完全相同、开头匹配的在前），再多进模板库看。模板库卡片和列表都分页，每页 48 个。模板列表接口仍然一次返回全部，上万个时再改服务端分页。
 - 下拉框统一用 `class="sel"`：自定义箭头；浏览器支持可定制下拉框（`appearance: base-select`，Chrome / Edge 135 起）时，展开的列表也是系统风格，其他浏览器用原生列表。样式在 `src/system.css`。
 - 不引用 `frontend/` 以外的文件（后端检查程序会拦）。
 - 注释（AGENTS.md R5）：每个模块级的函数、常量、接口和类型（含属性）、store 的状态、组件的 props 和 emits 都写多行 JSDoc，函数写 `@param`、`@returns`；`npm run check` 用 `tests/docs.ts` 核对。`src/` 下的文件不超过 500 行，同样由 `npm run check` 核对。
