@@ -38,6 +38,26 @@ internal static class MockTemplates
     /// <returns>模板；没有时为 null。</returns>
     public static MockTemplate? Find(string code) =>
         All.FirstOrDefault(template => string.Equals(template.Code, code.Trim(), StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>
+    /// GET /api/v1/templates 的响应体：全部模拟模板，按编码排序。
+    /// </summary>
+    /// <returns>响应体（匿名对象，按驼峰序列化）。</returns>
+    public static object List() => new
+    {
+        templates = All.OrderBy(template => template.Code, StringComparer.Ordinal).Select(template => new
+        {
+            templateCode = template.Code,
+            name = template.Name,
+            version = template.Version,
+            page = new
+            {
+                width = template.Width,
+                height = template.Height,
+                dpi = template.Dpi
+            },
+        }),
+    };
 }
 
 /// <summary>

@@ -56,14 +56,41 @@ internal sealed partial class MainForm : Form
     private readonly Button testConnection = new Button { Text = "测试连接", AutoSize = true };
 
     /// <summary>
-    /// 模板与数据：模板编码（可以选示例模板，也可以手填）。
+    /// 模板与数据：模板编码（可以从刷新出的列表里选，也可以手填）；下拉列表里同时画出模板名称和尺寸。
     /// </summary>
-    private readonly ComboBox templateCode = new ComboBox { Text = "BOX_LABEL", Dock = DockStyle.Fill };
+    private readonly ComboBox templateCode = new ComboBox
+    {
+        Text = "BOX_LABEL",
+        Dock = DockStyle.Fill,
+        DrawMode = DrawMode.OwnerDrawFixed,
+        AutoCompleteMode = AutoCompleteMode.SuggestAppend,
+        AutoCompleteSource = AutoCompleteSource.ListItems,
+    };
+
+    /// <summary>
+    /// 模板与数据：从服务端列出这把 Key 能用的模板（ListTemplatesAsync）。
+    /// </summary>
+    private readonly Button refreshTemplates = new Button { Text = "刷新", AutoSize = true, Margin = new Padding(3, 0, 0, 0) };
 
     /// <summary>
     /// 模板与数据：读取字段按钮。
     /// </summary>
     private readonly Button readSchema = new Button { Text = "读取字段", AutoSize = true, Margin = new Padding(3, 0, 0, 0) };
+
+    /// <summary>
+    /// 模板与数据：单张数据、批量数据两个页签。
+    /// </summary>
+    private readonly TabControl dataTabs = new TabControl { Dock = DockStyle.Fill };
+
+    /// <summary>
+    /// 页签：单张数据，一个字段一行。
+    /// </summary>
+    private readonly TabPage singleTab = new TabPage("单张数据");
+
+    /// <summary>
+    /// 页签：批量数据，一行一张标签。
+    /// </summary>
+    private readonly TabPage batchTab = new TabPage("批量数据");
 
     /// <summary>
     /// 模板与数据：字段表格，列是字段、名称、类型、必填、值，只有值可以编辑。
@@ -81,6 +108,43 @@ internal sealed partial class MainForm : Form
         SelectionMode = DataGridViewSelectionMode.CellSelect,
         EditMode = DataGridViewEditMode.EditOnEnter,
     };
+
+    /// <summary>
+    /// 模板与数据：批量数据表格，列是模板的全部字段，一行是一张标签的全部数据（调用方给全，SDK 原样发送）。
+    /// </summary>
+    private readonly DataGridView batchRows = new DataGridView
+    {
+        Dock = DockStyle.Fill,
+        AllowUserToAddRows = false,
+        AllowUserToDeleteRows = true,
+        AllowUserToResizeRows = false,
+        AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.AllCells,
+        BackgroundColor = SystemColors.Window,
+        BorderStyle = BorderStyle.FixedSingle,
+        SelectionMode = DataGridViewSelectionMode.RowHeaderSelect,
+        EditMode = DataGridViewEditMode.EditOnKeystrokeOrF2,
+        ClipboardCopyMode = DataGridViewClipboardCopyMode.EnableWithoutHeaderText,
+    };
+
+    /// <summary>
+    /// 批量数据：加一行（复制最后一行）。
+    /// </summary>
+    private readonly Button addRow = new Button { Text = "加一行", AutoSize = true };
+
+    /// <summary>
+    /// 批量数据：删除选中单元格所在的行。
+    /// </summary>
+    private readonly Button removeRows = new Button { Text = "删除选中行", AutoSize = true };
+
+    /// <summary>
+    /// 批量数据：从剪贴板粘贴（Excel 里复制的多行），从选中的格子开始。
+    /// </summary>
+    private readonly Button pasteRows = new Button { Text = "粘贴", AutoSize = true };
+
+    /// <summary>
+    /// 批量数据：删除全部行。
+    /// </summary>
+    private readonly Button clearRows = new Button { Text = "清空", AutoSize = true };
 
     /// <summary>
     /// 模板与数据：模板名称、版本、尺寸、字段个数。
@@ -113,24 +177,14 @@ internal sealed partial class MainForm : Form
     private readonly NumericUpDown copies = new NumericUpDown { Minimum = 1, Maximum = 100, Value = 1, Width = 60 };
 
     /// <summary>
-    /// 生成选项：批量生成的条数。
-    /// </summary>
-    private readonly NumericUpDown batchCount = new NumericUpDown { Minimum = 1, Maximum = 600, Value = 10, Width = 60 };
-
-    /// <summary>
-    /// 生成选项：批量时每条递增的字段（如箱号）。
-    /// </summary>
-    private readonly ComboBox incrementKey = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 120 };
-
-    /// <summary>
     /// 生成选项：生成单张按钮（快捷键 F5）。
     /// </summary>
     private readonly Button renderSingle = new Button { Text = "生成单张", AutoSize = true };
 
     /// <summary>
-    /// 生成选项：批量生成按钮，文字跟着条数变。
+    /// 生成选项：批量生成按钮，文字跟着批量数据的行数变。
     /// </summary>
-    private readonly Button renderBatch = new Button { Text = "批量生成 10 条", AutoSize = true };
+    private readonly Button renderBatch = new Button { Text = "批量生成 0 条", AutoSize = true };
 
     /// <summary>
     /// 右边的四个页签。
@@ -232,10 +286,11 @@ internal sealed partial class MainForm : Form
     /// </summary>
     public MainForm()
     {
+        // 按屏幕缩放：下面写的尺寸都是 100% 缩放时的像素，150% 的屏幕上放大 1.5 倍，字变大时控件跟着变大（否则标签折行、下拉框文字被截断）
+        FormScaling.Begin(this);
         Text = "标签服务 SDK 调用演示 - LabelServiceDemo";
         Font = new Font("Microsoft YaHei UI", 9f);
         ClientSize = new Size(1240, 760);
-        MinimumSize = new Size(960, 600);
         StartPosition = FormStartPosition.CenterScreen;
         KeyPreview = true;
 
@@ -243,7 +298,8 @@ internal sealed partial class MainForm : Form
         dpi.SelectedIndex = 0;
         zoom.Items.AddRange(new object[] { "适应窗口", "100%", "50%" });
         zoom.SelectedIndex = 0;
-        templateCode.Items.AddRange(new object[] { "BOX_LABEL", "A4_SHIPPING_MARK" });
+        fields.RowHeadersWidth = Px(24);
+        batchRows.RowHeadersWidth = Px(44);
 
         var split = new SplitContainer { Dock = DockStyle.Fill, FixedPanel = FixedPanel.Panel1, SplitterWidth = 6 };
         split.Panel1.Controls.Add(BuildLeft());
@@ -252,7 +308,16 @@ internal sealed partial class MainForm : Form
         Controls.Add(BuildHeader());
         Controls.Add(BuildMenu());
         Controls.Add(BuildStatus());
-        Load += (_, _) => split.SplitterDistance = 440;
+        FormScaling.End(this);
+        Load += (_, _) =>
+        {
+            // 放大后的窗口可能比屏幕的工作区还大（如 1920×1080 的 150% 缩放）：缩到工作区以内再居中
+            var area = Screen.FromControl(this).WorkingArea;
+            MinimumSize = new Size(Math.Min(Px(960), area.Width), Math.Min(Px(600), area.Height));
+            Size = new Size(Math.Min(Width, area.Width), Math.Min(Height, area.Height));
+            CenterToScreen();
+            split.SplitterDistance = Px(440);
+        };
 
         WireEvents();
         UpdateEndpoint();

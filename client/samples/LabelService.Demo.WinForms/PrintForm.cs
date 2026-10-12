@@ -63,6 +63,9 @@ internal sealed class PrintForm : Form
     {
         this.file = file;
         this.image = image;
+
+        // 和主窗口一样按屏幕缩放：下面的尺寸都是 100% 缩放时的像素
+        FormScaling.Begin(this);
         Text = "发送到打印机";
         Font = new Font("Microsoft YaHei UI", 9f);
         FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -104,6 +107,7 @@ internal sealed class PrintForm : Form
         buttons.Anchor = AnchorStyles.Right;
         layout.Controls.Add(buttons);
         Controls.Add(layout);
+        FormScaling.End(this);
         AcceptButton = send;
         CancelButton = cancel;
         send.Enabled = network.Enabled || windows.Enabled;

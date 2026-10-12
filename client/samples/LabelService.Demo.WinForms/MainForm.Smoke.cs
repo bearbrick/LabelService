@@ -38,7 +38,7 @@ internal sealed partial class MainForm
     }
 
     /// <summary>
-    /// 按顺序走一遍：读取字段、三种格式生成、批量、四种错误、慢调用、调用代码；每一步记 PASS/FAIL，关键步骤截图，最后关闭窗口。
+    /// 按顺序走一遍：界面缩放、刷新模板、读取字段、三种格式生成、批量数据和粘贴、四种错误、慢调用、调用代码；每一步记 PASS/FAIL，关键步骤截图，最后关闭窗口。
     /// </summary>
     /// <param name="directory">输出目录。</param>
     /// <param name="server">真实服务的地址；null 表示用内置模拟服务。</param>
@@ -71,9 +71,14 @@ internal sealed partial class MainForm
         useMock.Checked = server is null;
         flaky.Checked = server is null;
         baseAddress.Text = server ?? baseAddress.Text;
+        Check($"界面缩放（{DeviceDpi} dpi）：左栏的文字都不折行，DPI 下拉框放得下“模板默认”", LeftLabelsFit() && dpi.Width >= TextRenderer.MeasureText("模板默认", dpi.Font).Width + SystemInformation.VerticalScrollBarWidth);
+
+        await RefreshTemplatesAsync();
+        Check("刷新模板：下拉框里有这把 Key 能用的模板，带名称", templateCode.Items.Contains("BOX_LABEL") && templateCode.Items.Contains("A4_SHIPPING_MARK") && templateList["BOX_LABEL"].Name.Length > 0);
         await ReadSchemaAsync();
         var required = fields.Rows.Cast<DataGridViewRow>().FirstOrDefault(row => row.Cells["required"].Value is true);
         Check("读取字段：表格里有 BOX_LABEL 的全部字段，样例值已填好", schema is not null && fields.Rows.Count == schema.Fields.Count && required is not null && Cell(required, "value").Length > 0);
+        Check("批量数据：列是模板的全部字段，默认 3 行，按钮写着条数", schema is not null && batchRows.Columns.Count == schema.Fields.Count && batchRows.Rows.Count == 3 && renderBatch.Text == "批量生成 3 条");
         Check("状态栏显示当前连接的服务", endpoint.Text == (server ?? "内置模拟服务"));
 
         png.Checked = true;
@@ -91,11 +96,22 @@ internal sealed partial class MainForm
         Check("生成单张 PDF，文件以 %PDF 开头，预览区提示用默认程序打开", result is { Format: LabelFormat.Pdf, LabelCount: 1 } && Encoding.ASCII.GetString(result.Content, 0, 4) == "%PDF" && images.Count == 0);
 
         zpl.Checked = true;
-        batchCount.Value = 5;
+        SetBatchRowCount(5);
         await RenderBatchAsync();
-        Check("批量 5 条 ZPL，解出 5 张黑白预览", result is { Format: LabelFormat.Zpl, LabelCount: 5 } && images.Count == 5);
+        Check("批量 5 条 ZPL（每条数据给全），解出 5 张黑白预览", result is { Format: LabelFormat.Zpl, LabelCount: 5 } && images.Count == 5);
         ShowImage(4);
         Shot("2-batch-zpl");
+
+        // 从 Excel 复制的两行，表头混用中文名称和 key：替换原有数据、按表头对列；没给的字段留空，服务端按条报缺字段
+        PasteBatchText("箱号\tpartName\tqty\r\nC1\t电源适配器\t50\r\nC2\t电源适配器\t60\r\n");
+        Check("粘贴带表头的两行：替换成 2 行，按表头对列（箱号 → boxNo）",
+            batchRows.Rows.Count == 2 && BatchCell(1, "boxNo") == "C2" && BatchCell(1, "qty") == "60" && BatchCell(0, "batchNo") == "");
+        await RenderBatchAsync();
+        Check("批量数据缺必填字段：响应信息显示 FIELD_REQUIRED（按条列出）", result is null && ResponseHas(LabelErrorCodes.FieldRequired));
+        batchRows.CurrentCell = batchRows.Rows[0].Cells["boxNo"];
+        PasteBatchText("C3\nC4\nC5");
+        Check("粘贴不带表头的一列：从选中的格子往下填，行不够时加行", batchRows.Rows.Count == 3 && BatchCell(0, "boxNo") == "C3" && BatchCell(2, "boxNo") == "C5" && BatchCell(1, "partName") == "电源适配器");
+        Shot("2b-batch-rows");
 
         // 设计书第 11 节验收：缺必填、Key 无效、模板未发布、批量超量时显示的错误码和第 8 节一致
         var value = required is null ? "" : Cell(required, "value");
@@ -118,11 +134,10 @@ internal sealed partial class MainForm
         templateCode.Text = "BOX_LABEL";
         await ReadSchemaAsync();
 
-        batchCount.Value = 600;
+        SetBatchRowCount(600);
         await RenderBatchAsync();
         Check("批量超量：SDK 本地拦下，响应信息对照服务端错误码 BATCH_TOO_LARGE", result is null && ResponseHas(LabelErrorCodes.BatchTooLarge));
         Shot("4-batch-too-large");
-        batchCount.Value = 5;
 
         // 慢调用：单张服务端超过 100 ms 的标出来。A4 唛头图大，模拟服务画一张就超过 100 ms
         templateCode.Text = "A4_SHIPPING_MARK";
@@ -143,7 +158,9 @@ internal sealed partial class MainForm
         File.WriteAllText(Path.Combine(directory, "Program.Single.cs.txt"), codeText.Text, Encoding.UTF8);
         codeBatch.Checked = true;
         tabs.SelectedTab = codeTab;
-        Check("调用代码：批量写法里有 BatchRenderRequest 和递增的箱号", codeText.Text.Contains("new BatchRenderRequest(\"BOX_LABEL\", LabelFormat.Zpl)") && codeText.Text.Contains("ToString(\"D"));
+        Check("调用代码：批量写法每条用 AddItem().Set 给全数据，没有公共字段和递增",
+            codeText.Text.Contains("new BatchRenderRequest(\"BOX_LABEL\", LabelFormat.Zpl)") && codeText.Text.Contains("batch.AddItem()") && codeText.Text.Contains(".Set(\"boxNo\"")
+            && !codeText.Text.Contains("SetCommon") && !codeText.Text.Contains("ToString(\"D"));
         File.WriteAllText(Path.Combine(directory, "Program.Batch.cs.txt"), codeText.Text, Encoding.UTF8);
         Shot("6-code");
 
@@ -165,6 +182,30 @@ internal sealed partial class MainForm
             row.Cells["value"].Value = value;
             MarkRequired();
         }
+    }
+
+    /// <summary>
+    /// 批量数据某一格的文字。
+    /// </summary>
+    /// <param name="row">第几行，从 0 开始。</param>
+    /// <param name="key">字段 key（列名）。</param>
+    /// <returns>文字；空格子为空字符串。</returns>
+    private string BatchCell(int row, string key) => batchRows.Rows[row].Cells[key].Value as string ?? "";
+
+    /// <summary>
+    /// 左栏里自动大小的文字都没有折行（高度不到一行半）。
+    /// </summary>
+    /// <returns>都没折行时为 true。</returns>
+    private bool LeftLabelsFit()
+    {
+        Control left = dataTabs;
+        while (left.Parent is { } parent && parent is not SplitterPanel)
+        {
+            left = parent;
+        }
+
+        return Descendants(left).OfType<Label>().Where(label => label.AutoSize && label.Text.Length > 0)
+            .All(label => label.Height < TextRenderer.MeasureText(label.Text, label.Font).Height * 3 / 2);
     }
 
     /// <summary>
@@ -192,6 +233,10 @@ internal sealed partial class MainForm
                 Environment.ExitCode = 2;
                 Close();
             }
+        }
+        else
+        {
+            await LoadTemplatesOnStartAsync();
         }
     }
 }
