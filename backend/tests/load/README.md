@@ -1,6 +1,6 @@
 # 压测（k6）
 
-单张接口和批量接口的 k6 脚本（T-015、设计书第 9 节“压测与防退化”）。需要 [k6](https://k6.io)。在本目录运行，默认请求 `http://localhost:5080`、开发 Key（只在 Development 环境有效）；压别的服务器用 `-e BASE_URL=... -e API_KEY=...`。
+单张接口和批量接口的 k6 脚本。需要已安装的 k6，在本目录运行。先确认目标为专用压测或现场验收实例，**不要把默认 localhost:5080 当成安全的隔离测试环境**。默认使用开发 Key，仅 Development 有效；其他实例显式传 `-e BASE_URL=... -e API_KEY=...`。指标和当前异常见 [性能约定](../../../docs/performance.md)。
 
 | 脚本 | 场景 | 门槛 |
 | --- | --- | --- |
@@ -12,7 +12,7 @@
 k6 run single.js
 k6 run -e MODE=rate -e RATE=150 single.js              # 按固定速率
 k6 run -e REPEAT=1 single.js                            # 每次发完全相同的请求（条码缓存全命中，偏乐观）
-dotnet run log-report.cs <数据目录>label-log.db <压测开始的 UTC 时间>   # 到写完最后一个字节的 P50/P95/P99
+dotnet run log-report.cs "<数据目录>/label-log.db" <压测开始的 UTC 时间>   # 到写完最后一个字节的 P50/P95/P99
 k6 run -e FORMAT=pdf single.js                          # 换输出格式
 k6 run -e REQUEST=../../samples/requests/a4-shipping-mark.render.json -e FORMAT=pdf single.js
 k6 run batch.js

@@ -1,11 +1,18 @@
 # Windows 静默打印扩展
 
-引用 `LabelService.Client.Windows`，使用 `LabelService.Client.Printing.WindowsLabelPrinter`：
+当前为 `1.0.0-preview.5`，配套同版本 HTTP SDK。客户先由实施人员安装驱动并设置默认打印机、纸张和方向，日常直接调用打印入口；特殊情况再传打印机名或调整本次 PrintDocument 参数。
+
+引用 `LabelService.Client.Windows`，使用 `LabelService.Client.Printing.WindowsLabelPrinter`。已有单文件结果时：
 
 ```csharp
-WindowsLabelPrinter.Print(file, printerName);
 WindowsLabelPrinter.Print(file); // 使用 Windows 默认打印机
-// 使用 SDK 的集合接口生成后：
+// 指定已配置的打印机时，替换上面一行：
+// WindowsLabelPrinter.Print(file, "打印机名称");
+```
+
+使用 SDK 集合接口生成后，改为集合入口，按需要选择一种提交：
+
+```csharp
 WindowsLabelPrinter.Print(result.Items);    // 整批
 // WindowsLabelPrinter.Print(result.Items[1]); // 只打第 2 条或第 2 页，替代上面一行
 // WindowsLabelPrinter.Print(new[] { result.Items[0], result.Items[2] }); // 指定子集

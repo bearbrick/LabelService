@@ -1,5 +1,7 @@
 # 最新代码隔离功能与页面整合验收记录
 
+> 历史评审：结论只对应文中日期和固定提交，保留用于追溯。当前状态见 [定版清单](../release-readiness.md)，本页不作为最新 main 的通过证明。
+
 本候选基于 `0456cb4387370d74e1e524b54c6a487f20895c24`，按职责移植 `a2cbba23cbe1e9996ca60f6cd70dc8b3c3c11ca5` 中尚缺的修复。功能与页面回归通过，性能门禁仍独立未通过，不能据此宣称整个系统完成。
 
 ## 固定版本和改动边界
@@ -65,7 +67,7 @@ T-024 的 `designerState/History/Template/Elements/Fields`、`stageViewport`、�
 
 ## 证据与清理
 
-详细证据均在工作区外置目录 [phase10](../../../evidence/phase10/verification-summary.json)：[全量日志](../../../evidence/phase10/verify-clean-clone.log)、[干净克隆结果](../../../evidence/phase10/full-verification-result.json)、[真实缩放](../../../evidence/phase10/real-zoom-results.json)、[画布交互](../../../evidence/phase10/canvas-regression-results.json)、[语法对照](../../../evidence/phase10/source-token-comparison.json)、[构建条件](../../../evidence/phase10/build-condition-comparison.json)。这些均为本次独立执行证据，区别于 Claude 的自述。
+详细证据均在工作区外置目录 phase10（历史工作区路径：`../../../evidence/phase10/verification-summary.json`）：全量日志（历史工作区路径：`../../../evidence/phase10/verify-clean-clone.log`）、干净克隆结果（历史工作区路径：`../../../evidence/phase10/full-verification-result.json`）、真实缩放（历史工作区路径：`../../../evidence/phase10/real-zoom-results.json`）、画布交互（历史工作区路径：`../../../evidence/phase10/canvas-regression-results.json`）、语法对照（历史工作区路径：`../../../evidence/phase10/source-token-comparison.json`）、构建条件（历史工作区路径：`../../../evidence/phase10/build-condition-comparison.json`）。这些均为本次独立执行证据，区别于 Claude 的自述。
 
 自建 Vite/API 实例已关闭，Chrome 测试上下文已关闭，5089/5183/5189 无监听，生成的 LocalDB 数据库已删除。仅保留自建合成 SQLite 数据、截图与测试日志供复核。
 

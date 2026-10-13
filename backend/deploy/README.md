@@ -16,6 +16,8 @@
 | `label.db`（及 `-wal`、`-shm`） | 用 SQLite 时：模板、版本、业务分组、用户、角色、调用方、画布预设、素材登记 | 不能 |
 | `label-log.db`（及 `-wal`、`-shm`） | 用 SQLite 时：调用日志、操作日志，保留 180 天 | 删了只丢日志 |
 | `assets/` | 上传的图片素材 | 不能 |
+| `fonts/` | 上传的授权字体；恢复标签文字需要同一字体 | 不能，需另行备份 |
+| `branding/` | 完整 Logo、图标及深色背景 Logo | 不能，需另行备份 |
 | `admin-signing.key` | 管理后台 JWT 签名密钥（没配置 `LabelService:Admin:SigningKey` 时自动生成） | 删了所有人要重新登录 |
 | `backups/` | 用 SQLite 时：每日备份快照；升级数据库前的快照 `label-before-upgrade-*.db` | 可以按需清理（升级确认没问题后再删升级前的快照） |
 
@@ -112,26 +114,30 @@ location /health { proxy_pass http://127.0.0.1:8080; }
 3. 启动服务：自动建表、建内置角色和 `admin` 账号（初始密码写在启动日志里，或者用 `LabelService:Admin:InitialPassword` 指定）。
 
 - 调用日志默认和主库放在同一个库里（表名不冲突）；量大时可以用 `LogConnectionString` 放到另一个库。
-- 数据目录仍然要有：上传的素材和 JWT 签名密钥在那里，备份时一起备份。
+- 数据目录仍然要有：上传的素材、字体、品牌图片和 JWT 签名密钥在那里，备份时一起备份。
 - 已经在用 SQLite 的部署，换数据库不会自动搬数据，需要导出、导入（目前没有现成的工具，需要时再做）。
 - SQL Server 默认的排序规则不区分大小写：模板编码这类唯一的字段，只差大小写的会被当成重复（SQLite、PostgreSQL 区分大小写；账号统一存小写，不受影响）。
 
 ## 备份与恢复
 
-**SQL Server、PostgreSQL** 用数据库自己的备份工具（SQL Server 的维护计划或 `BACKUP DATABASE`、PostgreSQL 的 `pg_dump`），内置的每日备份不运行；数据目录里的 `assets/` 和 `admin-signing.key` 另外备份。下面说的是 SQLite。
+**SQL Server、PostgreSQL** 用数据库自己的备份工具（SQL Server 的维护计划或 `BACKUP DATABASE`、PostgreSQL 的 `pg_dump`），内置的每日备份不运行；数据目录里的 `assets/`、`fonts/`、`branding/`、`admin-signing.key` 和部署配置另外备份。下面说的是 SQLite。
 
 服务每天在 `LabelService:Backup:Time` 用 SQLite 的 `VACUUM INTO` 生成快照：`backups/yyyyMMdd-HHmmss/` 里有 `label.db`、`label-log.db`（可关）和 `assets/`，只保留最近 `Keep` 份。快照是完整、一致的库文件，服务运行时生成也不影响使用。**不要直接复制正在运行的 .db 文件当备份**（可能不一致）。
+
+当前内置备份**不会自动复制** `fonts/`、`branding/`、`admin-signing.key` 或部署配置。请额外备份这些文件，恢复时与数据库/素材一起还原；否则可能丢失标签字体、公司 Logo 或登录签名密钥。数据库升级前快照也不等于整个数据目录备份。
 
 恢复步骤（检查程序 `HostingChecks` 每次都会演练一遍，见下）：
 
 1. 停服务：`docker stop label-service` 或 `Stop-Service LabelService`。
 2. 把数据目录里的 `label.db` 改名留底（如 `label.db.bak`），删掉 `label.db-wal`、`label.db-shm`。
-3. 把快照里的 `label.db` 复制到数据目录；要恢复日志就同样处理 `label-log.db`；把快照的 `assets/` 复制回数据目录的 `assets/`。
+3. 把快照里的 `label.db` 复制到数据目录；要恢复日志就同样处理 `label-log.db`；还原 `assets/`，再从额外文件备份恢复 `fonts/`、`branding/`、签名密钥和匹配的部署配置。
 4. 启动服务，等 `/health/ready` 变成 200，登录管理后台确认模板和调用方都在，用接口调试试生成一张。
 
 演练记录：后端检查程序的 `HostingChecks.CheckRestoreAsync` 按上面的步骤做——生成快照，删掉画布预设，停服务，用快照替换 `label.db`、删掉 `-wal`、`-shm`，重启后数据回来、示例模板照常生成；另外验证了换进来的库文件不是 WAL 模式时服务也能启动。
 
 ## 还没验证的
+
+以下是环境边界，定版前完整核对入口见 [定版清单](../../docs/release-readiness.md)。开发检查成功不能替代目标机器安装与实际设备打印。
 
 - Docker 镜像没有在本机构建过（开发机上没有 Docker）；`dotnet publish -r linux-x64` 已验证能出包，原生库（libSkiaSharp、libHarfBuzzSharp、libe_sqlite3）都在包里；发布包不带字体（ADR 0011），第一次在 Linux 上跑时，先在管理后台上传思源黑体，再用示例请求生成一张 PNG 看中文是否正常。
 - Windows 服务没有实际安装过（需要管理员权限）。

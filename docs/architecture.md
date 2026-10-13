@@ -2,6 +2,8 @@
 
 标签生成服务把“模板 + 数据”变成可直接打印的文件（PNG、PDF、ZPL）。业务系统通过开放接口或客户端 SDK 调用；网页设计器负责画模板。完整背景见[设计书](design/label-service-design.html)。
 
+当前功能和定版边界见 [文档入口](README.md)、[定版清单](release-readiness.md)。本文描述现有依赖和扩展点；测试运行方式集中在 [测试说明](testing.md)。
+
 ## 三个部分
 
 仓库分成三个互不引用的部分，只通过 HTTP 和模板 JSON 交互（[ADR 0004](adr/0004-three-parts.md)）：
@@ -150,7 +152,7 @@
 ## 状态与部署
 
 - 单实例部署，前期不考虑高可用（[ADR 0003](adr/0003-sqlite-single-instance.md)）。模板、版式、调用方的内存缓存是单进程的，多实例要另做缓存同步，换数据库不改变这一点（ADR 0010）。
-- 数据库默认 SQLite：数据目录里有 `label.db`（模板等）、`label-log.db`（调用日志），不能放网络共享盘。配置 `LabelService:Data:Provider` 可换成 SQL Server 或 PostgreSQL（连接字符串 `LabelService:Data:ConnectionString`，调用日志可以另配 `LogConnectionString`）。不管用哪种数据库，数据目录都要有：上传的素材和 JWT 签名密钥放在那里。
+- 数据库默认 SQLite：数据目录里有 `label.db`（模板等）、`label-log.db`（调用日志），不能放网络共享盘。配置 `LabelService:Data:Provider` 可换成 SQL Server 或 PostgreSQL（连接字符串 `LabelService:Data:ConnectionString`，调用日志可以另配 `LogConnectionString`）。数据目录还包含上传素材、字体、品牌图片及 JWT 签名密钥；内置 SQLite 备份仅覆盖数据库与 assets，其余文件额外备份，见部署说明。
 - SQLite 特有的功能只在 SQLite 下启用：连接 PRAGMA、升级前快照和失败恢复、旧库换算、每日 `VACUUM INTO` 备份。SQL Server、PostgreSQL 的迁移每个都在事务里执行，备份用数据库自己的工具。
 - 开发环境用 `appsettings.Development.json` 里的测试调用方，Key 是 `lbl_test_local_dev`，配置里只存它的 SHA-256。
 - 部署（Docker 或 Windows 服务）、数据库配置、预热、并发控制、备份见 `backend/deploy/README.md`（ADR 0008）；监控接入见 `backend/deploy/monitoring/`。

@@ -1,5 +1,7 @@
 # 页面与功能修复整合候选
 
+> 历史评审：结论只对应文中日期和固定提交，保留用于追溯。当前状态见 [定版清单](../release-readiness.md)，本页不作为最新 main 的通过证明。
+
 2026-10-11，Codex。独立分支 `ai/codex/T-032-layout-integration`；稳定起点为 `087aeba48df486acc44b3bdbd9fba47502d419f6`，完整合入 `091c4e1d6a996ace8e19ddde25ef5e9e5a7d8097`。实际代码与浏览器检查针对 `9b223710a76b6c386ab06904ab542e105ff3b567`；之后交付提交只增加本报告、截图及任务/README 文档。
 
 ## 结果与修复
@@ -35,14 +37,14 @@
 
 ## 证据位置与截图
 
-完整证据在隔离工作区同级 `evidence/phase16/`；[汇总](../../../evidence/phase16/validation-summary.json)、[全新克隆完整日志](../../../evidence/phase16/verify-exact-head-clean-clone.log)、[行为断言](../../../evidence/phase16/layout-behavior/layout-behavior-results.json)、[原生缩放校准与结果](../../../evidence/phase16/real-zoom-results.json)、[长内容断言](../../../evidence/phase16/ui-before-results.json)、[画布编辑断言](../../../evidence/phase16/canvas-regression-results.json)、[两框架自检](../../../evidence/phase16/demo-smoke-results.json)。`ui-before-results.json` 沿用旧脚本默认文件名，本次执行提交为 9b22371，时间/提交见 `boundaries-execution.json`，不是修改前基线。
+完整证据在隔离工作区同级 `evidence/phase16/`；汇总（历史工作区路径：`../../../evidence/phase16/validation-summary.json`）、全新克隆完整日志（历史工作区路径：`../../../evidence/phase16/verify-exact-head-clean-clone.log`）、行为断言（历史工作区路径：`../../../evidence/phase16/layout-behavior/layout-behavior-results.json`）、原生缩放校准与结果（历史工作区路径：`../../../evidence/phase16/real-zoom-results.json`）、长内容断言（历史工作区路径：`../../../evidence/phase16/ui-before-results.json`）、画布编辑断言（历史工作区路径：`../../../evidence/phase16/canvas-regression-results.json`）、两框架自检（历史工作区路径：`../../../evidence/phase16/demo-smoke-results.json`）。`ui-before-results.json` 沿用旧脚本默认文件名，本次执行提交为 9b22371，时间/提交见 `boundaries-execution.json`，不是修改前基线。
 
 关键截图随仓库提交：
 
 - [1100px 模板提示](t028-evidence/template-1100.png)、[1101px 模板可编辑](t028-evidence/template-1101.png)。
 - [150% 长内容滚动后窄窗提示可达](t028-evidence/chrome150-long-template.png)、[125% 长说明表格](t028-evidence/chrome125-long-business.png)。
 - [本候选 net48 自检布局](t028-evidence/demo-net48-default.png)、[本候选 net10 自检布局](t028-evidence/demo-net10-default.png)。
-- [保留的 T-025 最小窗口实际截图](t028-evidence/demo-min-preserved.png)：六行和 number/必填列完整，生成选项通过左侧纵向滚动到达。此图来源于 Claude 14:03 UTC 前的已提交布局；本候选该源码树完全相同。默认窗口自检截图为本次重新执行，不把保留图称为新拍摄。
+- [保留的 T-025 最小窗口实际截图](t025-evidence/demo-960x600-after.png)：六行和 number/必填列完整，生成选项通过左侧纵向滚动到达。此图来源于 Claude 14:03 UTC 前的已提交布局；本候选该源码树完全相同。默认窗口自检截图为本次重新执行，不把保留图称为新拍摄。
 
 ## 原目录新活动与应用限制
 

@@ -1,5 +1,7 @@
 # 性能约定
 
+当前定版前核对项见 [定版清单](release-readiness.md)。本页下面的测量均有日期和环境限制；历史机器门禁存在失败项，详见 2026-10-13 的记录。文档整理不调整基线，不把功能验证成功当作性能门禁成功。
+
 核心指标：**单张标签（≤ 100×150 mm、≤ 300 dpi）服务端处理 P95 ≤ 100 ms**，P99 ≤ 200 ms。“服务端处理”从收到完整请求算到写完最后一个字节。完整目标见设计书第 9 节。
 
 ## 目标
@@ -64,7 +66,7 @@ dotnet run -c Release --project backend/tests/LabelService.Benchmarks -- --gate 
 dotnet run -c Release --project backend/tests/LabelService.Benchmarks -- --update-baseline    # 写新基线
 ```
 
-- 基线在 `backend/tests/LabelService.Benchmarks/baseline.json`，记了测基线的机器。**基线和机器有关**：要在跑门禁的那台（或同规格的）机器上生成，换机器先 `--update-baseline`。
+- 基线在 `backend/tests/LabelService.Benchmarks/baseline.json`，记了测基线的机器。**基线和机器有关**：使用同规格、空闲机器比较；换机器时先记录差异和原因，确认新的基线环境后再独立更新，不能因一次失败就直接重录来放行。
 - 什么时候更新基线：有意的性能改进合并后（让门禁跟着收紧），或者有意接受的变慢（在交接记录里写明原因）之后。更新基线单独提交：`perf(bench): update baseline (T-xxx)`。
 - 门禁用 ShortRun 加到 10 次迭代：同一台机器连跑两次差 ±4% 以内；3 次迭代时能差到 25%，会误报。跑门禁时机器上不要有别的重负载（编译、视频会议）。
 - CI 平台还没定（见 README 待定问题）：选定后加一步 `--gate`，并在 CI 机器上生成基线。CI 上要先准备字体（`backend/assets/fonts`），否则文本相关的检查和基准会失败。

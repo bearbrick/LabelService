@@ -1,8 +1,8 @@
 # 后端（backend）
 
-字段可选 `source` 分为 `input` 和 `template`，分别只取接口或模板提供的数据；模板提供的 `auto` 与 `default` 互斥且不进入调用样例，类型检查仍保留。省略来源的旧模板保持接口优先回退规则，见 ADR 0016 和 `docs/contracts.md`。
-
 标签生成服务的服务端：模板 JSON 契约、渲染引擎、按领域驱动设计分层的 ASP.NET Core 服务（ADR 0010）。解决方案 `LabelService.Backend.slnx`，.NET 10。
+
+当前进入功能收敛与定版前验收。运行部署见 [deploy/README.md](deploy/README.md)，验证入口见 [测试说明](../docs/testing.md)，环境待核对项见 [定版清单](../docs/release-readiness.md)。
 
 ```
 backend/
@@ -94,7 +94,8 @@ dotnet run -c Release --project backend/tests/LabelService.Benchmarks -- --gate 
 
 ## 模板和调用方
 
-- **示例模板**：开发环境首次建库（库里没有模板）时，把 `samples/templates` 导入为已发布版本 1，走正常的保存草稿和发布流程。改了示例模板想重新导入，停掉服务、删掉数据目录（或数据库）再启动。
+- **字段来源**：`source: input` 只取接口条目/公共数据；`source: template` 只取互斥的系统预设或手写值，不进入调用样例。省略来源的旧模板保持接口优先回退，类型检查保留，见 [契约](../docs/contracts.md)。
+- **示例模板**：开发环境首次空库导入 `samples/templates` 为发布版本 1，不覆盖已有模板。修改示例后应通过管理后台导入并发布，或另建独立测试数据目录；不要为了重新导入删掉正在使用的数据目录。
 - **拼版版式**：表 `sheet_layout`，管理接口 `/api/admin/layouts` 维护，保存后立即更新内存缓存 `Application/Layouts/SheetLayoutCache.cs`（开放接口只读它）。开发环境版式表为空时导入 `samples/layouts`；模板来源是 `Files` 时也从这个目录读。
 - **模板来源**：配置 `LabelService:Templates:Source`，默认 `Database`；设成 `Files` 时直接读示例目录、不建库，只适合只读演示。
 - **草稿和发布**：核心流程在 `Application/Templates/TemplateManager.cs`（保存草稿、发布、放弃草稿、回滚到旧版本），管理接口经 `TemplateAppService` 调它。同一模板最多一个草稿，草稿的版本号是“最新发布版本 + 1”；发布前做静态检查并用样例值试渲染计时，通过后立即生效；已发布版本不能修改、不能删除。

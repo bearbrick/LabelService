@@ -230,7 +230,7 @@ footer { margin-top: 48px; font-size: 13px; color: var(--ink-3); }
       <!-- 2 -->
       <section id="arch">
         <h2><span class="n">2</span>总体架构</h2>
-        <p class="lead">服务由网页设计器、管理 API、渲染引擎、开放 API 四部分组成。后端是一个无状态进程，初版单实例部署、数据存 SQLite；以后需要时换成 SQL Server，就可以多实例横向扩展。</p>
+        <p class="lead">服务由网页设计器、管理 API、渲染引擎、开放 API 四部分组成。当前按 ADR 0010 分为领域、应用、基础设施、接口层，单实例部署，数据库可选 SQLite、SQL Server、PostgreSQL；多实例还需要缓存同步，不能仅换数据库就横向扩展。定版核对事项见 <a href="../release-readiness.md">定版清单</a>。</p>
         <figure>
           <div class="fig">
             <svg viewBox="0 0 760 496" role="img" aria-labelledby="arch-t">
@@ -1000,14 +1000,14 @@ X-Api-Key: ********
 
         <h3>压测与防退化</h3>
         <ul>
-          <li>基准测试：用 BenchmarkDotNet 对每个示例模板的渲染流水线做基准。CI 每次提交都跑，单张中位数比基线慢 20% 以上就不允许合并。</li>
+          <li>基准测试：用 BenchmarkDotNet 对每个示例模板的渲染流水线做基准，已提供门禁脚本；CI 接入后应每次提交运行，当前尚未配置自动流水线。中位数比基线慢 20% 以上不通过，历史机器异常与目标环境限制如实记录，不通过修改基线掩盖。</li>
           <li>压测：用 k6 或 NBomber 在目标机器（4 核 8 GB）上压单张接口，50 并发时 P95 ≤ 100 ms、错误率为 0。结果写进每次发布的记录。</li>
           <li>发布前检查：模板发布时用样例值实际渲染一次并计时，超过 50 ms 就提示设计者，常见原因是大图片、600 dpi 和 A4 满版。只提示，不阻止发布。</li>
         </ul>
 
         <h3>其他非功能需求</h3>
         <ul>
-          <li>部署：初版单实例（Docker 或 Windows 服务），前期不考虑高可用；服务本身无状态，以后换 SQL Server 后可以多实例，届时模板缓存最长 60 秒过期。批量生成 PNG 或 ZIP 时并行渲染，PDF 按页顺序写入。</li>
+          <li>部署：当前单实例（Docker 或 Windows 服务），前期不考虑高可用；SQL Server/PostgreSQL 已支持，但模板、版式和调用方缓存仍为单进程，多实例同步另立任务（ADR 0010）。批量生成 PNG 或 ZIP 时并行渲染，PDF 按页顺序写入。</li>
           <li>安全：API Key 只存哈希；请求体上限 20 MB；图片字段只收 base64，不支持传 URL，防止服务器被利用去访问内网地址；上传素材校验类型和大小，SVG 上传时清除脚本；管理操作需要登录，模板发布记录操作人。</li>
           <li>日志与审计：每次生成写一条调用日志（调用方、模板、版本、格式、张数、总耗时、各阶段耗时、结果）；不存业务数据全文，需要补打时由调用方重新调用；模板每次发布都保留版本，可以查看和回滚。</li>
         </ul>
@@ -1196,7 +1196,7 @@ catch (LabelServiceException ex) when (ex.IsTransient)
               <text x="513" y="290" text-anchor="middle" class="d-note">PNG 直接预览；ZPL 显示指令和黑白效果；PDF 用默认程序打开</text>
               <text x="513" y="312" text-anchor="middle" class="d-note">保存文件 · 用默认程序打开 · 发送到打印机</text>
               <rect x="24" y="340" width="712" height="20" class="d-group"/>
-              <text x="38" y="354" class="d-note">RenderAsync 完成，344 ms · 内置模拟服务 · SDK 1.0.0-preview.1 · .NET Framework 4.8</text>
+              <text x="38" y="354" class="d-note">RenderAsync 完成，344 ms · 内置模拟服务 · SDK 1.0.0-preview.5 · .NET Framework 4.8</text>
             </svg>
           </div>
           <figcaption>界面结构。完整交互见上面的原型链接：按钮都能点，标签图片是真实渲染。</figcaption>
@@ -1286,7 +1286,7 @@ catch (LabelServiceException ex) when (ex.IsTransient)
 
         <h3>待确认问题</h3>
         <ul class="qs">
-          <li><span class="tag">待定</span><span>前端框架：公司现有项目用 Vue 还是 React？本设计按 Vue 3 写，Konva 两种框架都支持。</span></li>
+          <li><span class="tag done">已定</span><span>前端已实现为 Vue 3、TypeScript、Vite 和 Konva；当前维护沿用现有技术栈。</span></li>
           <li><span class="tag done">已定</span><span>数据库：初版用 SQLite，单实例部署，前期不考虑高可用（2026-10-09）。需要多实例时换 SQL Server。</span></li>
           <li><span class="tag">待定</span><span>每天大约多少次调用？调用日志保留多久（默认 180 天）？</span></li>
           <li><span class="tag">待定</span><span>部署环境：Linux Docker 还是 Windows 服务器？</span></li>

@@ -2,6 +2,8 @@
 
 给业务系统和第三方用的 .NET SDK，以及 WinForms 调用演示程序。解决方案 `LabelService.Client.slnx`。只通过 HTTP 调用后端，不引用后端的任何项目。
 
+当前 SDK 和 Windows 扩展为 `1.0.0-preview.5`，正式发版仍需用户确认。集成使用 [HTTP SDK 说明](src/LabelService.Client/README.md) 与 [Windows 打印说明](src/LabelService.Client.Windows/README.md)；现场待验收项见 [定版清单](../docs/release-readiness.md)。
+
 ```
 client/
 ├─ LabelService.Client.slnx
@@ -44,11 +46,14 @@ dotnet run --project client/samples/LabelService.Demo.WinForms -f net10.0-window
 var client = new LabelServiceClient(new LabelServiceClientOptions
 {
     BaseAddress = new Uri("https://label.example.com/"),
-    ApiKey = ConfigurationManager.AppSettings["LabelApiKey"],
+    ApiKey = Environment.GetEnvironmentVariable("LABEL_API_KEY"),
 });
 
 var file = await client.RenderAsync(new RenderRequest("BOX_LABEL", LabelFormat.Pdf)
     .Set("partName", "电源适配器")
+    .Set("partNo", "3100-0123")
+    .Set("qty", 50)
+    .Set("batchNo", "20261008-A")
     .Set("prodDate", DateTime.Today)
     .Set("boxNo", "C2610080001"));
 file.Save(Path.Combine(@"D:\Labels", file.FileName));
@@ -87,7 +92,8 @@ EXE、主窗口和打印窗口使用同一个深蓝条码图标，内含 16～25
 | `MainForm.Calls.cs` | 调 SDK：建客户端（设置不变就复用同一个实例）、读取字段、单张和批量、调用日志（`CallCompleted` 事件） |
 | `MainForm.Templates.cs` | 模板编码下拉框：`ListTemplatesAsync` 刷新，列表里显示名称和尺寸 |
 | `MainForm.Batch.cs` | 批量数据：一行一张标签、每条数据给全；加行、删行、从 Excel 粘贴（带表头时按表头对列） |
-| `MainForm.Results.cs` | 显示结果：PNG 预览、批量缩略图、ZPL 指令和黑白效果、PDF 交给默认程序；`LabelFile` / `LabelServiceException` 的全部属性 |
+| `MainForm.Results.cs` | 显示结果：PNG 预览、批量缩略图、ZPL 指令和黑白效果、PDF 可由默认程序查看；静默打印使用独立统一入口，无需阅读器 |
+| `MainForm.BatchPrinting.cs` | 整批、选中项及子集打印；区分业务条目和拼版纸页，保留原文件内容 |
 | `ZplPreview.cs` | 把 ZPL 的 `^GFA` 位图（含 ASCII 压缩）还原成图片 |
 | `CodeGenerator.cs` | “调用代码”页签：按当前设置生成 C# 7.3 的 Program.cs，单张和批量两种写法 |
 | `CodeGenerator.Printing.cs` | 调用代码里的统一静默打印入口；PNG、PDF、ZPL 共用一行，特殊参数和网络 ZPL 用法放在注释中 |
@@ -116,7 +122,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\client\build\pack.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File .\client\build\pack.ps1 -Version 1.0.0 -StrongNameKey D:\keys\LabelService.snk -CertificatePath D:\keys\codesign.pfx
 ```
 
-- 版本：调用端独立于后端发版，语义化版本，写在 `client/Directory.Build.props`（`VersionPrefix` + 预览版的 `VersionSuffix`，如 `1.0.0-preview.1`）。改了公开 API 同步设计书第 10 节和 `CHANGELOG.md`。
+- 版本：调用端独立于后端发版，语义化版本，写在 `client/Directory.Build.props`（`VersionPrefix` + `VersionSuffix`，当前 `1.0.0-preview.5`）。改了公开 API 同步设计书第 10 节和 `CHANGELOG.md`；准备定版不自动升级为正式版。
 - 签名：强名称密钥（.snk）和代码签名证书（.pfx）都不进仓库；没给时脚本照样打包，只是不签名（会提示）。证书由谁申请见设计书第 12 节的待定问题。
 - 脚本最后核对 nupkg 里有三个目标框架的 DLL、XML 注释和 README。zip 里还有演示程序源码和依赖说明。
 - 打包同时生成 `LabelService.Client.Windows` 的 nupkg；zip 的 `windows/` 目录包含两个 Windows 目标的扩展 DLL、XML 注释和说明。原 HTTP SDK 保持原有独立包和目标框架。

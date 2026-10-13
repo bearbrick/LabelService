@@ -7,8 +7,8 @@
 
 ## 快速开始
 
-1. 找标签服务管理员要：服务地址、一把 API Key（测试环境的 Key 以 `lbl_test_` 开头）、要调用的模板编码。
-2. 引用包：`dotnet add package LabelService.Client`，或者把 zip 里对应框架的 `LabelService.Client.dll` 加到项目引用。静默打印再引用可选的 `LabelService.Client.Windows`。
+1. 找标签服务管理员要：服务地址、一把有效 API Key、已发布模板的编码和字段定义。Development 自带的 `lbl_test_local_dev` 也是实际配置的开发 Key，不代表任意字符串都可调用。
+2. 使用管理员交付的包或私有源：`dotnet add package LabelService.Client --version 1.0.0-preview.5`，或者引用 zip 里对应框架的 DLL；不假定包已发布到公共 NuGet。静默打印再引用可选的 `LabelService.Client.Windows`。
 3. 应用里只建一个客户端实例，多线程共享：
 
 ```csharp
@@ -18,13 +18,15 @@ using LabelService.Client.Printing;
 var client = new LabelServiceClient(new LabelServiceClientOptions
 {
     BaseAddress = new Uri("https://label.example.com/"),
-    ApiKey = ConfigurationManager.AppSettings["LabelApiKey"],   // 放配置文件或环境变量，不要写进代码
+    ApiKey = Environment.GetEnvironmentVariable("LABEL_API_KEY"),   // 放配置文件或环境变量，不要写进代码
 });
 
 // 单张：生成 PDF 并保存
 var request = new RenderRequest("BOX_LABEL", LabelFormat.Pdf)
     .Set("partName", "电源适配器")
+    .Set("partNo", "3100-0123")
     .Set("qty", 50)
+    .Set("batchNo", "20261008-A")
     .Set("prodDate", DateTime.Today)
     .Set("boxNo", "C2610080001");
 LabelFile file = await client.RenderAsync(request);
@@ -33,6 +35,8 @@ file.Save(Path.Combine(@"D:\Labels", file.FileName));
 // 批量：公共字段只传一次，生成一个 ZPL 文件直接发给斑马打印机
 var batch = new BatchRenderRequest("BOX_LABEL", LabelFormat.Zpl)
     .SetCommon("partName", "电源适配器")
+    .SetCommon("partNo", "3100-0123")
+    .SetCommon("qty", 50)
     .SetCommon("batchNo", "20261008-A");
 foreach (var boxNo in boxNumbers)
     batch.AddItem().Set("boxNo", boxNo);
@@ -40,7 +44,9 @@ LabelFile zpl = await client.RenderBatchAsync(batch);
 await NetworkPrinter.SendAsync("192.168.1.50", 9100, zpl.Content);
 ```
 
-要先知道模板要哪些字段：`TemplateSchema schema = await client.GetSchemaAsync("BOX_LABEL");`，里面有字段 key、类型、是否必填、自动值（`Auto`，如 `today`：不传时服务端填当天日期）和调用样例。这把 Key 能用哪些模板：`IReadOnlyList<TemplateSummary> templates = await client.ListTemplatesAsync();`（编码、名称、最新版本、尺寸，按编码排序）。
+先查模板字段：`TemplateSchema schema = await client.GetSchemaAsync("BOX_LABEL");`，包含 key、类型、来源、必填、系统预设和调用样例。接口字段由客户传入；模板提供字段由服务取值，不接受同名数据覆盖；旧模板省略来源时保持回退。`client.ListTemplatesAsync()` 列出这把 Key 能用的已发布模板。
+
+以下代码是集成片段：`boxNumbers` 为业务系统的箱号集合，字段以管理员发布的模板为准。内置 BOX_LABEL 的必填字段已在示例中给全；自定义模板提供的日期等字段不需要接口重复传。
 
 ### 拼版：多张标签排在 A4 上打
 
@@ -49,11 +55,15 @@ await NetworkPrinter.SendAsync("192.168.1.50", 9100, zpl.Content);
 ```csharp
 // 单张：Copies 就是铺几个格子，8 格的版式 8 份是一页 8 张相同的标签
 var sheet = new RenderRequest("BOX_LABEL", LabelFormat.Pdf) { Layout = "A4_100x60_2x4", Copies = 8 }
-    .Set("partName", "电源适配器");
+    .Set("partName", "电源适配器")
+    .Set("partNo", "3100-0123").Set("qty", 50)
+    .Set("batchNo", "20261008-A").Set("boxNo", "C2610080001");
 
 // 批量：每条按顺序占格子，一页排满换下一页；StartSlot = 3 表示第一页从第 3 格开始（前两格已经用掉了）
 var boxes = new BatchRenderRequest("BOX_LABEL", LabelFormat.Pdf) { Layout = "A4_100x60_2x4", StartSlot = 3 }
-    .SetCommon("partName", "电源适配器");
+    .SetCommon("partName", "电源适配器")
+    .SetCommon("partNo", "3100-0123").SetCommon("qty", 50)
+    .SetCommon("batchNo", "20261008-A");
 foreach (var boxNo in boxNumbers)
     boxes.AddItem().Set("boxNo", boxNo);
 LabelFile pages = await client.RenderBatchAsync(boxes);
@@ -156,8 +166,10 @@ client.CallCompleted += (sender, e) =>
 
 **PNG 批量为什么报错？** PNG 一个文件只能放一张，批量要选 `BatchOutput.Zip`。
 
-**TLS 1.2？** .NET Framework 4.6.2 上如果服务是 HTTPS，确认系统启用了 TLS 1.2（4.7 以上默认跟随系统设置）。
+**HTTPS？** 旧版 .NET Framework 4.6.1/4.6.2 集成需确认客户系统的 TLS 配置与服务匹配；SDK 不绕过证书校验。正式部署使用有效证书，不把开发环境 HTTP 地址复制成生产配置。
 
 ## 版本
 
 语义化版本：1.x 只做向后兼容的改动；接口升到 `/api/v2` 时 SDK 升 2.0，v1 接口至少保留 12 个月。预览版带 `-preview.N`。变更见 CHANGELOG.md。
+
+当前为 `1.0.0-preview.5`。预览包、源码验证通过和软件提交打印成功不等于客户现场验收或正式发版完成。
