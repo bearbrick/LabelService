@@ -176,11 +176,17 @@ internal sealed class MockLabelServiceHandler : HttpMessageHandler
             using var stream = new MemoryStream();
             using (var zip = new ZipArchive(stream, ZipArchiveMode.Create, leaveOpen: true))
             {
+                var number = 0;
                 for (var i = 0; i < labels.Count; i++)
                 {
                     var (content, _) = Encode(template, format, dpi, new[] { (labels[i].Data, format == "png" ? 1 : labels[i].Copies) });
-                    using var entry = zip.CreateEntry($"{template.Code}_{i + 1:D4}.{format}").Open();
-                    entry.Write(content, 0, content.Length);
+                    // PNG 每份独立文件；PDF、ZPL 在单个业务文件内保留该条的份数，与真实服务一致。
+                    var files = format == "png" ? labels[i].Copies : 1;
+                    for (var copy = 0; copy < files; copy++)
+                    {
+                        using var entry = zip.CreateEntry($"{template.Code}_{++number:D4}.{format}").Open();
+                        entry.Write(content, 0, content.Length);
+                    }
                 }
             }
 

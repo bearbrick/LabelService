@@ -3,12 +3,12 @@
 标签生成服务的 .NET 客户端：几行代码生成标签文件（PDF、PNG、ZPL），自带超时、重试和错误码映射，还有把 ZPL 直接送到标签打印机的辅助类。
 
 - 目标框架：`net461`（.NET Framework 4.6.1–4.8.1）、`netstandard2.0`、`net8.0`（.NET 8、9、10）
-- 依赖：没有任何 NuGet 依赖（JSON 读写是自带的），.NET Framework 版只用框架自带的 System.Net.Http。不依赖 System.Text.Json、Newtonsoft.Json，也不依赖任何日志框架。
+- 依赖：没有任何 NuGet 依赖（JSON 读写是自带的），.NET Framework 版使用框架自带的 System.Net.Http、System.IO.Compression。
 
 ## 快速开始
 
 1. 找标签服务管理员要：服务地址、一把 API Key（测试环境的 Key 以 `lbl_test_` 开头）、要调用的模板编码。
-2. 引用包：`dotnet add package LabelService.Client`，或者把 zip 里对应框架的 `LabelService.Client.dll`（和 `System.Text.Json`）加到项目引用。
+2. 引用包：`dotnet add package LabelService.Client`，或者把 zip 里对应框架的 `LabelService.Client.dll` 加到项目引用。静默打印再引用可选的 `LabelService.Client.Windows`。
 3. 应用里只建一个客户端实例，多线程共享：
 
 ```csharp
@@ -61,6 +61,26 @@ Console.WriteLine($"{pages.LabelCount} 张标签，{pages.PageCount} 页");
 ```
 
 PDF 是一个文件、一页一张纸；PNG 一页一张图，多页时是 ZIP（`IsZip` 为 true）。用了版式时批量的 `Output` 不起作用，PNG 单张也可以多份。
+
+### 生成集合，再选择哪些打印
+
+```csharp
+LabelBatchResult result = await client.RenderBatchFilesAsync(batch);
+WindowsLabelPrinter.Print(result.Items);                      // 打印整批
+// 下面两种是替代上面一行的补打方式，不要一起执行：
+// WindowsLabelPrinter.Print(result.Items[1]);                 // 只打第 2 项
+// WindowsLabelPrinter.Print(new[] { result.Items[0], result.Items[2] }); // 第 1、3 项
+```
+
+`RenderBatchFilesAsync` / `RenderBatchFiles` 是 `ILabelServiceClient` 的扩展方法：不增加原接口的抽象成员，不要求已有接口实现者修改。SDK 固定请求快照并使用 ZIP 输出，一次批量调用后在内存拆分，不修改原请求；拼版沿用服务的 PNG/PDF 输出规则。网络重试仍按原客户端设置执行，`CallCompleted` 仍为 `RenderBatch`。
+
+- `OriginalFile`：原始响应，可保存整批留底，保留服务计时、警告和追踪信息。
+- `Unit == Item`：普通标签按业务条目组织，`ItemNumber` 从 1 开始。PNG 多份放在同一项的 `Files` 中，PDF/ZPL 的份数已经包含在文件内；`Copies` 表示该条生成的份数。
+- `Unit == Page`：拼版按纸页组织，`PageNumber` 从 1 开始。PNG 每项为一张纸图，PDF 每项通过 `PdfPageIndex` 引用原文档的对应页。**打印 PDF 纸页时传 `LabelBatchItem`，不要只传 `item.Files[0]`，后者是整个原 PDF。** 拼版页的 `Copies` 为 1，PNG 页的 `LabelCount` 为 0（未知），实际整批标签数看 `OriginalFile.LabelCount`。
+- `Items`、`Files` 是只读列表，每个原文件保留生成 DPI、实际模板版本和原字节，补打不重新请求服务。`Content` 延续旧 API 的 `byte[]`，调用方不要修改内容。
+- 空集合、错误格式、损坏 ZIP、数量不符会报错；ZIP 解压总大小上限 256 MiB。集合提交前验证图形文件和 PDF 页号；PNG/PDF 一个连续分页文档、ZPL 一个 RAW 作业，按选择顺序提交，可重复选择某项。
+
+原来的 `RenderBatchAsync` / `RenderBatch` 返回 `LabelFile`，`Print(file)` 打印完整结果，继续可用。
 
 ## 错误处理
 
@@ -130,7 +150,7 @@ client.CallCompleted += (sender, e) =>
 
 **日期、图片字段怎么传？** `DateTime` 自动转成 ISO 8601（只有日期部分时转成 `yyyy-MM-dd`）；图片字段传 `byte[]`，自动转 base64（不超过 1 MB，不支持 URL）；值为 null 的字段不发送。
 
-**USB 连接的标签打印机？** 用 `Printing.WindowsRawPrinter.Send(打印机名称, zpl.Content)` 以 RAW 方式写入 Windows 打印队列。网络打印机用 `NetworkPrinter.SendAsync(地址, 9100, 内容)`。PDF 交给系统默认程序打印。
+**USB 连接的打印机？** 实施人员先装好驱动，引用 `LabelService.Client.Windows` 后调用 `WindowsLabelPrinter.Print(file)` 或 `Print(result.Items)`，使用默认打印机静默提交。PNG、PDF 无需阅读器；ZPL 设备必须支持 ZPL。网络 ZPL 也可用 `NetworkPrinter.SendAsync`。
 
 **PNG 批量为什么报错？** PNG 一个文件只能放一张，批量要选 `BatchOutput.Zip`。
 

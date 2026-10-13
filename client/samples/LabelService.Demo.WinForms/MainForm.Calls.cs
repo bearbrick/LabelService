@@ -216,7 +216,7 @@ internal sealed partial class MainForm
         }
 
         dataTabs.SelectedTab = batchTab;
-        await RunAsync("RenderBatchAsync", async () =>
+        await RunAsync("RenderBatchFilesAsync", async () =>
         {
             var batch = new BatchRenderRequest(TemplateCodeText, SelectedFormat)
             {
@@ -234,7 +234,7 @@ internal sealed partial class MainForm
                 }
             }
 
-            ShowResult(await Client().RenderBatchAsync(batch));
+            ShowBatchResult(await Client().RenderBatchFilesAsync(batch));
         });
     }
 

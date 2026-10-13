@@ -14,7 +14,7 @@ namespace LabelService.Client.Printing;
 /// PDF 使用 Windows 自带的渲染引擎，需要 Windows 8.1 或更新版本；不需要 PDF 阅读器。
 /// 方法返回表示任务提交结束，不代表打印机已经出纸。
 /// </remarks>
-public static class WindowsLabelPrinter
+public static partial class WindowsLabelPrinter
 {
     /// <summary>
     /// 直接静默打印生成结果；不弹打印机选择框和 .NET 打印进度框。
@@ -74,9 +74,21 @@ public static class WindowsLabelPrinter
             throw new ArgumentException("ZPL 使用原始指令，请调用 Print；份数等参数在生成请求中设置。", nameof(file));
         }
 
+        return CreateDocument(() => PrintPages.Read(file), printerName, file.FileName);
+    }
+
+    /// <summary>
+    /// 用同一文档连续提交全部选中页面，重打时重新创建页面枚举器。
+    /// </summary>
+    /// <param name="readPages">按需读取页面的函数。</param>
+    /// <param name="printerName">打印机名称。</param>
+    /// <param name="documentName">队列中的作业名称。</param>
+    /// <returns>静默分页打印文档。</returns>
+    private static PrintDocument CreateDocument(Func<IEnumerable<PrintablePage>> readPages, string? printerName, string documentName)
+    {
         var document = new PrintDocument
         {
-            DocumentName = file.FileName,
+            DocumentName = documentName,
             PrintController = new StandardPrintController(),
         };
         if (!string.IsNullOrWhiteSpace(printerName))
@@ -88,7 +100,7 @@ public static class WindowsLabelPrinter
         document.BeginPrint += (_, _) =>
         {
             pages?.Dispose();
-            pages = PrintPages.Read(file).GetEnumerator();
+            pages = readPages().GetEnumerator();
             try
             {
                 if (!pages.MoveNext())

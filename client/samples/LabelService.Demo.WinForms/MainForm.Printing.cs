@@ -3,6 +3,7 @@ using System.Drawing.Printing;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
+using LabelService.Client;
 using LabelService.Client.Printing;
 
 namespace LabelService.Demo;
@@ -18,10 +19,11 @@ internal sealed partial class MainForm
     private bool printing;
 
     /// <summary>
-    /// 在后台提交当前完整结果，PNG ZIP、PDF 多页都作为完整作业打印。
+    /// 在后台提交完整结果或当前选中项，使用已经生成的集合。
     /// </summary>
+    /// <param name="selectedOnly">是否只提交选择框中的条目或纸页。</param>
     /// <returns>提交完成或已显示错误后结束。</returns>
-    private async Task PrintResultAsync()
+    private async Task PrintResultAsync(bool selectedOnly = false)
     {
         var file = result;
         if (file is null || printing)
@@ -29,13 +31,34 @@ internal sealed partial class MainForm
             return;
         }
 
+        IReadOnlyList<LabelBatchItem>? items = batchResult?.Items;
+        if (selectedOnly)
+        {
+            if (items is null || printItem.SelectedIndex < 0)
+            {
+                return;
+            }
+            items = new[] { items[printItem.SelectedIndex] };
+        }
+
         printing = true;
         printMenu.Enabled = false;
+        printSelected.Enabled = false;
         status.Text = "正在提交到默认打印机…";
         try
         {
             // 生成结果在开始时固定，期间切换模板或重新生成不会替换正在打印的内容。
-            await Task.Run(() => WindowsLabelPrinter.Print(file));
+            await Task.Run(() =>
+            {
+                if (items is null)
+                {
+                    WindowsLabelPrinter.Print(file);
+                }
+                else
+                {
+                    WindowsLabelPrinter.Print(items);
+                }
+            });
             if (!IsDisposed && !Disposing)
             {
                 status.Text = "已提交到 Windows 默认打印机，请在打印队列查看状态。";
@@ -56,6 +79,7 @@ internal sealed partial class MainForm
             if (!IsDisposed && !Disposing)
             {
                 printMenu.Enabled = result is not null;
+                printSelected.Enabled = batchResult is not null;
             }
         }
     }

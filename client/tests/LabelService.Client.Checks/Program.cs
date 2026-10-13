@@ -34,9 +34,11 @@ internal static class Program
         }
 
         await ClientChecks.RunAsync(Check);
+        await BatchCollectionChecks.RunAsync(Check);
         ProtocolChecks.Run(Check);
         JsonChecks.Run(Check);
         WindowsPrintChecks.Run(Check);
+        WindowsBatchChecks.Run(Check);
         ArchitectureChecks.Run(clientRoot, Check);
         DocumentationChecks.Run(clientRoot, Check);
         await LiveServerChecks.RunAsync(Check);

@@ -135,7 +135,7 @@ internal static partial class CodeGenerator
             AppendSingle(code, settings, format);
         }
 
-        AppendPrintCall(code);
+        AppendPrintCall(code, settings.Batch);
         code.AppendLine("        }");
         code.AppendLine("        catch (LabelServiceException ex) when (ex.ErrorCode == LabelErrorCodes.FieldRequired)");
         code.AppendLine("        {");
@@ -149,7 +149,7 @@ internal static partial class CodeGenerator
         code.AppendLine("        }");
         AppendPrintCatch(code);
         code.AppendLine("    }");
-        AppendPrintMethods(code);
+        AppendPrintMethods(code, settings.Batch);
         code.AppendLine("}");
         return code.ToString();
     }
@@ -228,7 +228,9 @@ internal static partial class CodeGenerator
         }
 
         code.AppendLine();
-        code.AppendLine("            LabelFile file = await client.RenderBatchAsync(batch);");
+        code.AppendLine("            // DLL 自动整理集合；普通标签按业务条目分组，拼版按纸页分组。");
+        code.AppendLine("            LabelBatchResult result = await client.RenderBatchFilesAsync(batch);");
+        code.AppendLine("            LabelFile file = result.OriginalFile;   // 原文件用于留底，打印使用下面的 Items。");
         code.AppendLine("            Console.WriteLine(file.FileName + \"，\" + file.LabelCount + \" 张，服务端 \" + file.ServerDuration?.TotalMilliseconds + \" ms\");");
     }
 

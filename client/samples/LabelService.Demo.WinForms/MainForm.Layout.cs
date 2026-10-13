@@ -149,6 +149,7 @@ internal sealed partial class MainForm
         previewTab.Controls.Add(thumbnails);
         previewTab.Controls.Add(resultInfo);
         previewTab.Controls.Add(previewTools);
+        previewTab.Controls.Add(BuildBatchPrintTools());
 
         var copy = new Button { Text = "复制代码", AutoSize = true };
         copy.Click += (_, _) =>

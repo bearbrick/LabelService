@@ -4,6 +4,7 @@ using System.IO;
 using System.Text;
 using System.Windows.Forms;
 using LabelService.Client;
+using LabelService.Client.Printing;
 
 namespace LabelService.Demo;
 
@@ -21,8 +22,6 @@ internal sealed partial class MainForm
     /// </summary>
     private static readonly string[] PrintExamples =
     [
-        "WindowsLabelPrinter.Print(file, PrinterName);",
-        "WindowsLabelPrinter.CreateDocument(file, PrinterName)",
         "document.PrinterSettings.Copies = 2;",
         "document.Print();",
         "await NetworkPrinter.SendAsync(\"192.168.1.50\", NetworkPrinter.DefaultPort, file.Content);",
@@ -134,8 +133,29 @@ internal sealed partial class MainForm
         SetBatchRowCount(5);
         await RenderBatchAsync();
         Check("批量 5 条 ZPL（每条数据给全），解出 5 张黑白预览", result is { Format: LabelFormat.Zpl, LabelCount: 5 } && images.Count == 5);
+        Check("批量生成自动保留 5 个可打印项，选择第二项不会重新生成", batchResult is { Items.Count: 5 }
+            && printItem.Items.Count == 5 && printSelected.Enabled && batchResult.Items[1].ItemNumber == 2);
+        printItem.SelectedIndex = 1;
+        Check("选择第二个生成项同步预览", current == 1);
         ShowImage(4);
+        Check("点击第五张缩略图选择第五个补打项", printItem.SelectedIndex == 4);
         Shot("2-batch-zpl");
+
+        pdf.Checked = true;
+        await RenderBatchAsync();
+        Check("批量 PDF 自动拆成 5 个业务文件，支持第二项图形文档", batchResult is { Items.Count: 5 }
+            && batchResult.Items[1].Files[0].Format == LabelFormat.Pdf);
+        using (var document = WindowsLabelPrinter.CreateDocument(batchResult!.Items[1]))
+        {
+            Check("PDF 单项打印文档创建成功，无需打开阅读器", document.PrintController is System.Drawing.Printing.StandardPrintController);
+        }
+        png.Checked = true;
+        await RenderBatchAsync();
+        Check("批量 PNG 保留 5 项并显示所选项工具栏", batchResult is { Items.Count: 5 } && printItem.Items.Count == 5
+            && batchPrintTools is { Visible: true });
+        Check("批量选择工具栏显示后，下拉框的文字和边框完整", DropdownRowsFit(this));
+        Shot("2c-batch-selection");
+        zpl.Checked = true;
 
         // 从 Excel 复制的两行，表头混用中文名称和 key：替换原有数据、按表头对列；没给的字段留空，服务端按条报缺字段
         PasteBatchText("箱号\tpartName\tqty\r\nC1\t电源适配器\t50\r\nC2\t电源适配器\t60\r\n");
@@ -143,6 +163,7 @@ internal sealed partial class MainForm
             batchRows.Rows.Count == 2 && BatchCell(1, "boxNo") == "C2" && BatchCell(1, "qty") == "60" && BatchCell(0, "batchNo") == "");
         await RenderBatchAsync();
         Check("批量数据缺必填字段：响应信息显示 FIELD_REQUIRED（按条列出）", result is null && ResponseHas(LabelErrorCodes.FieldRequired));
+        Check("生成失败会清除旧集合和打印选择，避免补打旧内容", batchResult is null && printItem.Items.Count == 0 && !printSelected.Enabled);
         batchRows.CurrentCell = batchRows.Rows[0].Cells["boxNo"];
         PasteBatchText("C3\nC4\nC5");
         Check("粘贴不带表头的一列：从选中的格子往下填，行不够时加行", batchRows.Rows.Count == 3 && BatchCell(0, "boxNo") == "C3" && BatchCell(2, "boxNo") == "C5" && BatchCell(1, "partName") == "电源适配器");
@@ -215,7 +236,11 @@ internal sealed partial class MainForm
 
                 // ZPL 提示 DPI 要和打印机一致，PDF、PNG 提示可以拼版
                 var hint = radio == zpl ? ".Dpi = " : ".Layout = \"A4_100x60_2x4\";";
+                var printSource = batchCode ? "result.Items" : "file";
                 if (!PrintExamples.All(codeText.Text.Contains) || !codeText.Text.Contains(hint)
+                    || !codeText.Text.Contains("WindowsLabelPrinter.Print(" + printSource + ", PrinterName);")
+                    || !codeText.Text.Contains("WindowsLabelPrinter.CreateDocument(" + printSource + ", PrinterName)")
+                    || (batchCode && (!codeText.Text.Contains("RenderBatchFilesAsync(batch)") || !codeText.Text.Contains("Print(result.Items[1], PrinterName)")))
                     || codeText.Text.Contains("Process.Start") || codeText.Text.Contains("Verb ="))
                 {
                     incomplete.Add(name);

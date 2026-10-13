@@ -21,6 +21,11 @@ internal sealed class PrintForm : Form
     private readonly LabelFile file;
 
     /// <summary>
+    /// 已生成集合的选择；null 表示使用原单文件入口。
+    /// </summary>
+    private readonly IReadOnlyList<LabelBatchItem>? items;
+
+    /// <summary>
     /// 发到网络打印机（只有 ZPL 可用）。
     /// </summary>
     private readonly RadioButton network = new RadioButton { Text = "网络打印机（ZPL 原始数据，TCP 9100）", AutoSize = true };
@@ -54,9 +59,11 @@ internal sealed class PrintForm : Form
     /// 按结果的格式决定能选哪种打印方式，并给出说明。
     /// </summary>
     /// <param name="file">要打印的结果。</param>
-    public PrintForm(LabelFile file)
+    /// <param name="items">整批或选择的集合，避免丢失 PDF 页选择。</param>
+    public PrintForm(LabelFile file, IReadOnlyList<LabelBatchItem>? items = null)
     {
         this.file = file;
+        this.items = items?.ToArray();
 
         // 和主窗口一样按屏幕缩放：下面的尺寸都是 100% 缩放时的像素
         FormScaling.Begin(this);
@@ -81,7 +88,7 @@ internal sealed class PrintForm : Form
             printer.SelectedIndex = Math.Max(0, printer.Items.IndexOf(defaultName));
         }
 
-        var isZpl = file.Format == LabelFormat.Zpl && !file.IsZip;
+        var isZpl = items is null && file.Format == LabelFormat.Zpl && !file.IsZip;
         network.Enabled = isZpl;
         windows.Enabled = printer.Items.Count > 0;
         windows.Checked = windows.Enabled;
@@ -146,7 +153,17 @@ internal sealed class PrintForm : Form
             else
             {
                 var name = (string)printer.SelectedItem!;
-                await Task.Run(() => WindowsLabelPrinter.Print(file, name));
+                await Task.Run(() =>
+                {
+                    if (items is null)
+                    {
+                        WindowsLabelPrinter.Print(file, name);
+                    }
+                    else
+                    {
+                        WindowsLabelPrinter.Print(items, name);
+                    }
+                });
             }
 
             if (IsDisposed || Disposing)

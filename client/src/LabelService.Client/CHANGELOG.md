@@ -2,6 +2,20 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本遵循[语义化版本](https://semver.org/lang/zh-CN/)：1.x 只做向后兼容的改动，预览版带 `-preview.N`。
 
+## [1.0.0-preview.4] - 2026-10-13
+
+### 新增
+
+- `RenderBatchFilesAsync` / `RenderBatchFiles` 扩展方法、`LabelBatchResult`、`LabelBatchItem`、`LabelBatchUnit`：一次生成后自动得到业务条目或拼版纸页集合，保留原始文件、DPI、实际模板版本及生成份数；兼容原客户端接口实现者。
+- 可选 Windows 打印扩展提供集合、单项、子集的 `Print` / `CreateDocument` 重载，PNG/PDF 连续分页、ZPL 单个 RAW 作业；PDF 拼版按原文档页引用打印，不重新生成。
+- 演示程序保留生成集合，支持“静默打印所选项”，生成代码包含整批、单项和子集用法。
+
+### 修复
+
+- Windows 系统 PDF 引擎在桌面缩放下的位图像素数与请求 DPI 不一致：归一位图尺寸，保留 PDF 实际纸张尺寸。
+
+原 `RenderBatchAsync` 和 `Print(LabelFile)` 保持可用，SDK 仍无 NuGet 依赖。
+
 ## [1.0.0-preview.3] - 2026-10-12
 
 ### 新增

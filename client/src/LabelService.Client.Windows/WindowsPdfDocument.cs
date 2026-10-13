@@ -180,7 +180,18 @@ internal sealed class WindowsPdfDocument : IDisposable
             WindowsPdfNative.Check(WindowsPdfNative.CreateRandomAccessStreamOverStream(output, 0, ref streamId, out randomOutput));
             WindowsPdfNative.Check(WindowsPdfNative.Method<WindowsPdfNative.Render>(page, 7)(page, randomOutput, options, out operation));
             WindowsPdfNative.Wait(operation, false);
-            return new PrintablePage(WindowsPdfNative.Bytes(output), size.Width / 96f, size.Height / 96f);
+            var result = new PrintablePage(WindowsPdfNative.Bytes(output), size.Width / 96f, size.Height / 96f);
+            try
+            {
+                // DestinationWidth/Height 的单位是 DIP，系统可能叠加桌面缩放，打印像素数必须独立校正。
+                result.NormalizePixels(checked((int)width), checked((int)height));
+                return result;
+            }
+            catch
+            {
+                result.Dispose();
+                throw;
+            }
         }
         finally
         {

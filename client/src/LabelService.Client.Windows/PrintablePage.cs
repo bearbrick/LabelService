@@ -1,5 +1,7 @@
 using System;
 using System.Drawing;
+using System.Drawing.Drawing2D;
+using System.Drawing.Imaging;
 using System.IO;
 
 namespace LabelService.Client.Printing;
@@ -55,7 +57,7 @@ internal sealed class PrintablePage : IDisposable
     /// </summary>
     public Image Image
     {
-        get;
+        get; private set;
     }
 
     /// <summary>
@@ -72,6 +74,38 @@ internal sealed class PrintablePage : IDisposable
     public float HeightInches
     {
         get; private set;
+    }
+
+    /// <summary>
+    /// 将系统 PDF 引擎受桌面缩放影响的位图校正到请求 DPI 对应的像素尺寸，物理尺寸保持不变。
+    /// </summary>
+    /// <param name="width">目标像素宽度。</param>
+    /// <param name="height">目标像素高度。</param>
+    internal void NormalizePixels(int width, int height)
+    {
+        if (Image.Width == width && Image.Height == height)
+        {
+            return;
+        }
+        var bitmap = new Bitmap(width, height, PixelFormat.Format32bppArgb);
+        try
+        {
+            using (var graphics = Graphics.FromImage(bitmap))
+            {
+                graphics.CompositingMode = CompositingMode.SourceCopy;
+                graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
+                graphics.PixelOffsetMode = PixelOffsetMode.HighQuality;
+                graphics.DrawImage(Image, new Rectangle(0, 0, width, height),
+                    new Rectangle(0, 0, Image.Width, Image.Height), GraphicsUnit.Pixel);
+            }
+        }
+        catch
+        {
+            bitmap.Dispose();
+            throw;
+        }
+        Image.Dispose();
+        Image = bitmap;
     }
 
     /// <summary>

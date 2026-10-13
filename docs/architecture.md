@@ -112,6 +112,7 @@
 | --- | --- |
 | `src/LabelService.Client/` | SDK 公开 API；`Internal/` 放协议副本和请求体生成；`Printing/` 放打印辅助类 |
 | `src/LabelService.Client.Windows/` | 可选桌面打印扩展：`WindowsLabelPrinter` 统一静默入口、PNG/PDF 连续分页，PDF 通过 Windows 系统原生接口渲染；依赖原 SDK 和桌面框架，原 SDK 不反向引用；见 ADR 0014 |
+| `src/LabelService.Client/Internal/BatchFiles.cs`、`LabelBatchResult.cs` | SDK 将批量 ZIP 在内存整理为业务条目集合（PNG 多份归组）或拼版纸页集合（PDF 原文档页引用），扩展方法兼容原接口；打印模块接受集合、单项及子集，见 ADR 0015 |
 | `samples/LabelService.Demo.WinForms/` | SDK 演示程序 |
 | `tests/LabelService.Client.Checks/` | 调用端检查程序：假服务端用例、协议解析、架构规则、端到端用例 |
 

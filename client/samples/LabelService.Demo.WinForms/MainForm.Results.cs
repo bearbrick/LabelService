@@ -40,6 +40,7 @@ internal sealed partial class MainForm
     private void ShowResult(LabelFile? file)
     {
         result = file;
+        ClearBatchResult();
 
         // 先拿掉还引用旧图片的控件再释放图片，否则 PictureBox 重绘时访问已释放的 Image 会抛异常
         ClearControls(previewHost);
@@ -94,7 +95,9 @@ internal sealed partial class MainForm
             var panel = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 2 };
             panel.RowStyles.Add(new RowStyle(SizeType.Percent, 50));
             panel.RowStyles.Add(new RowStyle(SizeType.Percent, 50));
-            panel.Controls.Add(Message(file.Format == LabelFormat.Pdf
+            panel.Controls.Add(Message(file.IsZip && file.Format == LabelFormat.Pdf
+                ? "PDF 批量文件已保存在内存里，可整批打印或选择已生成项补打；需要查看时打开压缩包。"
+                : file.Format == LabelFormat.Pdf
                 ? $"PDF 共 {file.PageCount} 页。可以直接静默打印；需要查看时用默认程序打开。"
                 : "压缩包里的文件不能预览，保存后查看。"), 0, 0);
             panel.Controls.Add(open, 0, 1);
@@ -217,6 +220,7 @@ internal sealed partial class MainForm
     private void ShowImage(int index)
     {
         current = index;
+        TrackPreviewSelection(index);
         foreach (var picture in previewHost.Controls.Cast<Control>().SelectMany(Descendants).OfType<PictureBox>())
         {
             picture.Image = images[index];
@@ -420,7 +424,7 @@ internal sealed partial class MainForm
     {
         if (result is not null && !printing)
         {
-            using var dialog = new PrintForm(result);
+            using var dialog = new PrintForm(result, batchResult?.Items);
             dialog.ShowDialog(this);
         }
     }

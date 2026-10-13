@@ -71,6 +71,22 @@ internal static class LiveServerChecks
         check("端到端：SDK 批量 PNG 默认打包成 zip",
             zipped is { LabelCount: 3, IsZip: true } && zipped.Content.Length > 4 && zipped.Content[0] == (byte)'P' && zipped.Content[1] == (byte)'K');
 
+        foreach (var format in new[] { LabelFormat.Png, LabelFormat.Pdf, LabelFormat.Zpl })
+        {
+            var collection = await client.RenderBatchFilesAsync(Batch(format));
+            check($"端到端：{format} 一批三份自动分成两个业务条目，保留版本及 DPI",
+                collection.Items.Count == 2 && collection.Items[1].Copies == 2 && collection.OriginalFile.LabelCount == 3
+                && collection.Items.SelectMany(item => item.Files).All(item => item.Dpi == 300 && item.TemplateVersion == schema.Version));
+#if WINDOWS
+            if (format != LabelFormat.Zpl)
+            {
+                using var document = Printing.WindowsLabelPrinter.CreateDocument(collection.Items[1]);
+                using var selected = Printing.BatchPrintPages.Read(new[] { collection.Items[1] }).GetEnumerator();
+                check($"端到端：{format} 第二个业务条目的两份都能读取", selected.MoveNext() && selected.MoveNext() && !selected.MoveNext());
+            }
+#endif
+        }
+
         var sheet = new RenderRequest("BOX_LABEL", LabelFormat.Pdf) { Layout = "A4_100x60_2x4", Copies = 8 }
             .Set("partName", "电源适配器").Set("partNo", "3100-0123").Set("qty", 50).Set("batchNo", "20261008-A").Set("boxNo", "C2610080001");
         var onePage = await client.RenderAsync(sheet);
@@ -80,6 +96,25 @@ internal static class LiveServerChecks
         var twoPages = await client.RenderBatchAsync(pages);
         check("端到端：拼版 PDF，单张 8 份是 1 页；批量 3 张从第 7 格开始是 2 页（PageCount 来自 X-Page-Count）",
             onePage is { LabelCount: 8, PageCount: 1 } && twoPages is { LabelCount: 3, PageCount: 2, IsZip: false });
+        var pageCollection = await client.RenderBatchFilesAsync(pages);
+        check("端到端：PDF 拼版集合按纸页编号，引用原 PDF", pageCollection.Unit == LabelBatchUnit.Page
+            && pageCollection.Items.Count == 2 && pageCollection.Items[1].PdfPageIndex == 1
+            && ReferenceEquals(pageCollection.Items[1].Files[0], pageCollection.OriginalFile));
+#if WINDOWS
+        using (var document = Printing.WindowsLabelPrinter.CreateDocument(pageCollection.Items[1]))
+        using (var selected = Printing.BatchPrintPages.Read(new[] { pageCollection.Items[1] }).GetEnumerator())
+        {
+            var hasPage = selected.MoveNext();
+            var width = hasPage ? selected.Current.WidthInches * 25.4 : 0;
+            check("端到端：选择 PDF 拼版第二页只读取一张 A4", hasPage && Math.Abs(width - 210) < 0.1 && !selected.MoveNext());
+        }
+#endif
+        pages.Format = LabelFormat.Png;
+        var pngPages = await client.RenderBatchFilesAsync(pages);
+        check("端到端：PNG 拼版两页 ZIP 自动分为两页集合", pngPages.Unit == LabelBatchUnit.Page && pngPages.Items.Count == 2);
+        pages.StartSlot = 1;
+        var pngPage = await client.RenderBatchFilesAsync(pages);
+        check("端到端：PNG 单页拼版原 PNG 自动组成一页集合", !pngPage.OriginalFile.IsZip && pngPage.Items.Count == 1);
 #if WINDOWS
         using (var nativePdf = new Printing.WindowsPdfDocument(twoPages.Content))
         {

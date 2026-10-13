@@ -42,16 +42,31 @@ internal static partial class CodeGenerator
     /// 生成结果后直接提交静默打印，不先存文件，也不打开阅读器。
     /// </summary>
     /// <param name="code">生成中的源码。</param>
-    private static void AppendPrintCall(StringBuilder code) => code.Append("""
-
-                    // PNG、PDF、ZPL 和各自的 ZIP 都使用同一入口，直接打印内存里的结果。
-                    // PNG、PDF 多页连续打印，保持实际尺寸；ZPL 打印机必须支持 ZPL，DPI 和份数在生成请求中设置。
-                    WindowsLabelPrinter.Print(file, PrinterName);
+    /// <param name="batch">是否生成集合写法。</param>
+    private static void AppendPrintCall(StringBuilder code, bool batch)
+    {
+        code.AppendLine();
+        if (batch)
+        {
+            code.AppendLine("            // 打印整批；份数已经保留在各项里，无需自己解压或循环打印。");
+            code.AppendLine("            WindowsLabelPrinter.Print(result.Items, PrinterName);");
+            code.AppendLine("            // 只补打第 2 条（拼版时为第 2 页），将上面的 Print 替换为：");
+            code.AppendLine("            // WindowsLabelPrinter.Print(result.Items[1], PrinterName);");
+            code.AppendLine("            // 只补打第 1、3 条（需要集合里至少有 3 项）：");
+            code.AppendLine("            // WindowsLabelPrinter.Print(new[] { result.Items[0], result.Items[2] }, PrinterName);");
+        }
+        else
+        {
+            code.AppendLine("            // PNG、PDF、ZPL 都使用同一静默入口；ZPL 打印机必须支持 ZPL。");
+            code.AppendLine("            WindowsLabelPrinter.Print(file, PrinterName);");
+        }
+        code.Append("""
 
                     // 需要留底时再另存一份：
                     // file.Save(Path.Combine(Path.GetTempPath(), file.FileName));
 
         """);
+    }
 
     /// <summary>
     /// 打印异常与服务调用异常分别处理，异常发生时不声称打印机已经出纸。
@@ -71,10 +86,14 @@ internal static partial class CodeGenerator
     /// 特殊参数的标准写法和网络 ZPL 用法作为注释放在末尾，普通客户无需展开底层方法。
     /// </summary>
     /// <param name="code">生成中的源码。</param>
-    private static void AppendPrintMethods(StringBuilder code) => code.Append("""
+    /// <param name="batch">是否使用集合文档。</param>
+    private static void AppendPrintMethods(StringBuilder code, bool batch)
+    {
+        code.AppendLine();
+        code.AppendLine("    // 特殊情况（PNG、PDF）先修改本次参数再打印，不改系统中的驱动配置：");
+        code.AppendLine("    // using (var document = WindowsLabelPrinter.CreateDocument(" + (batch ? "result.Items" : "file") + ", PrinterName))");
+        code.Append("""
 
-            // 特殊情况（PNG、PDF）把上面的 Print 调用换成下面几行，先修改本次参数再打印，不改系统中的驱动配置：
-            // using (var document = WindowsLabelPrinter.CreateDocument(file, PrinterName))
             // {
             //     document.PrinterSettings.Copies = 2;
             //     document.Print();
@@ -84,4 +103,5 @@ internal static partial class CodeGenerator
             // await NetworkPrinter.SendAsync("192.168.1.50", NetworkPrinter.DefaultPort, file.Content);
 
         """);
+    }
 }

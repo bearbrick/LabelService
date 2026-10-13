@@ -110,7 +110,7 @@ Get-ChildItem $demo -Recurse -File | Where-Object { $_.FullName -notmatch '\\(bi
 # 依赖
 
 - 不依赖任何 NuGet 包（JSON 读写是 SDK 自带的，ADR 0013）。
-- net461（.NET Framework 4.6.1–4.8.1）只用框架自带的 System.Net.Http；netstandard2.0、net8.0 没有额外依赖。
+- net461（.NET Framework 4.6.1–4.8.1）使用框架自带的 System.Net.Http、System.IO.Compression；netstandard2.0、net8.0 没有额外依赖。
 
 直接引用 lib 里的 DLL 也行，不用另外加包。
 

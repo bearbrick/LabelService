@@ -67,11 +67,15 @@ WindowsLabelPrinter.Print(file); // 不传名称时使用 Windows 默认打印�
 
 特殊情况下，PNG、PDF 可用 `CreateDocument(file, printerName)` 取得标准 `PrintDocument`，先修改本次参数再调用 `Print()`，使用完释放。网络 ZPL 辅助方法继续保留。扩展只依赖原 HTTP SDK 和 Windows 桌面框架，不增加第三方 NuGet 包；详细说明见 [打印扩展 README](src/LabelService.Client.Windows/README.md)。
 
+一次生成后按项补打：`var result = await client.RenderBatchFilesAsync(batch)`，整批调用 `WindowsLabelPrinter.Print(result.Items)`，第二项调用 `Print(result.Items[1])`，子集传选中项数组。普通标签按业务条目（含该条全部份数）组织，A4 拼版按纸页组织，PDF 纸页引用原文档且不重新生成。原 API 保持可用；完整语义见 [SDK README](src/LabelService.Client/README.md)。
+
 ## 演示程序
 
 `samples/LabelService.Demo.WinForms` 生成 `LabelServiceDemo.exe`（net48 和 net10.0-windows 两个版本，界面相同），按设计书第 11 节和原型 `docs/prototypes/label-sdk-demo-prototype.html` 实现。
 
 EXE、主窗口和打印窗口使用同一个深蓝条码图标，内含 16～256 像素共七种尺寸，图标嵌入程序集，不需要单独部署 ICO 文件。修改图形后可以运行 `powershell -NoProfile -ExecutionPolicy Bypass -File client/build/New-DemoIcon.ps1` 重新生成。
+
+批量生成后预览区增加“已生成项”选择框及“静默打印所选项”，上方“静默打印”提交整批；切换为单张或生成失败时清除旧集合。补打使用已经生成的内容，不受后来编辑业务字段影响。
 
 | 文件 | 内容 |
 | --- | --- |
