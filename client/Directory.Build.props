@@ -11,7 +11,7 @@
     <Product>标签生成服务</Product>
     <!-- SDK 独立于后端发版：语义化版本，预览版带 -preview.N。正式发布时去掉 VersionSuffix，或由 client/build/pack.ps1 -Version 指定。 -->
     <VersionPrefix>1.0.0</VersionPrefix>
-    <VersionSuffix>preview.3</VersionSuffix>
+    <VersionSuffix>preview.4</VersionSuffix>
     <SatelliteResourceLanguages>zh-Hans</SatelliteResourceLanguages>
   </PropertyGroup>
 
