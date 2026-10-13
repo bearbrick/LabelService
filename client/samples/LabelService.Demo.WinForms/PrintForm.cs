@@ -61,6 +61,7 @@ internal sealed class PrintForm : Form
         // 和主窗口一样按屏幕缩放：下面的尺寸都是 100% 缩放时的像素
         FormScaling.Begin(this);
         Text = "选择其他打印机";
+        Icon = DemoIcon.Value;
         Font = new Font("Microsoft YaHei UI", 9f);
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = MinimizeBox = false;

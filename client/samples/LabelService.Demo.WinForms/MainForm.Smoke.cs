@@ -85,6 +85,7 @@ internal sealed partial class MainForm
         useMock.Checked = server is null;
         flaky.Checked = server is null;
         baseAddress.Text = server ?? baseAddress.Text;
+        Check("窗口使用内嵌条码图标，不依赖运行目录里的外部图标文件", ReferenceEquals(Icon, DemoIcon.Value) && typeof(MainForm).Assembly.GetManifestResourceNames().Contains("LabelService.Demo.AppIcon.ico"));
         Check($"界面缩放（{DeviceDpi} dpi）：左栏的文字都不折行，DPI 下拉框放得下“模板默认”", LeftLabelsFit() && dpi.Width >= TextRenderer.MeasureText("模板默认", dpi.Font).Width + SystemInformation.VerticalScrollBarWidth);
 
         await RefreshTemplatesAsync();

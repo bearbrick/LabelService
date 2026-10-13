@@ -8,6 +8,8 @@
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <AssemblyName>LabelServiceDemo</AssemblyName>
     <RootNamespace>LabelService.Demo</RootNamespace>
+    <!-- 同时设置 EXE 图标和窗口资源，部署时不需要额外的 ICO 文件。 -->
+    <ApplicationIcon>Assets\AppIcon.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup Condition="'$(TargetFramework)' == 'net48'">
@@ -19,6 +21,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="Assets\AppIcon.ico" LogicalName="LabelService.Demo.AppIcon.ico" />
     <ProjectReference Include="..\..\src\LabelService.Client\LabelService.Client.csproj" />
     <ProjectReference Include="..\..\src\LabelService.Client.Windows\LabelService.Client.Windows.csproj" />
   </ItemGroup>

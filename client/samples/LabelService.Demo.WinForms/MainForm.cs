@@ -289,6 +289,7 @@ internal sealed partial class MainForm : Form
         // 按屏幕缩放：下面写的尺寸都是 100% 缩放时的像素，150% 的屏幕上放大 1.5 倍，字变大时控件跟着变大（否则标签折行、下拉框文字被截断）
         FormScaling.Begin(this);
         Text = "标签服务 SDK 调用演示 - LabelServiceDemo";
+        Icon = DemoIcon.Value;
         Font = new Font("Microsoft YaHei UI", 9f);
         ClientSize = new Size(1240, 760);
         StartPosition = FormStartPosition.CenterScreen;

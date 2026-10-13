@@ -71,6 +71,8 @@ WindowsLabelPrinter.Print(file); // 不传名称时使用 Windows 默认打印�
 
 `samples/LabelService.Demo.WinForms` 生成 `LabelServiceDemo.exe`（net48 和 net10.0-windows 两个版本，界面相同），按设计书第 11 节和原型 `docs/prototypes/label-sdk-demo-prototype.html` 实现。
 
+EXE、主窗口和打印窗口使用同一个深蓝条码图标，内含 16～256 像素共七种尺寸，图标嵌入程序集，不需要单独部署 ICO 文件。修改图形后可以运行 `powershell -NoProfile -ExecutionPolicy Bypass -File client/build/New-DemoIcon.ps1` 重新生成。
+
 | 文件 | 内容 |
 | --- | --- |
 | `MainForm.cs` | 控件定义、窗口大小（100% 缩放时默认 1240×760、最小 960×600，按屏幕缩放，不超出工作区）、组装界面 |
