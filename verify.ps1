@@ -1,7 +1,7 @@
 ﻿<#
 .SYNOPSIS
   统一验证脚本：后端、调用端、前端各自编译、格式检查、运行检查程序。
-  全量运行时会临时启动后端服务，让调用端 SDK 对真实服务跑端到端检查。
+  全量运行时先检查文档本地链接，再临时启动后端服务，让调用端 SDK 跑端到端检查。
 
 .EXAMPLE
   powershell -NoProfile -ExecutionPolicy Bypass -File .\verify.ps1
@@ -70,6 +70,10 @@ function Invoke-ClientChecksWithServer {
 
 Push-Location $root
 try {
+    if ($Part -eq 'all') {
+        Invoke-Step '文档：本地文件链接' { node tools/check-docs.mjs }
+    }
+
     if ($Part -in 'all', 'backend') {
         Invoke-Step '后端：编译' { dotnet build backend/LabelService.Backend.slnx }
         Invoke-Step '后端：格式检查' { dotnet format backend/LabelService.Backend.slnx --verify-no-changes --no-restore }

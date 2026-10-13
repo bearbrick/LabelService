@@ -21,7 +21,7 @@
 
 核心指标：**单张标签服务端处理 P95 ≤ 100 ms**（见 `docs/performance.md`）。
 
-当前阶段：骨架已完成（T-000）。单实例部署（ADR 0003）；数据库默认 SQLite，可切换 SQL Server、PostgreSQL；后端按领域驱动设计分成领域、应用、基础设施、接口四层（T-023，ADR 0010）。单张 PNG 链路可用，7 种元素全部实现（T-001～T-004），PNG、PDF、ZPL 三种格式和批量接口都可用（T-005～T-007）；模板数据库和版本发布、调用方和调用日志已完成（T-008、T-009）；管理接口（见 `docs/admin-api.md`）和管理后台页面已完成（T-014），设计器的模板从服务端打开、草稿自动保存到服务端；服务端预览和设计器加载服务端字体已完成（T-016）；启动预热、并发排队、每日备份和部署说明已完成（T-017，`backend/deploy/`）；`/metrics` 和监控样例已完成（T-010）；基准门禁和 k6 压测脚本已完成（T-015）；SDK 打包脚本和 1.0.0-preview.1 的包说明已完成（T-011，`client/build/pack.ps1`）；WinForms 演示程序完整版已完成，带内置模拟服务和 `--smoke` 自检（T-012）；A4 拼版已完成：版式存 `sheet_layout` 表、管理接口 `/api/admin/layouts`、开放接口的 `layout` / `startSlot`、SDK 的 `Layout` / `PageCount`（T-018）；拼版设计器已完成，资源菜单的“拼版版式”（T-019）；一期验收问题已修复并做了总体 review（T-021，`docs/reviews/phase1-review.md`，证据在 `docs/reviews/phase1-evidence/`），待用户决定的事项列在 review 第 7 节。三个部分的代码注释已补齐，由各自的检查程序核对，代码里不写任务号（T-024，见 R5）。管理后台可以设置系统名称、公司 Logo、版权信息等系统信息，读取不用登录，修改要权限点 sys.settings（T-026，`/api/admin/system-info`）。字体由使用单位在“素材与字体”页上传，上传后不用重启立即生效，发布包不带字体（T-028，ADR 0011）。其余任务见 `docs/tasks/README.md`。
+当前阶段：功能收敛与定版前验收（2026-10-13），维护以使用体验、兼容性和缺陷修复为主。网页设计、7 种元素、单张/批量 PNG/PDF/ZPL、A4 拼版、管理后台、版本发布、字体上传、启动预热、并发控制和监控均已实现。SDK 为 1.0.0-preview.5，支持 net461/netstandard2.0/net8.0；可选 Windows 扩展统一静默打印 PNG/PDF/ZPL，支持生成结果集合、整批/单项/子集补打，PDF 使用系统引擎。字段区分接口输入与模板提供，系统预设和手写值互斥；省略来源的旧模板兼容。当前文档入口见 [docs/README.md](docs/README.md)，定版和现场核对项见 [docs/release-readiness.md](docs/release-readiness.md)，统一验证与浏览器/桌面测试入口见 [docs/testing.md](docs/testing.md)。正式版本、实际打印机、目标服务器及性能门禁异常仍需核对，不把准备定版等同于全部任务已验收；历史实现和交接保留在 [docs/tasks](docs/tasks/README.md) 与 [docs/reviews](docs/reviews/README.md)。
 
 ## 2. 仓库地图
 

@@ -7,6 +7,9 @@
     "dev": "vite",
     "build": "vue-tsc --noEmit && vite build",
     "check": "node tests/checks.ts",
+    "check:browser:boundaries": "node tests/browser-boundaries.mjs",
+    "check:browser:layout": "node tests/layout-behavior.mjs",
+    "check:browser:segmented": "node tests/segmented-browser.mjs after",
     "typecheck": "vue-tsc --noEmit",
     "preview": "vite preview"
   },
