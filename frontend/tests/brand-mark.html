@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>品牌组件展示检查</title>
+</head>
+<body>
+  <main id="app"></main>
+  <script type="module">
+    import { createApp, h, nextTick } from 'vue'
+    import BrandMark from '../src/components/admin/BrandMark.vue'
+    import '../src/style.css'
+    import '../src/admin.css'
+    import '../src/system.css'
+    import '../src/layout-recovery.css'
+
+    // 只读取公开系统信息，构造本页组件参数，不保存或上传任何配置。
+    const response = await fetch('/api/admin/system-info')
+    if (!response.ok) throw new Error('读取系统信息失败')
+    const info = await response.json()
+    const cases = [
+      { name: '当前配置：透明长 Logo', info },
+      { name: '没有深色 Logo：完整 Logo', info: { ...info, logoDarkVersion: null } },
+      { name: '只上传图标', info: { ...info, logoDarkVersion: null, logoVersion: null } },
+      { name: '没有图片：占位', info: { ...info, logoDarkVersion: null, logoVersion: null, iconVersion: null } },
+    ]
+
+    createApp({
+      /**
+       * 直接渲染真实组件，四种参数独立展示，便于核对图片回退及系统名称。
+       * @returns 组件节点。
+       */
+      render() {
+        return h('div', cases.map((item, index) => h('section', { 'data-case': index }, [
+          h('p', { style: 'padding: 20px 24px 8px' }, item.name),
+          h('header', { class: 'topbar' }, [
+            h('button', { class: 'brand', type: 'button', 'aria-label': '品牌入口' }, [h(BrandMark, { info: item.info })]),
+          ]),
+        ])))
+      },
+    }).mount('#app')
+    await nextTick()
+
+    // 断言真实 DOM 的回退结果，不复制组件选图逻辑；图片实际加载与布局由浏览器另行检查。
+    const checks = [
+      !info.logoDarkVersion || !!document.querySelector('[data-case="0"] .brand-logo-dark img[src*="logo-dark"]'),
+      !info.logoVersion || !!document.querySelector('[data-case="1"] img[src*="system-info/logo?"]'),
+      !info.iconVersion || !!document.querySelector('[data-case="2"] img[src*="system-info/icon?"]'),
+      !document.querySelector('[data-case="3"] img') && !!document.querySelector('[data-case="3"] .logo-placeholder'),
+      document.querySelectorAll('.sys-name').length === 4,
+    ]
+    const result = document.createElement('p')
+    result.setAttribute('role', 'status')
+    result.style.padding = '20px 24px'
+    result.textContent = checks.every(Boolean) ? '品牌组件检查通过：5 项' : '品牌组件检查失败'
+    document.body.append(result)
+    if (!checks.every(Boolean)) throw new Error(result.textContent)
+  </script>
+</body>
+</html>

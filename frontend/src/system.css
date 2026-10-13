@@ -1,6 +1,6 @@
 /* 公司 Logo、系统标题、登录页页脚和系统信息页。 */
 
-/* 顶栏左上角：白底圆角框里放公司 Logo，右边是系统名称（按钮去掉浏览器默认的底色和边框） */
+/* 顶栏左上角：优先透明的深色背景 Logo，右边是系统名称；普通 Logo 保留白底以保证可读。 */
 .topbar .brand { background: none; border: 0; padding: 0; color: #fff; cursor: pointer; min-width: 0; }
 /* 顶栏放不下时先省略副标题，再省略系统名称；业务切换按钮不压缩（业务名称自己限宽 220px） */
 .topbar > .brand { flex: 0 3 auto; overflow: hidden; }
@@ -12,6 +12,18 @@
 .brand-mark { display: inline-flex; align-items: center; gap: 14px; min-width: 0; }
 .company-logo { display: inline-flex; align-items: center; justify-content: center; height: 36px; max-width: 168px; padding: 4px 10px; background: #fff; border-radius: 6px; flex: none; overflow: hidden; }
 .company-logo img { display: block; max-height: 28px; max-width: 148px; object-fit: contain; }
+/* 长 Logo 保留图形和公司名，不拉伸；仅品牌区取消白卡片，不影响系统信息页的图片槽。 */
+.brand-mark .company-logo.brand-logo-dark { padding: 0; background: transparent; border-radius: 0; max-width: 152px; }
+.brand-mark .brand-logo-dark img { max-height: 36px; max-width: 152px; }
+@media (max-width: 1180px) {
+  .brand-mark .brand-logo-dark img { max-height: 30px; max-width: 120px; }
+}
+/* 导航文字尚未折叠的临界宽度，品牌区优先保留完整 Logo，避免把右侧菜单挤出窗口。 */
+@media (min-width: 901px) and (max-width: 1180px) {
+  .topbar { padding-inline: 16px; gap: 12px; }
+  .topbar .brand-mark .sys-name { display: none; }
+  .topbar .company-logo:not(.brand-logo-dark) img { max-height: 24px; max-width: 100px; }
+}
 .logo-placeholder { font-size: 11px; letter-spacing: 1px; color: #8c97a8; border: 1px dashed #c6cfdc; border-radius: 3px; padding: 3px 8px; white-space: nowrap; }
 .sys-name { font-size: 18px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 260px; padding-left: 14px; border-left: 1px solid #ffffff35; line-height: 22px; }
 @media (max-width: 1280px) { .sys-name { max-width: 180px; } }

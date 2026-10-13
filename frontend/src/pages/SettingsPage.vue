@@ -80,9 +80,9 @@ interface ImageSlot {
  * 三张图，按页面上的顺序排列。
  */
 const IMAGE_SLOTS: ImageSlot[] = [
-  { kind: 'logo', title: '完整 Logo', usage: '登录页左上角，显示得较大；可以带公司名称文字', fallback: '没上传时用 Logo 图标' },
-  { kind: 'icon', title: 'Logo 图标', usage: '顶栏左上角和浏览器标签页，显示很小；建议只用图形', fallback: '没上传时用完整 Logo' },
-  { kind: 'logoDark', title: '深色背景 Logo', usage: '登录页左上角深蓝底上直接显示（不加白框）；用白色或浅色、透明背景的 PNG', fallback: '没上传时登录页用白底卡片放完整 Logo' },
+  { kind: 'logo', title: '完整 Logo', usage: '登录页及顶栏未上传深色背景 Logo 时显示；可以带公司名称文字', fallback: '没上传时用 Logo 图标' },
+  { kind: 'icon', title: 'Logo 图标', usage: '浏览器标签页；完整 Logo 未上传时也用于页面品牌区，建议只用图形', fallback: '没上传时浏览器标签页使用默认图标' },
+  { kind: 'logoDark', title: '深色背景 Logo', usage: '登录页和顶栏的深蓝底上直接显示（不加白框）；建议白色或浅色、透明背景的长 Logo', fallback: '没上传时用白底卡片放完整 Logo 或图标' },
 ]
 
 /**
