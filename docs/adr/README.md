@@ -52,3 +52,4 @@
 | [0013](0013-sdk-own-json-net461.md) | SDK 自带 JSON 读写，最低支持 .NET Framework 4.6.1 | 已采纳 |
 | [0014](0014-windows-silent-print.md) | 可选 Windows 打印模块使用系统 PDF 引擎 | 已采纳 |
 | [0015](0015-batch-print-items.md) | 批量结果按业务条目或纸页组织及补打 | 已采纳 |
+| [0016](0016-explicit-field-sources.md) | 字段显式来源与互斥模板取值 | 已采纳 |
