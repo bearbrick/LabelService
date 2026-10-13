@@ -102,6 +102,8 @@ internal sealed class PrintForm : Form
         layout.Controls.Add(buttons);
         Controls.Add(layout);
         FormScaling.End(this);
+        FitPrinterList();
+        printer.DropDown += (_, _) => FitPrinterList();
         AcceptButton = send;
         CancelButton = cancel;
         send.Enabled = network.Enabled || windows.Enabled;
@@ -116,6 +118,16 @@ internal sealed class PrintForm : Form
         windows.CheckedChanged += (_, _) => Sync();
         Sync();
         send.Click += async (_, _) => await SendAsync();
+    }
+
+    /// <summary>
+    /// 展开列表按当前字体和打印机名称定宽，长名称不受收起时输入框宽度限制。
+    /// </summary>
+    private void FitPrinterList()
+    {
+        printer.DropDownWidth = Math.Min(Screen.FromControl(this).WorkingArea.Width,
+            printer.Items.Cast<string>().Select(name => TextRenderer.MeasureText(name, printer.Font).Width
+                + SystemInformation.VerticalScrollBarWidth + 12).DefaultIfEmpty(printer.Width).Append(printer.Width).Max());
     }
 
     /// <summary>

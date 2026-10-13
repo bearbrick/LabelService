@@ -87,6 +87,7 @@ internal sealed partial class MainForm
         baseAddress.Text = server ?? baseAddress.Text;
         Check("窗口使用内嵌条码图标，不依赖运行目录里的外部图标文件", ReferenceEquals(Icon, DemoIcon.Value) && typeof(MainForm).Assembly.GetManifestResourceNames().Contains("LabelService.Demo.AppIcon.ico"));
         Check($"界面缩放（{DeviceDpi} dpi）：左栏的文字都不折行，DPI 下拉框放得下“模板默认”", LeftLabelsFit() && dpi.Width >= TextRenderer.MeasureText("模板默认", dpi.Font).Width + SystemInformation.VerticalScrollBarWidth);
+        Check("主窗口的横排下拉框文字和边框显示完整", DropdownRowsFit(this));
 
         await RefreshTemplatesAsync();
         Check("刷新模板：下拉框里有这把 Key 能用的模板，带名称", templateCode.Items.Contains("BOX_LABEL") && templateCode.Items.Contains("A4_SHIPPING_MARK") && templateList["BOX_LABEL"].Name.Length > 0);
@@ -99,6 +100,18 @@ internal sealed partial class MainForm
         png.Checked = true;
         await RenderSingleAsync();
         Check("生成单张 PNG，有预览图", result is { Format: LabelFormat.Png, LabelCount: 1 } && images.Count == 1);
+        if (result is not null)
+        {
+            // 只显示打印窗口核对布局，不触发发送按钮或提交打印任务。
+            using var printWindow = new PrintForm(result);
+            printWindow.Show(this);
+            Application.DoEvents();
+            Check("选择其他打印机窗口的下拉框未被父容器裁切", DropdownRowsFit(printWindow));
+            using var printBitmap = new Bitmap(printWindow.Width, printWindow.Height);
+            printWindow.DrawToBitmap(printBitmap, new Rectangle(0, 0, printWindow.Width, printWindow.Height));
+            printBitmap.Save(Path.Combine(directory, "0-print-layout.png"), ImageFormat.Png);
+            printWindow.Close();
+        }
         if (server is null)
         {
             // 调用日志是 CallCompleted 事件异步加进列表的（BeginInvoke）：等这次生成的那条加进来再看，最多等 1 秒
@@ -220,6 +233,30 @@ internal sealed partial class MainForm
         File.WriteAllText(reportPath, report.ToString(), Encoding.UTF8);
         Environment.ExitCode = failures == 0 ? 0 : 1;
         Close();
+    }
+
+    /// <summary>
+    /// 核对所有横排下拉框的实际边界，确保文字和边框不会被父容器裁切。
+    /// </summary>
+    /// <param name="control">窗口或控件子树的根节点。</param>
+    /// <returns>全部横排下拉框显示完整时为 true。</returns>
+    private static bool DropdownRowsFit(Control control)
+    {
+        foreach (Control child in control.Controls)
+        {
+            if (child is ComboBox combo && combo.Parent is FlowLayoutPanel flow
+                && (combo.Top < 0 || combo.Bottom > flow.ClientSize.Height))
+            {
+                return false;
+            }
+
+            if (!DropdownRowsFit(child))
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /// <summary>

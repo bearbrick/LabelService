@@ -42,6 +42,31 @@ internal static class FormScaling
 
         form.ResumeLayout(false);
         form.PerformLayout();
+
+        // 原生下拉框的实际高度可能高于自动布局测得的首选高度，明确下限才能给文字和边框留足空间。
+        // 在自动缩放完成后再取高度，避免把已经按 DPI 放大的尺寸重复缩放。
+        foreach (var flow in Descendants(form).OfType<FlowLayoutPanel>()
+            .Where(panel => !panel.WrapContents && panel.Controls.OfType<ComboBox>().Any()))
+        {
+            FitDropdownRow(flow);
+            flow.Layout += (_, _) => FitDropdownRow(flow);
+        }
+
+        form.PerformLayout();
+    }
+
+    /// <summary>
+    /// 按控件实际高度和外边距设置横排行的下限，避免首选高度缓存裁掉原生下拉框。
+    /// </summary>
+    /// <param name="flow">包含下拉框且不折行的横排容器。</param>
+    private static void FitDropdownRow(FlowLayoutPanel flow)
+    {
+        var height = flow.Controls.Cast<Control>().Max(control => control.Height + control.Margin.Vertical)
+            + flow.Padding.Vertical;
+        if (flow.MinimumSize.Height != height)
+        {
+            flow.MinimumSize = new Size(flow.MinimumSize.Width, height);
+        }
     }
 
     /// <summary>
