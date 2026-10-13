@@ -65,6 +65,7 @@ Select-String -Path docs/tasks/T-*.md -Pattern '^(状态|负责人)：'
 | [T-046](T-046-dark-logo.md) | 深色背景 Logo：登录页深蓝底上直接放反白 Logo | 后端 + 前端 | 一期验收 | T-044 | `Application/SystemSettings`、`src/components/admin/LoginBrand.vue` |
 | [T-047](T-047-full-print-example.md) | 调用代码写全三种格式的打印：PDF、多页、ZPL | 调用端 | 一期验收 | T-045 | `samples/LabelService.Demo.WinForms` |
 | [T-048](T-048-windows-silent-print.md) | Windows 客户端统一静默打印 PNG、PDF、ZPL | 调用端 | 一期验收 | T-047 | `src/LabelService.Client.Windows`、`samples/LabelService.Demo.WinForms` |
+| [T-049](T-049-demo-icon.md) | 客户端窗口、任务栏和 EXE 使用条码图标 | 调用端 | 一期验收 | — | `samples/LabelService.Demo.WinForms` |
 
 “主要目录”是相对于对应部分（`frontend/`、`backend/`、`client/`）的路径；后端的 Rendering、Server 指 `backend/src/LabelService.Rendering`、`backend/src/LabelService.Server`（T-023 起 Server 改名为 `LabelService.Api`，原来的模板存储、鉴权、日志等拆到 Domain、Application、Infrastructure，见 ADR 0010；已完成任务的“主要目录”保留当时的写法）。跨两个部分的任务（T-014、T-016、T-018、T-020）建议按部分拆成子任务分别认领；T-018 是契约变更，后端和调用端的契约副本要在同一个提交里改齐。
 
