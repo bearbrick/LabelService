@@ -120,4 +120,6 @@ dotnet run -c Release --project backend/tests/LabelService.Benchmarks -- --updat
 
 | 2026-10-10 | A4 拼版（T-021 复核 T-018），`SheetBenchmarks` PDF、PNG 都在门禁里，同上 | PDF 中位数 8.05 ms、P95 8.15 ms；PNG（`PngWriter` 后）中位数 23.1 ms、P95 23.9 ms；预算是 P95 ≤ 250 ms | 固定元素共享排版（`ShareStatic`）**没有带来可测的提速**：PDF 两次完整门禁 −3%、−5%，PNG +1%、+2%，都在同机 ±4% 的波动内；只是 PDF 每次分配少 19%。T-018 行里“PNG 太重、门禁只放 PDF”已改回 PDF、PNG 都放（T-021）。上面 T-018 行的 7.3 ms 是中位数，不是 P95 |
 
+| 2026-10-13 | 显式字段来源（T-052），同一台 Ryzen AI 9 H 465、.NET 10.0.9，Release 门禁 18 项，10 次迭代，改动前后中位数 | 箱标 PNG 203/300dpi：1.400/2.636 → 0.829/1.626 ms；含逐次字段校验的 PDF：4.682/4.715 → 2.773/5.484 ms；ZPL：1.552/2.991 → 0.927/3.536 ms；A4 拼版 PNG：29.615 → 34.695 ms | 历史基线在改动前已失败 10 项，没有更新仓库基线。会话前后全量比较有 1 项超过 20%：仅渲染的箱标 PDF 4.767 → 5.957 ms（+25%）；该项不计字段校验，单项复跑中位数 5.115 ms（+7%），不能据此把全量门禁记为通过。其余 17 项在 20% 内。单项门禁因过滤覆盖检查返回 3，仍保留实际测量值。记录在本机会话的 artifacts/field-sources/benchmark-before.log、benchmark-after.log、benchmark-pdf-recheck.log；结果不代表生产 HTTP P95，也不证明此次来源判断带来提速。 |
+
 实现新元素或格式后在这里追加一行，写明机器和条件。

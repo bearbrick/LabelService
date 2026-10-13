@@ -2,6 +2,13 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本遵循[语义化版本](https://semver.org/lang/zh-CN/)：1.x 只做向后兼容的改动，预览版带 `-preview.N`。
 
+## [1.0.0-preview.5] - 2026-10-13
+
+### 新增
+
+- `TemplateField.Source`：字段定义接口的可选来源（input/template/null）；`RequiresInput` 区分是否需由接口填写。旧响应省略来源时保持原行为。
+- 演示程序模板提供字段不要求填写、输入只读，生成请求和复制代码排除这些字段。
+
 ## [1.0.0-preview.4] - 2026-10-13
 
 ### 新增

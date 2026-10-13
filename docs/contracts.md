@@ -38,9 +38,10 @@
 | `key` | 必填 | 字母开头，只含字母、数字、下划线；模板内唯一，区分大小写 |
 | `type` | `string` | `string` / `number` / `date` / `image` |
 | `name` | — | 中文显示名 |
-| `required` | `true` | 必填字段没传、没有自动值也没有默认值时返回 `FIELD_REQUIRED` |
-| `default` | — | 没传时用的值 |
-| `auto` | — | 自动值：没传时由服务端算出来，优先于 `default`，写法见下表（T-038，ADR 0012） |
+| `required` | `true` | 接口必填字段没传则返回 `FIELD_REQUIRED`；模板提供不适用；旧字段有自动值或默认值时使用回退 |
+| `source` | 省略 | `input` 仅接口传入；`template` 仅模板提供，忽略同名接口输入；省略时保留原有回退顺序 |
+| `default` | — | 模板提供的手写值；旧字段省略来源时作为不传值的回退 |
+| `auto` | — | 系统预设；旧字段省略来源时作为不传值的回退，优先于 `default`，写法见下表（T-038，ADR 0012、0016） |
 | `format` | — | number、date 的默认显示格式（.NET 格式字符串） |
 | `sample` | — | 样例值，用于预览和 JSON 样例 |
 | `maxLength` | — | string 的最大字符数，超出返回 `FIELD_TYPE_INVALID` |
@@ -58,8 +59,11 @@
 | `string` | `requestId` | 请求号：X-Request-Id，没带时是服务端的跟踪号（X-Trace-Id） |
 
 - 取值顺序：条目数据 → 批量公共字段 → 自动值 → `default`。调用方传了就用传的。
+- 上述顺序只适用于未声明 `source` 的旧字段。`source: "input"` 只取条目/公共数据，不允许配置 `auto`、`default`；`source: "template"` 只取模板预设或手写值，两者互斥，允许均为空，`required` 不适用。发布前检查冲突及类型；旧发布版本不迁移，`schemaVersion` 仍为 `1.0`。
+- 系统预设与手写内容分开：手写 `now` 是普通文本，只有 `auto: "now"` 才生成当前日期时间。数字零是有效手写值。
 - 同一次请求只取一次当前时间，批量里每张一样；时间按 `LabelService:Render:TimeZone` 配置的时区（如 `Asia/Shanghai`），不配时用服务器本机时区。
 - 字段定义接口（`/schema`）返回 `auto`；它的 `sample` 里不放有自动值的字段（照着样例传会盖掉自动值）。
+- `/schema` 同时返回可选的 `source`；模板提供字段的 `required` 为 false，不进入 `sample`。SDK `TemplateField.Source` 原样保留，`RequiresInput` 指示调用方是否需填写。
 
 数据校验规则（`FieldValidator`）：
 

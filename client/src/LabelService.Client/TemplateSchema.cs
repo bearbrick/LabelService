@@ -127,7 +127,20 @@ public sealed class TemplateField
     public bool Required { get; set; } = true;
 
     /// <summary>
-    /// 不传时使用的固定默认值：string、decimal、bool 等；没有时为 null。
+    /// 数据来源：input 仅接口传入，template 仅模板提供；null 保留旧版的接口优先规则。
+    /// </summary>
+    public string? Source
+    {
+        get; set;
+    }
+
+    /// <summary>
+    /// 是否要求调用方填写；模板提供及旧版自动值字段不要求接口填写。
+    /// </summary>
+    public bool RequiresInput => Source != "template" && Required && Auto == null;
+
+    /// <summary>
+    /// 模板提供的手写值；旧版省略来源时作为不传值的回退。值为 string、decimal、bool 等，没有时为 null。
     /// </summary>
     public object? Default
     {
@@ -135,8 +148,8 @@ public sealed class TemplateField
     }
 
     /// <summary>
-    /// 自动值：不传时服务端自动算出来，如 today（当前日期）、today+30d（30 天后）、index（批量里第几张）、client（调用方名称），
-    /// 写法见 docs/contracts.md；没有时为 null。有自动值的字段不用传，传了就用传的值。
+    /// 系统预设：服务端计算 today（当前日期）、today+30d（30 天后）、index（批量里第几张）、client（调用方名称）等，
+    /// 写法见 docs/contracts.md；没有时为 null。模板提供时忽略同名接口值，旧版省略来源时允许接口覆盖。
     /// </summary>
     public string? Auto
     {

@@ -158,7 +158,8 @@ public sealed partial class LabelRenderAppService(
                 Key = field.Key,
                 Name = field.Name,
                 Type = field.Type,
-                Required = field.Required,
+                Required = field.Source != FieldSource.Template && field.Required,
+                Source = field.Source,
                 Default = field.Default,
                 Auto = field.Auto,
                 Format = field.Format,
@@ -166,7 +167,7 @@ public sealed partial class LabelRenderAppService(
             }).ToList(),
             // 有自动值的字段不放进样例：照着样例传反而会盖掉自动值。
             Sample = template.Fields
-                .Where(field => field.Sample is not null && field.Auto is null)
+                .Where(field => field.Sample is not null && field.Auto is null && field.Source != FieldSource.Template)
                 .ToDictionary(field => field.Key, field => field.Sample!.Value),
         };
     }

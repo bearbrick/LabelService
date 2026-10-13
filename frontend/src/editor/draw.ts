@@ -5,6 +5,7 @@
  */
 import Konva from 'konva'
 import type { DisplayMode } from '../model/bindings.ts'
+import { previewFieldValue } from '../model/fieldSources.ts'
 import { findIcon } from '../model/icons.ts'
 import { STROKE_DEFAULT_WIDTH } from '../model/template.ts'
 import type { FieldDefinition, IconElement, ImageElement, LabelElement, LineElement, RectElement } from '../model/template.ts'
@@ -166,7 +167,8 @@ function drawImage(group: Konva.Group, element: ImageElement, context: DrawConte
   } else {
     const key = /\{\{\s*([A-Za-z][A-Za-z0-9_]*)/.exec(src)?.[1]
     label = key ? `{{${key}}}` : '未设置来源'
-    const sample = key ? context.fields.find((field) => field.key === key)?.sample : undefined
+    const field = key ? context.fields.find((field) => field.key === key) : undefined
+    const sample = field ? previewFieldValue(field) : undefined
     if (typeof sample === 'string' && sample && context.mode === 'sample') {
       url = sample.startsWith('data:') ? sample : `data:image/png;base64,${sample}`
     }

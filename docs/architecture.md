@@ -80,6 +80,7 @@
 | `src/LabelService.Contracts/LabelJson.cs`、`LabelUnits.cs` | 统一的 JSON 设置；mm、pt、点的换算 |
 | `src/LabelService.Rendering/Binding/` | `{{key:format}}` 绑定替换 |
 | `src/LabelService.Rendering/Validation/` | 字段校验和类型转换 |
+| 字段来源（ADR 0016） | source 可选：input 只读接口数据，template 只读互斥的预设/手写值，省略保持旧回退规则；发布期检查配置冲突，预览和 schema 样例排除模板提供字段 |
 | `src/LabelService.Rendering/Elements/` | 每种元素一个绘制器，`ElementPainters.cs` 登记；文本排版（换行、自动缩小、对齐）在 `TextLayout.cs`；条码编码在 `LinearSymbols.cs`（一维）、`MatrixSymbols.cs`（二维），编码结果缓存在 `Symbols.cs`（一维、二维共用） |
 | `src/LabelService.Rendering/Assets/` | 素材库：图标、图片素材启动时加载，按目标尺寸栅格化后缓存；SVG 清洗（`SvgSanitizer`）；Floyd–Steinberg 抖动 |
 | `src/LabelService.Rendering/Fonts/` | 字体注册表：启动时加载字体目录，按模板字体名匹配，缺失时降级；缓存字体和 SKFont |

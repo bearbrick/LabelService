@@ -3,7 +3,7 @@
  * 规则和后端 BindingResolver 一致：绑定里的格式优先，其次字段的 format，再次默认格式。
  * 这里只支持常用的 .NET 格式写法，用于预览；最终效果以服务端预览为准。
  */
-import { autoPreview } from './autoValues.ts'
+import { previewFieldValue } from './fieldSources.ts'
 import type { FieldDefinition, FieldType, LabelElement } from './template.ts'
 
 /**
@@ -86,7 +86,8 @@ export function resolveText(text: string, fields: readonly FieldDefinition[], mo
   return text.replace(BINDING, (whole, key: string, format: string | undefined) => {
     const field = fields.find((item) => item.key === key)
     // 有自动值的字段显示自动值算出来的样子（和实际打出来的一样），其次样例值、默认值
-    const value = (field?.auto ? autoPreview(field) : undefined) ?? field?.sample ?? field?.default
+    const value = field ? previewFieldValue(field) : undefined
+    if (field?.source === 'template' && (value === undefined || value === null || value === '')) return ''
     if (value === undefined || value === null || value === '') return whole
     return formatValue(value, field?.type ?? 'string', format?.trim() || field?.format)
   })

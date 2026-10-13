@@ -15,6 +15,7 @@ export const PLACEHOLDER_IMAGE = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA
  * @returns 样例值、按类型的占位值，或 undefined（不传）。
  */
 export function sampleValue(field: FieldDefinition): unknown {
+  if (field.source === 'template') return undefined
   if (field.auto) return undefined
   if (field.sample !== undefined && field.sample !== null && field.sample !== '') return field.sample
   const hasDefault = field.default !== undefined && field.default !== null && field.default !== ''

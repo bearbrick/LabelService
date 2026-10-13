@@ -35,6 +35,7 @@ internal static class Responses
                 Name = Text(field, "name"),
                 Type = Text(field, "type") ?? "string",
                 Required = Bool(field, "required") ?? true,
+                Source = Text(field, "source"),
                 Default = Get(field, "default"),
                 Format = Text(field, "format"),
                 MaxLength = Int(field, "maxLength"),

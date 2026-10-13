@@ -2,6 +2,7 @@
  * 设计器的字段操作：添加、改 key（引用它的元素一起改）、删除、把字段插入选中的元素。
  */
 import { renameKey } from '../model/bindings.ts'
+import { changeLiteral, changePreset, changeSource } from '../model/fieldSources.ts'
 import type { FieldDefinition, FieldType } from '../model/template.ts'
 import { FIELD_KEY_PATTERN } from '../model/validate.ts'
 import { commit } from './designerHistory.ts'
@@ -18,7 +19,7 @@ export function addField(key: string, type: FieldType, name?: string): string | 
   const trimmed = key.trim()
   if (!FIELD_KEY_PATTERN.test(trimmed)) return 'key 要以字母开头，只含字母、数字、下划线'
   if (designer.template.fields.some((field) => field.key === trimmed)) return `字段 ${trimmed} 已存在`
-  designer.template.fields.push({ key: trimmed, name: name || undefined, type, required: true })
+  designer.template.fields.push({ key: trimmed, name: name || undefined, type, required: true, source: 'input' })
   commit()
   return null
 }
@@ -52,6 +53,37 @@ export function renameField(field: FieldDefinition, key: string): string | null 
  */
 export function removeField(field: FieldDefinition): void {
   designer.template.fields = designer.template.fields.filter((item) => item !== field)
+  commit()
+}
+
+/**
+ * 设置字段来源并记录撤销，清除另一种来源的冲突值。
+ * @param field 字段。
+ * @param source 目标来源。
+ */
+export function setFieldSource(field: FieldDefinition, source: 'input' | 'template'): void {
+  changeSource(field, source)
+  commit()
+}
+
+/**
+ * 设置系统预设与兼容的相对日期参数，清空手写值并记录撤销。
+ * @param field 字段。
+ * @param kind 预设种类。
+ * @param n 相对日期参数。
+ */
+export function setFieldPreset(field: FieldDefinition, kind: string, n?: number): void {
+  changePreset(field, kind, n)
+  commit()
+}
+
+/**
+ * 保存手写值，不作为表达式，并记录撤销。
+ * @param field 字段。
+ * @param value 原始输入。
+ */
+export function setFieldLiteral(field: FieldDefinition, value: string): void {
+  changeLiteral(field, value)
   commit()
 }
 

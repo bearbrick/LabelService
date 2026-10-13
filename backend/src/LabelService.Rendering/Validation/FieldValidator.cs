@@ -78,7 +78,7 @@ public static class FieldValidator
     }
 
     /// <summary>
-    /// 校验一个字段：取值（条目 → 公共字段 → 自动值 → 默认值），没值时检查必填，有值时转换类型。
+    /// 按来源校验一个字段；旧字段保留条目、公共字段、自动值、默认值的回退顺序，有值时转换类型。
     /// </summary>
     /// <param name="field">字段定义。</param>
     /// <param name="common">批量请求的公共字段。</param>
@@ -96,19 +96,23 @@ public static class FieldValidator
         Dictionary<string, object?> values,
         List<ErrorDetail> errors)
     {
-        var raw = Pick(field.Key, data) ?? Pick(field.Key, common);
+        // 新字段按明确来源取值；没有声明来源的旧字段继续允许接口覆盖。
+        var raw = field.Source == FieldSource.Template ? null : Pick(field.Key, data) ?? Pick(field.Key, common);
 
         // 调用方没传：自动值优先于固定默认值；写法不认识（发布前检查会拦）时当作没有自动值
-        if (raw is null && field.Auto is { } rule && auto is not null && AutoValues.TryResolve(field.Type, rule, auto, index, out var autoValue))
+        if (field.Source != FieldSource.Input && raw is null && field.Auto is { } rule && auto is not null && AutoValues.TryResolve(field.Type, rule, auto, index, out var autoValue))
         {
             values[field.Key] = autoValue;
             return;
         }
 
-        raw ??= NotEmpty(field.Default);
+        if (field.Source != FieldSource.Input)
+        {
+            raw ??= NotEmpty(field.Default);
+        }
         if (raw is null)
         {
-            if (field.Required)
+            if (field.Required && field.Source != FieldSource.Template)
             {
                 errors.Add(Error(index, field.Key, ErrorCodes.FieldRequired, $"缺少必填字段 {field.Key}"));
             }

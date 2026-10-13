@@ -124,6 +124,10 @@ export interface FieldDefinition {
    */
   required?: boolean
   /**
+   * 数据来源：input 仅接口传入，template 仅模板提供；省略时保留旧版接口优先的回退规则。
+   */
+  source?: 'input' | 'template'
+  /**
    * 调用时没传就用这个值，类型要和 type 匹配。
    */
   default?: unknown

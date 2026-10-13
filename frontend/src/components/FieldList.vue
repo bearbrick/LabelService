@@ -32,7 +32,9 @@ function addMissing(key: string): void {
  * @returns 提示文字。
  */
 function tip(field: FieldDefinition): string {
-  const value = field.auto
+  const value = field.source === 'template'
+    ? field.auto ? `系统预设：${describeAuto(field.auto)}（无需接口传入）` : `模板手写值：${String(field.default ?? '')}`
+    : field.auto
     ? `自动值：${describeAuto(field.auto)}（调用方不用传）`
     : `样例值：${field.sample === undefined || field.sample === null || field.sample === '' ? '无' : field.type === 'image' ? '已选图片' : String(field.sample)}`
   return `${field.name || field.key} · ${field.type}\n${value}\n拖到画布或条码上，双击插入到选中的文本`
@@ -68,7 +70,8 @@ function editFields(): void {
       @dblclick.stop="insertFieldIntoSelection(field.key)"
     >
       <span class="k">{{ field.key }}</span><span class="n">{{ field.name }}</span>
-      <span v-if="field.auto" class="pill accent" :title="`调用方没传时服务端自动算：${describeAuto(field.auto)}`">自动</span>
+      <span v-if="field.source === 'template'" class="pill accent" title="由模板提供，接口无需传入">模板</span>
+      <span v-else-if="field.auto" class="pill accent" :title="`调用方没传时服务端自动算：${describeAuto(field.auto)}`">自动</span>
       <span v-if="!used.has(field.key)" class="pill" title="没有元素引用这个字段">未用</span>
       <span class="tpill">{{ field.type }}</span>
     </div>

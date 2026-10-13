@@ -53,6 +53,11 @@ internal static class JsonChecks
             Encoding.UTF8.GetString(Payloads.Build(new RenderRequest("BOX", LabelFormat.Pdf).Set("qty", schema.Sample["qty"]))).Contains("\"qty\":50"));
         check("响应结构不对（根不是对象）报 FormatException", Throws<FormatException>(() => Responses.ToSchema(JsonText.Parse("[1]"))));
 
+        var sources = Responses.ToSchema(JsonText.Parse("""{"fields":[{"key":"input","source":"input"},{"key":"fixed","source":"template","default":0},{"key":"old","auto":"now"}]}"""));
+        check("字段来源映射兼容旧响应，模板提供和旧自动值不要求接口填写", sources.Fields[0] is { Source: "input", RequiresInput: true }
+            && sources.Fields[1] is { Source: "template", Default: 0m, RequiresInput: false }
+            && sources.Fields[2] is { Source: null, RequiresInput: false });
+
         var error = Responses.ToError(JsonText.Parse("{\"code\":\"FIELD_REQUIRED\",\"message\":\"缺字段\",\"errors\":[{\"index\":1,\"field\":\"boxNo\",\"code\":\"FIELD_REQUIRED\"}],\"traceId\":\"00-x\"}"));
         check("错误响应映射：错误码、说明、逐条错误、跟踪 ID",
             error is { Code: "FIELD_REQUIRED", Message: "缺字段", TraceId: "00-x" } && error.Errors is [{ Index: 1, Field: "boxNo", Code: "FIELD_REQUIRED" }]);

@@ -25,7 +25,7 @@ public static class TemplateSampleData
         foreach (var field in fields)
         {
             // 有自动值的字段不给：试渲染和预览显示自动值算出来的样子（和实际打出来的一样）。
-            if (field.Auto is not null)
+            if (field.Source == FieldSource.Template || field.Auto is not null)
             {
                 continue;
             }

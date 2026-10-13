@@ -121,6 +121,8 @@ catch (LabelServiceException ex) when (ex.IsTransient)
 
 ## 选项
 
+字段定义的 `TemplateField.Source` 为 `input` 时只使用接口数据，为 `template` 时由模板提供（同名接口值不能覆盖），省略时保持旧版回退行为；`RequiresInput` 为 true 时调用方需要填写。系统预设和手写值互斥，模板提供字段不出现在 schema 的调用样例中。
+
 | 选项 | 默认值 | 说明 |
 | --- | --- | --- |
 | `BaseAddress` | — | 服务地址，必填 |

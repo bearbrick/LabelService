@@ -166,8 +166,14 @@ internal sealed partial class MainForm
                     ? typed
                     : schema.Sample.TryGetValue(field.Key, out var sample) ? System.Convert.ToString(sample, CultureInfo.InvariantCulture) ?? "" : "";
                 // 有自动值的字段不用填：不算必填，提示服务端会自动算
-                var index = fields.Rows.Add(field.Key, field.Name ?? "", field.Type, field.Required && field.Auto is null, value);
-                if (field.Auto is not null)
+                var index = fields.Rows.Add(field.Key, field.Name ?? "", field.Type, field.RequiresInput, field.Source == "template" ? "" : value);
+                fields.Rows[index].Tag = field;
+                if (field.Source == "template")
+                {
+                    fields.Rows[index].Cells["value"].ReadOnly = true;
+                    fields.Rows[index].Cells["value"].ToolTipText = "由模板提供，不需要接口填写，同名传值不会覆盖模板配置。";
+                }
+                else if (field.Auto is not null)
                 {
                     fields.Rows[index].Cells["value"].ToolTipText = $"不填时服务端自动算（{field.Auto}）；填了就用填的";
                 }
@@ -347,6 +353,7 @@ internal sealed partial class MainForm
     {
         fields.EndEdit();
         return fields.Rows.Cast<DataGridViewRow>()
+            .Where(row => row.Tag is not TemplateField { Source: "template" })
             .Select(row => (Cell(row, "key"), Cell(row, "type"), Cell(row, "value").Trim()))
             .Where(field => field.Item3.Length > 0)
             .ToList();

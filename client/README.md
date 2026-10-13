@@ -38,6 +38,8 @@ dotnet run --project client/samples/LabelService.Demo.WinForms -f net10.0-window
 
 ## 用法
 
+字段 schema 新增可选 `TemplateField.Source` 和 `RequiresInput`。模板提供字段由服务生成，演示输入只读并从请求/调用代码排除；旧 schema 省略来源时保持原有行为，详见 SDK README。
+
 ```csharp
 var client = new LabelServiceClient(new LabelServiceClientOptions
 {

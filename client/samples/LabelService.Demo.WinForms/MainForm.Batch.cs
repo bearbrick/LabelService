@@ -77,8 +77,9 @@ internal sealed partial class MainForm
             batchRows.Columns.Add(new DataGridViewTextBoxColumn
             {
                 Name = field.Key,
-                HeaderText = field.Required && field.Auto is null ? field.Key + " *" : field.Key,
-                ToolTipText = $"{field.Name ?? field.Key} · {field.Type}{(field.Auto is not null ? " · 不填时自动：" + field.Auto : field.Required ? " · 必填" : "")}",
+                HeaderText = field.RequiresInput ? field.Key + " *" : field.Key,
+                ToolTipText = $"{field.Name ?? field.Key} · {field.Type}{(field.Source == "template" ? " · 由模板提供，无需填写" : field.Auto is not null ? " · 不填时自动：" + field.Auto : field.Required ? " · 必填" : "")}",
+                ReadOnly = field.Source == "template",
                 Tag = field,
                 SortMode = DataGridViewColumnSortMode.NotSortable,
                 MinimumWidth = Px(60),
@@ -238,6 +239,7 @@ internal sealed partial class MainForm
 
         return batchRows.Rows.Cast<DataGridViewRow>()
             .Select(row => batchRows.Columns.Cast<DataGridViewColumn>()
+                .Where(column => column.Tag is not TemplateField { Source: "template" })
                 .Select(column => (column.Name, column.Tag is TemplateField field ? field.Type : "string", (row.Cells[column.Index].Value as string ?? "").Trim()))
                 .Where(value => value.Item3.Length > 0)
                 .ToList())
@@ -256,7 +258,7 @@ internal sealed partial class MainForm
 
         foreach (DataGridViewColumn column in batchRows.Columns)
         {
-            var required = column.Tag is TemplateField { Required: true, Auto: null };
+            var required = column.Tag is TemplateField { RequiresInput: true };
             foreach (DataGridViewRow row in batchRows.Rows)
             {
                 var cell = row.Cells[column.Index];

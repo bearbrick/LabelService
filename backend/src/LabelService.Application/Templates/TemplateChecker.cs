@@ -115,6 +115,19 @@ public sealed class TemplateChecker(ILabelRenderer renderer)
         var keys = new HashSet<string>(StringComparer.Ordinal);
         foreach (var field in template.Fields)
         {
+            if (field.Source is { } source && !Enum.IsDefined(source))
+            {
+                errors.Add($"字段 {field.Key} 的数据来源不合法");
+            }
+            var hasDefault = field.Default is { ValueKind: not (System.Text.Json.JsonValueKind.Null or System.Text.Json.JsonValueKind.Undefined) };
+            if (field.Source == FieldSource.Input && (field.Auto is not null || hasDefault))
+            {
+                errors.Add($"字段 {field.Key} 的接口来源不能设置系统预设或手写值");
+            }
+            if (field.Source == FieldSource.Template && field.Auto is not null && hasDefault)
+            {
+                errors.Add($"字段 {field.Key} 的系统预设和手写值不能同时设置");
+            }
             if (!TemplateCodes.IsValidFieldKey(field.Key))
             {
                 errors.Add($"字段 key“{field.Key}”不合法：要以字母开头，只含字母、数字、下划线");

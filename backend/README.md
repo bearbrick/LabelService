@@ -1,5 +1,7 @@
 # 后端（backend）
 
+字段可选 `source` 分为 `input` 和 `template`，分别只取接口或模板提供的数据；模板提供的 `auto` 与 `default` 互斥且不进入调用样例，类型检查仍保留。省略来源的旧模板保持接口优先回退规则，见 ADR 0016 和 `docs/contracts.md`。
+
 标签生成服务的服务端：模板 JSON 契约、渲染引擎、按领域驱动设计分层的 ASP.NET Core 服务（ADR 0010）。解决方案 `LabelService.Backend.slnx`，.NET 10。
 
 ```

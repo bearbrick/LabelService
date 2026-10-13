@@ -1,15 +1,17 @@
 <script setup lang="ts">
 /**
- * 数据源：声明模板需要的字段（key、名称、类型、必填、默认值或自动值、格式、样例值）。
- * 扫描元素里的 {{key}}：未定义的一键添加，没被引用的给出提示；右边按字段自动生成调用样例。
+ * 数据源：声明字段的名称、类型、必填、来源、互斥的系统预设与手写值、格式和样例值。
+ * 扫描元素里的 {{key}}：未定义的一键添加，没被引用的给出提示；接口资料通过按钮抽屉查看。
  */
-import { computed, reactive } from 'vue'
-import { AUTO_PRESETS, buildAuto, isValidAuto, parseAuto } from '../../model/autoValues.ts'
+import { computed, reactive, ref } from 'vue'
+import { isValidAuto, parseAuto } from '../../model/autoValues.ts'
+import { fieldSource, presetOptions } from '../../model/fieldSources.ts'
 import { sampleRequest } from '../../model/request.ts'
 import type { FieldDefinition, FieldType } from '../../model/template.ts'
-import { addField, commit, designer, removeField, renameField, report, toast } from '../../stores/designer.ts'
-import { confirmBox, copyText } from '../../stores/dialogs.ts'
+import { addField, commit, designer, removeField, renameField, report, setFieldLiteral, setFieldPreset, setFieldSource, toast } from '../../stores/designer.ts'
+import { confirmBox } from '../../stores/dialogs.ts'
 import AppIcon from '../AppIcon.vue'
+import FieldsApiDrawer from './FieldsApiDrawer.vue'
 
 /**
  * 字段类型的选项。
@@ -30,6 +32,11 @@ const requestJson = computed(() => JSON.stringify(sampleRequest(designer.templat
  * 模板的字段（表格直接编辑它们）。
  */
 const fields = computed(() => designer.template.fields)
+
+/**
+ * 当前打开的接口资料；未打开时不渲染抽屉。
+ */
+const apiDrawer = ref<'sample' | 'schema' | null>(null)
 
 /**
  * 加一行字段，key 取第一个没用过的 fieldN。
@@ -79,6 +86,7 @@ function text(value: unknown): string {
  * @param value 输入的文本。
  */
 function setValue(field: FieldDefinition, prop: 'default' | 'sample', value: string): void {
+  if (prop === 'default') { setFieldLiteral(field, value); return }
   if (value === '') delete field[prop]
   else field[prop] = field.type === 'number' && Number.isFinite(Number(value)) ? Number(value) : value
   commit()
@@ -129,7 +137,7 @@ function onTypeChange(field: FieldDefinition): void {
 }
 
 /**
- * 默认值一栏下拉框的当前选项：空字符串是“固定值”，否则是自动值预设的 kind。
+ * 系统预设下拉框的当前选项：空字符串是“无”，否则是自动值预设的 kind。
  * @param field 字段。
  * @returns 选项值。
  */
@@ -138,20 +146,12 @@ function autoKind(field: FieldDefinition): string {
 }
 
 /**
- * 换默认值的方式：选固定值去掉自动值；选自动值去掉固定默认值，并取消必填（有自动值时调用方不用传）。
+ * 选择系统预设并清空手写值；选择无时恢复手写输入，模板提供的字段不要求接口填写。
  * @param field 字段。
  * @param kind 选项值。
  */
 function onAutoKind(field: FieldDefinition, kind: string): void {
-  if (!kind) {
-    delete field.auto
-  } else {
-    field.auto = buildAuto(kind, parseAuto(field.auto ?? '')?.n)
-    delete field.default
-    field.required = false
-  }
-
-  commit()
+  setFieldPreset(field, kind)
 }
 
 /**
@@ -160,8 +160,7 @@ function onAutoKind(field: FieldDefinition, kind: string): void {
  * @param value 输入的文本。
  */
 function onAutoN(field: FieldDefinition, value: string): void {
-  field.auto = buildAuto(autoKind(field), Number(value))
-  commit()
+  setFieldPreset(field, autoKind(field), Number(value))
 }
 
 /**
@@ -191,10 +190,13 @@ async function remove(field: FieldDefinition): Promise<void> {
       <div class="toolbar-row">
         <button class="btn" type="button" :disabled="designer.readOnly" @click="addRow"><AppIcon name="plus" small />新增字段</button>
         <span class="toolbar-divider"></span>
-        <span class="hint">声明模板需要的字段 key 和类型。业务系统调用接口时按这里传数据，样例值只用于设计器预览、发布前试渲染和调用样例。</span>
+        <span class="hint">接口字段由业务系统传入；模板提供的系统预设和手写值二选一。</span>
+        <span class="fields-toolbar-space"></span>
+        <button class="btn" type="button" @click="apiDrawer = 'sample'"><AppIcon name="api" small />调用样例</button>
+        <button class="btn" type="button" @click="apiDrawer = 'schema'"><AppIcon name="braces" small />字段定义接口</button>
       </div>
       <div class="page-body fill">
-        <div class="two-col wide-left">
+        <div class="fields-full-width">
           <div style="display: grid; gap: 16px; min-width: 0; align-content: start">
             <div v-if="report.undefinedKeys.length || report.unusedFields.length">
               <div v-for="key in report.undefinedKeys" :key="key" class="notice warn">
@@ -220,7 +222,9 @@ async function remove(field: FieldDefinition): Promise<void> {
                         <th style="min-width: 100px">名称</th>
                         <th style="min-width: 100px">类型</th>
                         <th>必填</th>
-                        <th style="min-width: 220px">默认值</th>
+                        <th style="min-width: 160px">数据来源</th>
+                        <th style="min-width: 160px">系统预设</th>
+                        <th style="min-width: 160px">手写值</th>
                         <th style="min-width: 110px">格式</th>
                         <th style="min-width: 140px">样例值</th>
                         <th></th>
@@ -239,24 +243,29 @@ async function remove(field: FieldDefinition): Promise<void> {
                           </select>
                         </td>
                         <td style="text-align: center">
-                          <input v-model="field.required" type="checkbox" aria-label="必填" :disabled="!!field.auto" :title="field.auto ? '有自动值，调用方不用传' : ''" @change="commit()" />
+                          <span v-if="fieldSource(field) === 'template'" class="hint" title="模板提供不要求接口填写">—</span>
+                          <input v-else v-model="field.required" type="checkbox" aria-label="必填" :disabled="!!field.auto" :title="field.auto ? '有自动值，调用方不用传' : ''" @change="commit()" />
+                        </td>
+                        <td>
+                          <select class="sel" :value="fieldSource(field)" aria-label="数据来源" @change="setFieldSource(field, ($event.target as HTMLSelectElement).value as 'input' | 'template')">
+                            <option value="input">接口传入</option>
+                            <option value="template">模板提供</option>
+                            <option v-if="fieldSource(field) === 'legacy'" value="legacy" disabled>兼容：接口优先</option>
+                          </select>
                         </td>
                         <td>
                           <div class="default-cell">
-                            <select v-if="AUTO_PRESETS[field.type].length" class="sel" :value="autoKind(field)" aria-label="默认值方式" @change="onAutoKind(field, ($event.target as HTMLSelectElement).value)">
-                              <option value="">固定值</option>
-                              <optgroup label="自动值（调用方没传时服务端算）">
-                                <option v-for="preset in AUTO_PRESETS[field.type]" :key="preset.kind" :value="preset.kind">{{ preset.label }}</option>
-                              </optgroup>
+                            <select class="sel" :value="autoKind(field)" :disabled="fieldSource(field) === 'input'" aria-label="系统预设" @change="onAutoKind(field, ($event.target as HTMLSelectElement).value)">
+                              <option value="">无</option>
+                              <option v-for="preset in presetOptions(field)" :key="preset.kind" :value="preset.kind">{{ preset.label }}</option>
                             </select>
-                            <input v-if="!field.auto" class="inp" :value="text(field.default)" :placeholder="field.required === false ? '可选' : '—'" aria-label="默认值" @change="setValue(field, 'default', ($event.target as HTMLInputElement).value)" />
                             <input
-                              v-else-if="autoKind(field).includes('N')"
+                              v-if="autoKind(field).includes('N')"
                               class="inp num n-input"
                               type="number"
                               min="1"
                               max="9999"
-                              :value="parseAuto(field.auto)?.n"
+                              :value="parseAuto(field.auto ?? '')?.n"
                               aria-label="N"
                               title="N：天数、月数或年数（1～9999）"
                               @change="onAutoN(field, ($event.target as HTMLInputElement).value)"
@@ -264,10 +273,14 @@ async function remove(field: FieldDefinition): Promise<void> {
                           </div>
                         </td>
                         <td>
+                          <input class="inp" :value="field.auto ? '' : text(field.default)" :disabled="fieldSource(field) === 'input' || !!field.auto" :placeholder="fieldSource(field) === 'input' ? '由接口传入' : field.auto ? '使用系统预设' : '可留空，如 0 或固定文字'" aria-label="手写值" @change="setValue(field, 'default', ($event.target as HTMLInputElement).value)" />
+                        </td>
+                        <td>
                           <input v-model="field.format" class="inp mono" :disabled="field.type === 'string' || field.type === 'image'" :placeholder="formatHint(field.type)" aria-label="格式" @change="commit()" />
                         </td>
                         <td>
-                          <input v-if="field.type !== 'image'" class="inp" :value="text(field.sample)" aria-label="样例值" @change="setValue(field, 'sample', ($event.target as HTMLInputElement).value)" />
+                          <span v-if="fieldSource(field) === 'template'" class="hint" title="预览直接使用模板提供的值">—</span>
+                          <input v-else-if="field.type !== 'image'" class="inp" :value="text(field.sample)" aria-label="样例值" @change="setValue(field, 'sample', ($event.target as HTMLInputElement).value)" />
                           <span v-else class="img-sample">
                             <img v-if="field.sample" :src="imageSrc(field.sample)" alt="样例图" />
                             <label class="btn sm">{{ field.sample ? '换图片' : '选择图片' }}<input type="file" accept="image/png,image/jpeg" hidden @change="onImageSample(field, $event)" /></label>
@@ -284,23 +297,15 @@ async function remove(field: FieldDefinition): Promise<void> {
               <p class="hint" style="margin: 12px 0 0">key 以字母开头，只含字母、数字、下划线。改 key 时，模板里引用它的元素会一起改。</p>
             </div>
           </div>
-          <div style="display: grid; gap: 16px; min-width: 0; align-content: start">
-            <div class="box">
-              <div class="code-head">
-                <h3 style="margin: 0"><AppIcon name="api" small />调用样例</h3>
-                <button class="btn sm" type="button" @click="copyText(requestJson)"><AppIcon name="copy" small />复制</button>
-              </div>
-              <div class="endpoint"><span class="method">POST</span>/api/v1/render</div>
-              <pre class="code">{{ requestJson }}</pre>
-            </div>
-            <div class="box">
-              <h3>字段定义接口</h3>
-              <div class="endpoint"><span class="method">GET</span>/api/v1/templates/{{ designer.template.code }}/schema</div>
-              <p class="hint" style="margin: 0">返回已发布版本的字段定义和调用样例，供调用方对接。草稿里的字段改动要发布后才对接口生效。</p>
-            </div>
-          </div>
         </div>
       </div>
     </div>
   </div>
+  <FieldsApiDrawer v-if="apiDrawer" :kind="apiDrawer" :code="designer.template.code" :sample="requestJson" @close="apiDrawer = null" />
 </template>
+
+<style scoped>
+.fields-full-width { min-width: 0; width: 100%; }
+.fields-toolbar-space { flex: 1; }
+.page-inner { padding-inline: 20px; }
+</style>

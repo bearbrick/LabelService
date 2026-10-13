@@ -3,6 +3,7 @@
  * 运行：npm run check
  */
 import { checkAvailableLayouts } from './available-layouts.ts'
+import { checkFieldSources } from './field-sources.ts'
 import sampleJson from '../src/samples/box-label.json' with { type: 'json' }
 import { alignElements, distributeElements, moveAbove, reorder } from '../src/editor/arrange.ts'
 import { encode, moduleDots } from '../src/editor/barcode.ts'
@@ -414,6 +415,7 @@ checkLayouts()
 checkFonts()
 checkTemplateList()
 checkAutoValues()
+checkFieldSources(check)
 checkSource()
 
 await checkAvailableLayouts(check)

@@ -652,8 +652,9 @@ footer { margin-top: 48px; font-size: 13px; color: var(--ink-3); }
             <tr><td><code>type</code></td><td>是</td><td>string / number / date / image</td></tr>
             <tr><td><code>name</code></td><td>否</td><td>中文显示名，在设计器的字段列表里显示</td></tr>
             <tr><td><code>required</code></td><td>否</td><td>默认 true，调用时不传（且没有自动值、默认值）就报错</td></tr>
-            <tr><td><code>default</code></td><td>否</td><td>调用时不传则用默认值</td></tr>
-            <tr><td><code>auto</code></td><td>否</td><td>自动值，调用时不传由服务端算：date 用 today（当前日期）、now（当前日期和时间）、today+30d / today-1d / today+6m / today+1y（今天加减 N 天、月、年）；number 用 index（批量里第几张）、total（共几张）；string 用 client（调用方名称）、requestId（请求号）。优先于 default，传了值就用传的（ADR 0012）</td></tr>
+            <tr><td><code>source</code></td><td>否</td><td>input 仅接口传入，不设预设/默认值；template 仅模板提供，系统预设和手写值互斥，允许空值，必填不适用；省略时保留旧版接口优先规则，已发布版本不迁移（ADR 0016）</td></tr>
+            <tr><td><code>default</code></td><td>否</td><td>模板提供的手写值；旧字段省略 source 时作为不传值的回退</td></tr>
+            <tr><td><code>auto</code></td><td>否</td><td>系统预设：date 用 today（当前日期）、now（当前日期和时间）、today+30d / today-1d / today+6m / today+1y（今天加减 N 天、月、年）；number 用 index（批量里第几张）、total（共几张）；string 用 client（调用方名称）、requestId（请求号）。模板提供忽略同名接口值；旧字段省略 source 时允许接口覆盖，预设优先于 default（ADR 0012、0016）</td></tr>
             <tr><td><code>format</code></td><td>否</td><td>number、date 的默认显示格式</td></tr>
             <tr><td><code>sample</code></td><td>否</td><td>设计器预览和 JSON 样例用</td></tr>
           </tbody>
@@ -675,6 +676,7 @@ footer { margin-top: 48px; font-size: 13px; color: var(--ink-3); }
           <li>选中模板后进入“数据源定义”页，以表格形式批量编辑字段（字段只在这里新增和修改）；设计器左侧的字段面板用来把字段拖到画布、拖到条码上绑定、双击插入到选中的文本</li>
           <li>保存时扫描所有 <code>{{key}}</code>：没定义的提示一键添加（默认 string），定义了但没有元素引用的给出提示</li>
           <li>字段随模板版本一起发布。已发布版本的字段不会变，调用方不会突然报错</li>
+          <li>字段表占满工作区，系统预设与手写值分开：选预设清空并禁用手写值，接口来源禁用两项。新预设先提供当前日期和当前日期时间，旧扩展预设保留。旧回退字段显示“兼容：接口优先”，显式配置后使用新来源。调用样例与字段定义接口通过顶部按钮打开抽屉。</li>
           <li>调用时多传的 key 直接忽略，不报错</li>
         </ul>
 
@@ -1032,6 +1034,7 @@ X-Api-Key: ********
           <thead><tr><th>类型</th><th>主要成员</th><th>说明</th></tr></thead>
           <tbody>
             <tr><td><code>LabelServiceClient</code></td><td>RenderAsync / Render、RenderBatchAsync / RenderBatch、GetSchemaAsync / GetSchema、ListTemplatesAsync / ListTemplates、CallCompleted 事件</td><td>入口类，实现 ILabelServiceClient，调用方写单元测试时可以替换</td></tr>
+            <tr><td><code>TemplateField.Source / RequiresInput</code></td><td>source: input / template / null；RequiresInput</td><td>与字段定义接口同步；模板提供无需填写，同名接口值不覆盖；null 保留旧响应语义</td></tr>
             <tr><td><code>LabelServiceClientOptions</code></td><td>BaseAddress、ApiKey、Timeout（默认 30 秒）、MaxRetries（默认 2）、RetryDelay（默认 0.5 秒）、MaxLabelsPerRequest（默认 500）、UserAgent</td><td>构造客户端时传入</td></tr>
             <tr><td><code>RenderRequest</code></td><td>TemplateCode、Version、Format、Dpi、Mono、Copies、Layout、StartSlot、Data、Set(key, value)</td><td>单张请求，Set 可以链式调用</td></tr>
             <tr><td><code>BatchRenderRequest</code></td><td>TemplateCode、Version、Format、Dpi、Output（Merge / Zip）、Layout、StartSlot、Common、Items、SetCommon()、AddItem()</td><td>批量请求，公共字段只传一次</td></tr>

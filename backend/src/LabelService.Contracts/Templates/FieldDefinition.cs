@@ -31,6 +31,14 @@ public sealed class FieldDefinition
     public bool Required { get; set; } = true;
 
     /// <summary>
+    /// 数据来源；省略时保持旧版接口优先的回退规则，显式来源只从对应位置取值。
+    /// </summary>
+    public FieldSource? Source
+    {
+        get; set;
+    }
+
+    /// <summary>
     /// 调用时没传则用这个值。类型必须和 <see cref="Type"/> 匹配。
     /// </summary>
     public JsonElement? Default
@@ -71,6 +79,22 @@ public sealed class FieldDefinition
     {
         get; set;
     }
+}
+
+/// <summary>
+/// 字段的显式数据来源，未指定来源的旧字段保持兼容行为。
+/// </summary>
+public enum FieldSource
+{
+    /// <summary>
+    /// 只使用调用方条目或公共数据，不使用模板的自动值、默认值。
+    /// </summary>
+    Input,
+
+    /// <summary>
+    /// 只使用模板自动值或手写值，忽略同名接口输入，必填不适用。
+    /// </summary>
+    Template,
 }
 
 /// <summary>

@@ -44,6 +44,10 @@ export function checkTemplate(template: LabelTemplate): TemplateReport {
   const duplicateKeys = keys.filter((key, index) => keys.indexOf(key) !== index)
   for (const key of new Set(duplicateKeys)) errors.push(`字段 key“${key}”重复`)
   for (const field of template.fields) {
+    const configuredDefault = field.default !== undefined && field.default !== null
+    if (field.source === 'input' && (field.auto || configuredDefault)) errors.push(`字段 ${field.key} 的接口来源不能设置预设或手写值`)
+    if (field.source === 'template' && field.auto && configuredDefault) errors.push(`字段 ${field.key} 的系统预设和手写值不能同时设置`)
+    if (field.source != null && field.source !== 'input' && field.source !== 'template') errors.push(`字段 ${field.key} 的数据来源不合法`)
     if (field.auto && !isValidAuto(field.type, field.auto)) errors.push(`字段 ${field.key} 的自动值“${field.auto}”不认识，或者和类型 ${field.type} 不匹配`)
   }
   const ids = template.elements.map((element) => element.id)
