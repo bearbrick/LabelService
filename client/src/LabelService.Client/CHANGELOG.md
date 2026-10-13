@@ -66,4 +66,3 @@
 - 每个请求自动带 `X-Api-Key`、`User-Agent`、`X-Request-Id`。
 - `Printing.NetworkPrinter`（TCP 9100 发 ZPL）、`Printing.WindowsRawPrinter`（RAW 写入 Windows 打印队列）。
 - 目标框架 net462、netstandard2.0、net8.0。
-
